@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FirstMod-AI - Home</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="logo">FirstMod-AI</div>
+    <nav>
+      <ul>
+        <li><a href="#guest-dashboard" class="active">Guest Dashboard</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="{{ url_for('login_page') }}">Login</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Welcome to FirstMod-AI</h1>
+      <p>
+        Experience the future of AI-powered animation. Our platform brings static photos 
+        to life with realistic facial expressions and natural movements.
+      </p>
+      <a href="{{ url_for('login_page') }}" class="btn">Get Started</a>
+    </div>
+  </section>
+  
+  <!-- About Section -->
+  <section id="about" class="about">
+    <h2>About Face Animation</h2>
+    <p>
+      Face animation technology uses advanced deep learning to create expressive, 
+      lifelike movements from still images. It powers applications in education, 
+      healthcare, gaming, film, and virtual communication. Our platform makes it 
+      accessible for creators, professionals, and learners worldwide.
+    </p>
+  </section>
+  
+  <!-- Guest Content -->
+  <section class="guest-dashboard" id="guest-dashboard">
+    <div class="dashboard-container">
+      <h2>Explore Our Platform</h2>
+      <p>You are currently browsing as a guest. Sign up to unlock all features and personalized content.</p>
+
+      <!-- Sample Animations Gallery -->
+      <div class="sample-animations">
+        <h3>Sample Videos</h3>
+        <div class="animation-list" id="sampleAnimationList">
+          <div class="animation-item">
+            <video width="320" height="240" controls>
+              <source src="{{ url_for('static', filename='videos/sample1.mp4') }}" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <p>Sample Video 1</p>
+          </div>
+
+          <div class="animation-item">
+            <video width="320" height="240" controls>
+              <source src="{{ url_for('static', filename='videos/sample2.mp4') }}" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <p>Sample Video 2</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sign Up Prompt -->
+      <div class="signup-prompt">
+        <h3>Want Full Access?</h3>
+        <p>Create your free account to access more features, upload your own content, and save your progress.</p>
+        <a href="{{ url_for('signup_page') }}" class="btn">Sign Up Now</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2025 FirstMod-AI. All rights reserved.</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,580 @@
+from flask import Flask, render_template, request, jsonify, session, send_file, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from db_config import DatabaseConnection
+from datetime import datetime
+import uuid
+import os
+
+app = Flask(__name__, 
+            static_folder='static',
+            static_url_path='/static',
+            template_folder='templates')
+
+app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key_here_change_in_production')
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['AVATARS_FOLDER'] = 'static/avatars'
+app.config['ANIMATIONS_FOLDER'] = 'static/animations'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Ensure upload directories exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['AVATARS_FOLDER'], exist_ok=True)
+os.makedirs(app.config['ANIMATIONS_FOLDER'], exist_ok=True)
+
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov'}
+
+def allowed_file(filename, allowed_extensions):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def get_db():
+    return DatabaseConnection().get_connection()
+
+def check_account_status():
+    """Check if the logged-in user's account is suspended"""
+    if 'user_id' not in session:
+        return None
+    
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("SELECT subscription_status FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        
+        if user and user.get('subscription_status') == 'suspended':
+            session.clear()  # Clear session if suspended
+            return 'suspended'
+        return 'active' if user else None
+    except Exception as e:
+        print(f"Error checking account status: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()
+
+# ============================================
+# MAIN ROUTES (HTML Pages)
+# ============================================
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/login')
+def login_page():
+    return render_template('login.html')
+
+@app.route('/signup')
+def signup_page():
+    return render_template('signup.html')
+
+@app.route('/forgot-password')
+def forgot_password_page():
+    return render_template('forgot_password.html')
+
+@app.route('/user')
+def user_dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    if session.get('role') not in ['user', 'subscriber', 'admin']:
+        return redirect(url_for('login_page'))
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return redirect(url_for('login_page'))
+    return render_template('user.html')
+
+@app.route('/subscriber')
+def subscriber_dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    if session.get('role') not in ['subscriber', 'admin']:
+        return redirect(url_for('login_page'))
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return redirect(url_for('login_page'))
+    return render_template('subscriber.html')
+
+@app.route('/admin')
+def admin_dashboard():
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return redirect(url_for('login_page'))
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return redirect(url_for('login_page'))
+    return render_template('admin.html')
+
+@app.route('/payment')
+def payment_page():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return redirect(url_for('login_page'))
+    # If user is already a subscriber, redirect to subscriber dashboard
+    if session.get('role') in ['subscriber', 'admin']:
+        return redirect(url_for('subscriber_dashboard'))
+    return render_template('payment.html')
+
+@app.route('/makeittalk')
+def makeittalk_page():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return redirect(url_for('login_page'))
+    # Check if user is a subscriber or admin
+    if session.get('role') not in ['subscriber', 'admin']:
+        return redirect(url_for('payment_page'))
+    return render_template('makeittalk.html', user_role=session.get('role'))
+
+@app.route('/fomd')
+def fomd_page():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return redirect(url_for('login_page'))
+    # Check if user is a subscriber or admin
+    if session.get('role') not in ['subscriber', 'admin']:
+        return redirect(url_for('payment_page'))
+    return render_template('fomd.html', user_role=session.get('role'))
+
+# ============================================
+# API ENDPOINTS
+# ============================================
+@app.route('/api/signup', methods=['POST'])
+def api_signup():
+    try:
+        data = request.get_json()
+        fullname = data.get('fullname')
+        email = data.get('email')
+        password = data.get('password')
+        
+        if not all([fullname, email, password]):
+            return jsonify({'success': False, 'message': 'All fields are required'}), 400
+        
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Check if email exists
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (email,))
+        if cursor.fetchone():
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Email already exists'}), 400
+        
+        # Insert new user
+        hashed_password = generate_password_hash(password)
+        cursor.execute(
+            "INSERT INTO users (fullname, email, password, role, subscription_status) VALUES (%s, %s, %s, %s, %s)",
+            (fullname, email, hashed_password, 'user', 'active')
+        )
+        db.commit()
+        cursor.close()
+        db.close()
+        
+        return jsonify({'success': True, 'message': 'Account created successfully'})
+    
+    except Exception as e:
+        print(f"Signup error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        if not all([email, password]):
+            return jsonify({'success': False, 'message': 'Email and password required'}), 400
+        
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+        
+        cursor.close()
+        db.close()
+        
+        if not user or not check_password_hash(user['password'], password):
+            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+        
+        # Check if account is suspended
+        if user.get('subscription_status') == 'suspended':
+            return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+        
+        # Create session
+        session['user_id'] = user['user_id']
+        session['email'] = user['email']
+        session['fullname'] = user['fullname']
+        session['role'] = user['role']
+        
+        return jsonify({
+            'success': True,
+            'message': 'Login successful',
+            'role': user['role'],
+            'redirect': url_for(f'{user["role"]}_dashboard') if user['role'] != 'user' else url_for('user_dashboard')
+        })
+    
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    session.clear()
+    return jsonify({'success': True, 'message': 'Logged out successfully'})
+
+@app.route('/api/forgot-password', methods=['POST'])
+def api_forgot_password():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+        
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        # Check if email exists
+        cursor.execute("SELECT user_id, fullname FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+        
+        cursor.close()
+        db.close()
+        
+        # Always return success message for security (don't reveal if email exists)
+        # In production, you would send an email with reset link here
+        return jsonify({
+            'success': True,
+            'message': 'If an account with that email exists, password reset instructions have been sent.'
+        })
+    
+    except Exception as e:
+        print(f"Forgot password error: {e}")
+        return jsonify({'success': False, 'message': 'An error occurred. Please try again.'}), 500
+
+@app.route('/api/change-password', methods=['POST'])
+def api_change_password():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    try:
+        data = request.get_json()
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        if not all([current_password, new_password, confirm_password]):
+            return jsonify({'success': False, 'message': 'All fields are required'}), 400
+        
+        if new_password != confirm_password:
+            return jsonify({'success': False, 'message': 'New passwords do not match'}), 400
+        
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'}), 400
+        
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        # Verify current password
+        cursor.execute("SELECT password FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        
+        if not user or not check_password_hash(user['password'], current_password):
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Current password is incorrect'}), 401
+        
+        # Update password
+        hashed_password = generate_password_hash(new_password)
+        cursor.execute(
+            "UPDATE users SET password = %s WHERE user_id = %s",
+            (hashed_password, session['user_id'])
+        )
+        db.commit()
+        
+        cursor.close()
+        db.close()
+        
+        return jsonify({'success': True, 'message': 'Password changed successfully'})
+    
+    except Exception as e:
+        print(f"Change password error: {e}")
+        return jsonify({'success': False, 'message': 'An error occurred. Please try again.'}), 500
+
+@app.route('/api/profile', methods=['GET', 'PUT'])
+def api_profile():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        if request.method == 'GET':
+            cursor.execute("SELECT user_id, fullname, email, role, subscription_status FROM users WHERE user_id = %s", 
+                         (session['user_id'],))
+            user = cursor.fetchone()
+            return jsonify({'success': True, 'user': user})
+        
+        elif request.method == 'PUT':
+            data = request.get_json()
+            fullname = data.get('fullname')
+            email = data.get('email')
+            
+            cursor.execute(
+                "UPDATE users SET fullname = %s, email = %s WHERE user_id = %s",
+                (fullname, email, session['user_id'])
+            )
+            db.commit()
+            
+            session['fullname'] = fullname
+            session['email'] = email
+            
+            return jsonify({'success': True, 'message': 'Profile updated'})
+    
+    except Exception as e:
+        print(f"Profile error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+
+@app.route('/api/subscription/update', methods=['POST'])
+def update_subscription():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    data = request.get_json()
+    plan = data.get('plan')
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    try:
+        cursor.execute(
+            "UPDATE users SET role = %s, subscription_status = %s WHERE user_id = %s",
+            ('subscriber', 'active', session['user_id'])
+        )
+        db.commit()
+        
+        session['role'] = 'subscriber'
+        
+        return jsonify({'success': True, 'message': 'Subscription updated'})
+    
+    except Exception as e:
+        print(f"Update subscription error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+@app.route('/api/admin/users', methods=['GET'])
+def admin_get_users():
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("SELECT user_id, fullname, email, role, subscription_status, created_at FROM users")
+        users = cursor.fetchall()
+        return jsonify({'success': True, 'users': users})
+    
+    except Exception as e:
+        print(f"Get users error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+@app.route('/api/admin/user/<int:user_id>', methods=['PUT', 'DELETE'])
+def admin_manage_user(user_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    try:
+        if request.method == 'PUT':
+            data = request.get_json()
+            action = data.get('action')
+            
+            if action == 'suspend':
+                cursor.execute("UPDATE users SET subscription_status = %s WHERE user_id = %s", 
+                             ('suspended', user_id))
+                db.commit()
+                return jsonify({'success': True, 'message': 'User suspended'})
+            
+            elif action == 'activate':
+                cursor.execute("UPDATE users SET subscription_status = %s WHERE user_id = %s", 
+                             ('active', user_id))
+                db.commit()
+                return jsonify({'success': True, 'message': 'User activated'})
+            
+            elif action == 'edit':
+                fullname = data.get('fullname')
+                email = data.get('email')
+                
+                if not fullname or not email:
+                    return jsonify({'success': False, 'message': 'Fullname and email are required'}), 400
+                
+                # Check if email is already taken by another user
+                cursor.execute("SELECT user_id FROM users WHERE email = %s AND user_id != %s", (email, user_id))
+                if cursor.fetchone():
+                    return jsonify({'success': False, 'message': 'Email already exists'}), 400
+                
+                cursor.execute(
+                    "UPDATE users SET fullname = %s, email = %s WHERE user_id = %s",
+                    (fullname, email, user_id)
+                )
+                db.commit()
+                return jsonify({'success': True, 'message': 'User updated successfully'})
+            
+            else:
+                return jsonify({'success': False, 'message': 'Invalid action'}), 400
+        
+        elif request.method == 'DELETE':
+            # Prevent admin from deleting themselves
+            if user_id == session['user_id']:
+                return jsonify({'success': False, 'message': 'Cannot delete your own account'}), 400
+            
+            cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+            db.commit()
+            return jsonify({'success': True, 'message': 'User deleted successfully'})
+    
+    except Exception as e:
+        print(f"Manage user error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+# ============================================
+# MAKEITTALK API ENDPOINTS
+# ============================================
+@app.route('/api/makeittalk/animate', methods=['POST'])
+def makeittalk_animate():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    # Check if user is a subscriber or admin
+    if session.get('role') not in ['subscriber', 'admin']:
+        return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
+    
+    if 'image' not in request.files or 'audio' not in request.files:
+        return jsonify({'success': False, 'message': 'Image and audio required'}), 400
+    
+    image_file = request.files['image']
+    audio_file = request.files['audio']
+    
+    if image_file.filename == '' or audio_file.filename == '':
+        return jsonify({'success': False, 'message': 'No files selected'}), 400
+    
+    try:
+        # Save uploaded files
+        image_filename = secure_filename(f"{uuid.uuid4()}_{image_file.filename}")
+        audio_filename = secure_filename(f"{uuid.uuid4()}_{audio_file.filename}")
+        
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+        audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
+        
+        image_file.save(image_path)
+        audio_file.save(audio_path)
+        
+        # Generate output filename
+        output_filename = f"makeittalk_{uuid.uuid4()}.mp4"
+        output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], output_filename)
+        
+        # Get ngrok URL from environment variable or use default
+        api_url = os.environ.get('MAKEITTALK_API_URL', None)
+        
+        # Process with MakeItTalk
+        result = create_talking_animation(
+            image_path=image_path,
+            audio_path=audio_path,
+            output_path=output_path,
+            api_url=api_url
+        )
+        
+        if result['status'] == 'success':
+            # Save to database
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                "INSERT INTO animations (user_id, avatar_id, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], None, f'animations/{output_filename}', 'completed')
+            )
+            db.commit()
+            
+            animation_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Animation created successfully',
+                'animation_id': animation_id,
+                'video_url': f'/static/animations/{output_filename}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': result.get('message', 'Animation generation failed')
+            }), 500
+    
+    except Exception as e:
+        print(f"MakeItTalk error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Error handlers
+@app.errorhandler(404)
+def not_found(e):
+    return render_template('index.html'), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    return jsonify({'success': False, 'message': 'Internal server error'}), 500
+
+if __name__ == '__main__':
+    print("\n" + "="*60)
+    print("Face Animation Platform Starting...")
+    print("="*60)
+    print(f"Server running at: http://localhost:5000")
+    print(f"Static folder: {app.static_folder}")
+    print(f"Template folder: {app.template_folder}")
+    print("="*60 + "\n")
+    
+    app.run(debug=True, port=5000, host='0.0.0.0')

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+  <div class="logo">Face Animation Admin</div>
+  <ul>
+    <li><a href="#" class="active">Admin Dashboard</a></li>
+    <li><a href="{{ url_for('login_page') }}">Logout</a></li>
+  </ul>
+</div>
+
+<section class="user-dashboard">
+  <div class="dashboard-container">
+    <h2>Welcome, Admin</h2>
+    <p>Manage user accounts and platform settings.</p>
+
+    <!-- Profile Section -->
+    <div class="profile-card">
+      <h3>👤 Admin Profile</h3>
+      <p><strong>Username:</strong> <span id="adminUsername">AdminUser</span></p>
+      <p><strong>Email:</strong> <span id="adminEmail">admin@email.com</span></p>
+      <div class="profile-actions">
+        <button class="btn small-btn" id="editAdminProfileBtn">Edit Profile</button>
+        <button class="btn small-btn" id="changePasswordBtn">Change Password</button>
+        <button class="btn small-btn danger-btn" id="logoutAdminBtn">Logout</button>
+      </div>
+
+      <div id="editAdminForm" style="display:none; margin-top:10px;">
+        <input type="text" id="newAdminUsername" placeholder="New Username">
+        <input type="email" id="newAdminEmail" placeholder="New Email">
+        <button class="btn small-btn" id="saveAdminProfileBtn">Save</button>
+        <button class="btn small-btn" id="cancelAdminEditBtn">Cancel</button>
+      </div>
+      <div id="changePasswordForm" style="display:none; margin-top:10px;">
+        <input type="password" id="currentPassword" placeholder="Current Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
+        <input type="password" id="newPassword" placeholder="New Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
+        <input type="password" id="confirmPassword" placeholder="Confirm New Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
+        <div class="profile-actions">
+          <button class="btn small-btn" id="savePasswordBtn">Change Password</button>
+          <button class="btn small-btn" id="cancelPasswordBtn">Cancel</button>
+        </div>
+        <div id="passwordMessage" style="display: none; margin-top: 10px; padding: 10px; border-radius: 5px;"></div>
+      </div>
+    </div>
+
+    <!-- User Management -->
+    <div class="profile-card">
+      <h3>👥 User Management</h3>
+      <div class="profile-actions">
+        <input type="text" id="searchUser" placeholder="Search user by email or name...">
+        <button class="btn small-btn" id="searchUserBtn">Search</button>
+        <button class="btn small-btn" id="loadAllUsersBtn">Load All Users</button>
+      </div>
+      <div id="userList" style="margin-top:20px;"></div>
+    </div>
+
+  </div>
+</section>
+
+<div class="footer">
+  <p>&copy; 2025 FirstMod-AI Platform | Admin Panel</p>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscriber Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+  <div class="logo">Face Animation</div>
+  <ul>
+    <li><a href="{{ url_for('subscriber_dashboard') }}" class="active">Subscriber Dashboard</a></li>
+    <li><a href="{{ url_for('fomd_page') }}">FOMD</a></li>
+    <li><a href="{{ url_for('makeittalk_page') }}">MakeItTalk</a></li>
+    <li><a href="{{ url_for('login_page') }}">Logout</a></li>
+  </ul>
+</div>
+
+<section class="user-dashboard">
+  <div class="dashboard-container">
+    <h2>Welcome, Subscriber</h2>
+    <p>Manage your account settings and access premium features.</p>
+
+    <!-- Profile Section -->
+    <div class="profile-card">
+      <h3>👤 Subscriber Profile</h3>
+      <p><strong>Username:</strong> <span id="username">JohnDoe</span></p>
+      <p><strong>Email:</strong> <span id="email">johndoe@email.com</span></p>
+      <p><strong>Subscription:</strong> Premium</p>
+      <div class="profile-actions">
+        <button class="btn small-btn" id="editProfileBtn">Edit Profile</button>
+        <button class="btn small-btn" id="changePasswordBtn">Change Password</button>
+        <button class="btn small-btn danger-btn" id="deleteAccountBtn">Delete Account</button>
+        <button class="btn small-btn danger-btn" id="logoutBtn">Logout</button>
+      </div>
+      <div id="editProfileForm" style="display:none; margin-top:10px;">
+        <input type="text" id="newUsername" placeholder="New Username">
+        <input type="email" id="newEmail" placeholder="New Email">
+        <button class="btn small-btn" id="saveProfileBtn">Save</button>
+        <button class="btn small-btn" id="cancelEditBtn">Cancel</button>
+      </div>
+      <div id="changePasswordForm" style="display:none; margin-top:10px;">
+        <input type="password" id="currentPassword" placeholder="Current Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
+        <input type="password" id="newPassword" placeholder="New Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
+        <input type="password" id="confirmPassword" placeholder="Confirm New Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
+        <div class="profile-actions">
+          <button class="btn small-btn" id="savePasswordBtn">Change Password</button>
+          <button class="btn small-btn" id="cancelPasswordBtn">Cancel</button>
+        </div>
+        <div id="passwordMessage" style="display: none; margin-top: 10px; padding: 10px; border-radius: 5px;"></div>
+      </div>
+    </div>
+
+    <!-- Subscription Management -->
+    <div class="subscription-management">
+      <h3>💳 Subscription & Payment</h3>
+      <p><strong>Status:</strong> Active Premium</p>
+      <p><strong>Benefits:</strong> Unlimited animations, MP4 download, MakeItTalk audio</p>
+      <form class="subscription-form">
+        <label for="planSelect">Modify Plan:</label>
+        <select id="planSelect">
+          <option value="monthly">Monthly - $9.99</option>
+          <option value="yearly">Yearly - $99.99</option>
+        </select>
+        <label for="paymentMethod">Update Payment Method:</label>
+        <input type="text" id="paymentMethod" placeholder="Card Number">
+        <button type="button" class="btn small-btn" id="updateSubscriptionBtn">Update Subscription</button>
+        <button type="button" class="btn small-btn danger-btn" id="cancelSubscriptionBtn">Cancel Subscription</button>
+      </form>
+    </div>
+
+  </div>
+</section>
+
+<div class="footer">
+  <p>&copy; 2025 Face Animation. All Rights Reserved.</p>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
