@@ -7,12 +7,27 @@ class DatabaseConnection:
         """Initialize database connection"""
         try:
             # Railway automatically creates MYSQLHOST, MYSQLUSER, etc. when MySQL service is added
+            # Also check for MYSQL_URL or MYSQL_PUBLIC_URL which Railway might provide
             # Check for Railway's auto-generated variables first, then fall back to custom DB_* variables
-            db_host = os.getenv("MYSQLHOST") or os.getenv("DB_HOST", "localhost")
-            db_user = os.getenv("MYSQLUSER") or os.getenv("DB_USER", "root")
-            db_password = os.getenv("MYSQLPASSWORD") or os.getenv("MYSQL_ROOT_PASSWORD") or os.getenv("DB_PASSWORD", "1234")
-            db_name = os.getenv("MYSQLDATABASE") or os.getenv("DB_NAME", "face_animation_db")
-            db_port = int(os.getenv("MYSQLPORT") or os.getenv("DB_PORT", "3306"))
+            
+            # Check if Railway provides a connection URL (parse it if available)
+            mysql_url = os.getenv("MYSQL_URL") or os.getenv("MYSQL_PUBLIC_URL")
+            if mysql_url:
+                # Parse MySQL URL: mysql://user:password@host:port/database
+                import urllib.parse
+                parsed = urllib.parse.urlparse(mysql_url)
+                db_host = parsed.hostname
+                db_user = parsed.username or "root"
+                db_password = parsed.password or ""
+                db_name = parsed.path.lstrip('/') or "railway"
+                db_port = parsed.port or 3306
+            else:
+                # Use individual environment variables
+                db_host = os.getenv("MYSQLHOST") or os.getenv("DB_HOST", "localhost")
+                db_user = os.getenv("MYSQLUSER") or os.getenv("DB_USER", "root")
+                db_password = os.getenv("MYSQLPASSWORD") or os.getenv("MYSQL_ROOT_PASSWORD") or os.getenv("DB_PASSWORD", "1234")
+                db_name = os.getenv("MYSQLDATABASE") or os.getenv("DB_NAME", "face_animation_db")
+                db_port = int(os.getenv("MYSQLPORT") or os.getenv("DB_PORT", "3306"))
             
             # Debug: Print connection details (password will be hidden in logs)
             print(f"Attempting to connect to MySQL:")
