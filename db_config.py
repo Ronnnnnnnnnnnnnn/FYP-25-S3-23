@@ -6,12 +6,13 @@ class DatabaseConnection:
     def __init__(self):
         """Initialize database connection"""
         try:
-            # Use environment variables for production (Railway), fallback to local values for development
-            db_host = os.getenv("DB_HOST", "localhost")
-            db_user = os.getenv("DB_USER", "root")
-            db_password = os.getenv("DB_PASSWORD", "1234")
-            db_name = os.getenv("DB_NAME", "face_animation_db")
-            db_port = int(os.getenv("DB_PORT", 3306))
+            # Railway automatically creates MYSQLHOST, MYSQLUSER, etc. when MySQL service is added
+            # Check for Railway's auto-generated variables first, then fall back to custom DB_* variables
+            db_host = os.getenv("MYSQLHOST") or os.getenv("DB_HOST", "localhost")
+            db_user = os.getenv("MYSQLUSER") or os.getenv("DB_USER", "root")
+            db_password = os.getenv("MYSQLPASSWORD") or os.getenv("MYSQL_ROOT_PASSWORD") or os.getenv("DB_PASSWORD", "1234")
+            db_name = os.getenv("MYSQLDATABASE") or os.getenv("DB_NAME", "face_animation_db")
+            db_port = int(os.getenv("MYSQLPORT") or os.getenv("DB_PORT", "3306"))
             
             # Debug: Print connection details (password will be hidden in logs)
             print(f"Attempting to connect to MySQL:")
