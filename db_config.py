@@ -7,12 +7,25 @@ class DatabaseConnection:
         """Initialize database connection"""
         try:
             # Use environment variables for production (Railway), fallback to local values for development
+            db_host = os.getenv("DB_HOST", "localhost")
+            db_user = os.getenv("DB_USER", "root")
+            db_password = os.getenv("DB_PASSWORD", "1234")
+            db_name = os.getenv("DB_NAME", "face_animation_db")
+            db_port = int(os.getenv("DB_PORT", 3306))
+            
+            # Debug: Print connection details (password will be hidden in logs)
+            print(f"Attempting to connect to MySQL:")
+            print(f"  Host: {db_host}")
+            print(f"  User: {db_user}")
+            print(f"  Database: {db_name}")
+            print(f"  Port: {db_port}")
+            
             self.connection = mysql.connector.connect(
-                host=os.getenv("DB_HOST", "localhost"),
-                user=os.getenv("DB_USER", "root"),
-                password=os.getenv("DB_PASSWORD", "1234"),
-                database=os.getenv("DB_NAME", "face_animation_db"),
-                port=int(os.getenv("DB_PORT", 3306))
+                host=db_host,
+                user=db_user,
+                password=db_password,
+                database=db_name,
+                port=db_port
             )
             
             if self.connection.is_connected():
