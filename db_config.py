@@ -29,12 +29,9 @@ class DatabaseConnection:
                 db_name = os.getenv("MYSQLDATABASE") or os.getenv("DB_NAME", "face_animation_db")
                 db_port = int(os.getenv("MYSQLPORT") or os.getenv("DB_PORT", "3306"))
             
-            # Debug: Print connection details (password will be hidden in logs)
-            print(f"Attempting to connect to MySQL:")
-            print(f"  Host: {db_host}")
-            print(f"  User: {db_user}")
-            print(f"  Database: {db_name}")
-            print(f"  Port: {db_port}")
+            # Debug: Print connection details on first connection
+            # (Commented out to reduce log noise - uncomment if debugging)
+            # print(f"Connecting to MySQL: {db_host}:{db_port}/{db_name}")
             
             self.connection = mysql.connector.connect(
                 host=db_host,

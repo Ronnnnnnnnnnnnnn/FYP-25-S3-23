@@ -586,26 +586,7 @@ def not_found(e):
 def internal_error(e):
     return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
-# Test database connection on startup (runs when worker starts)
-def test_db_connection():
-    """Test database connection when worker starts"""
-    try:
-        print("\n" + "="*60)
-        print("Testing database connection on startup...")
-        print("="*60)
-        db = get_db()
-        if db and db.is_connected():
-            print("✅ Database connection successful!")
-            db.close()
-        else:
-            print("❌ Database connection failed!")
-        print("="*60 + "\n")
-    except Exception as e:
-        print(f"❌ Database connection error: {e}")
-        print("="*60 + "\n")
-
-# Test connection when worker starts (for gunicorn)
-test_db_connection()
+# Database connection will be tested on first request
 
 if __name__ == '__main__':
     print("\n" + "="*60)
