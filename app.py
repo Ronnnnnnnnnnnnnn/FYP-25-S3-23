@@ -318,7 +318,7 @@ def api_signup():
         # Insert new user with unverified status
         hashed_password = generate_password_hash(password)
         cursor.execute(
-            """INSERT INTO users (fullname, email, password, role, subscription_status, email_verified, verification_code, verification_code_expires_at) 
+            """INSERT INTO users (fullname, email, password, role, subscription_status, email_verified, verification_token, verification_token_expires_at) 
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
             (fullname, email, hashed_password, 'user', 'inactive', False, verification_token, expires_at)
         )
@@ -391,8 +391,8 @@ def verify_email_link(token):
         
         # Find user with this verification token
         cursor.execute(
-            """SELECT user_id, verification_code, verification_code_expires_at, email_verified, email 
-               FROM users WHERE verification_code = %s""",
+            """SELECT user_id, verification_token, verification_token_expires_at, email_verified, email 
+               FROM users WHERE verification_token = %s""",
             (token,)
         )
         user = cursor.fetchone()
@@ -413,7 +413,7 @@ def verify_email_link(token):
                                  message='Email already verified! You can now login.')
         
         # Check if token expired
-        if user['verification_code_expires_at'] and datetime.now() > user['verification_code_expires_at']:
+        if user['verification_token_expires_at'] and datetime.now() > user['verification_token_expires_at']:
             cursor.close()
             db.close()
             return render_template('verify_result.html', 
@@ -422,8 +422,8 @@ def verify_email_link(token):
         
         # Verify the email
         cursor.execute(
-            """UPDATE users SET email_verified = TRUE, verification_code = NULL, 
-               verification_code_expires_at = NULL, subscription_status = 'active' 
+            """UPDATE users SET email_verified = TRUE, verification_token = NULL, 
+               verification_token_expires_at = NULL, subscription_status = 'active' 
                WHERE user_id = %s""",
             (user['user_id'],)
         )
@@ -531,12 +531,12 @@ def api_login():
         
         # Check if email is verified
         # Allow existing users (created before email verification) to login
-        # If verification_code is NULL, it means it's an old user created before email verification feature
+        # If verification_token is NULL, it means it's an old user created before email verification feature
         email_verified = user.get('email_verified', False)
-        verification_code = user.get('verification_code')
+        verification_token = user.get('verification_token')
         
-        # If user has verification_code but not verified, require verification
-        if verification_code is not None and not email_verified:
+        # If user has verification_token but not verified, require verification
+        if verification_token is not None and not email_verified:
             return jsonify({
                 'success': False, 
                 'message': 'Please verify your email before logging in. Check your inbox for the verification link.',
