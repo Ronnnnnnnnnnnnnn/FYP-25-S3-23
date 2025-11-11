@@ -98,21 +98,31 @@ def send_verification_email(email, token, fullname):
             """
         )
         
-        print(f"Message created, attempting to send...")
+        print(f"Message created, verification URL: {verification_url}")
+        print(f"Email config - Server: {app.config.get('MAIL_SERVER')}, Port: {app.config.get('MAIL_PORT')}, TLS: {app.config.get('MAIL_USE_TLS')}")
+        print(f"Sender: {app.config.get('MAIL_DEFAULT_SENDER')}")
+        
         # Set a timeout for email sending to prevent hanging
         import socket
+        original_timeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(10)  # 10 second timeout
         
         try:
+            print(f"Attempting to send email via SMTP...")
             mail.send(msg)
-            print(f"Verification email sent successfully to {email}")
+            print(f"✓ Verification email sent successfully to {email}")
             return True
         except socket.timeout:
-            print(f"ERROR: Email sending timed out after 10 seconds")
+            print(f"✗ ERROR: Email sending timed out after 10 seconds")
             return False
         except Exception as send_error:
-            print(f"ERROR during mail.send(): {send_error}")
+            print(f"✗ ERROR during mail.send(): {send_error}")
+            import traceback
+            traceback.print_exc()
             raise  # Re-raise to be caught by outer exception handler
+        finally:
+            # Restore original timeout
+            socket.setdefaulttimeout(original_timeout)
     except Exception as e:
         print(f"ERROR sending email to {email}: {e}")
         import traceback
@@ -330,39 +340,40 @@ def api_signup():
         if db:
             db.close()
         
-        # Send verification email asynchronously (don't block the response)
-        # Return success immediately, email will be sent in background
+        # Send verification email
+        # Try to send email synchronously first to catch errors immediately
+        print(f"Preparing to send verification email to {email} with token: {verification_token[:20]}...")
+        email_sent = False
+        email_error_msg = None
+        
         try:
-            print(f"Preparing to send verification email to {email}")
-            # Try to send email, but don't wait for it - return immediately
-            import threading
-            def send_email_async():
-                try:
-                    send_verification_email(email, verification_token, fullname)
-                except Exception as e:
-                    print(f"Background email sending failed: {e}")
-            
-            # Start email sending in background thread
-            email_thread = threading.Thread(target=send_email_async)
-            email_thread.daemon = True
-            email_thread.start()
-            
-            # Return success immediately - email is being sent in background
+            email_sent = send_verification_email(email, verification_token, fullname)
+            if email_sent:
+                print(f"✓ Verification email sent successfully to {email}")
+            else:
+                print(f"✗ Verification email failed to send to {email}")
+                email_error_msg = "Email sending returned False"
+        except Exception as email_error:
+            print(f"✗ Exception during email sending: {email_error}")
+            import traceback
+            traceback.print_exc()
+            email_error_msg = str(email_error)
+        
+        # Return response based on email sending result
+        if email_sent:
             return jsonify({
                 'success': True, 
                 'message': 'Account created! Please check your email and click the verification link to activate your account.',
                 'requires_verification': True
             })
-        except Exception as email_error:
-            print(f"Email sending exception: {email_error}")
-            import traceback
-            traceback.print_exc()
-            # User is created, but email failed - still return success but warn user
+        else:
+            # Email failed, but account is created - user can request resend
             return jsonify({
                 'success': True, 
-                'message': 'Account created but failed to send verification email. Please contact support.',
+                'message': f'Account created but verification email failed to send. Error: {email_error_msg}. Please use "Resend Verification" or contact support.',
                 'requires_verification': True,
-                'email_error': True
+                'email_error': True,
+                'verification_token': verification_token  # Include token for manual verification if needed
             }), 200
     
     except Exception as e:
