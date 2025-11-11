@@ -372,6 +372,10 @@
                 info.style.fontWeight = 'bold';
             }
         }
+        
+        // Make functions globally accessible for inline event handlers
+        window.showFileInfo = showFileInfo;
+        window.showStatus = showStatus;
 
         function showStatus(message, type) {
             const status = document.getElementById('status');
