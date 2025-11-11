@@ -50,6 +50,16 @@ def generate_otp():
 def send_verification_email(email, otp, fullname):
     """Send OTP verification email"""
     try:
+        # Check if email is configured
+        mail_username = app.config.get('MAIL_USERNAME', '')
+        mail_password = app.config.get('MAIL_PASSWORD', '')
+        
+        if not mail_username or not mail_password:
+            print(f"ERROR: Email not configured. MAIL_USERNAME: {bool(mail_username)}, MAIL_PASSWORD: {bool(mail_password)}")
+            return False
+        
+        print(f"Attempting to send email to {email} from {mail_username}")
+        
         msg = Message(
             subject='Verify Your Email - FirstMod-AI',
             recipients=[email],
@@ -70,9 +80,12 @@ def send_verification_email(email, otp, fullname):
             """
         )
         mail.send(msg)
+        print(f"Email sent successfully to {email}")
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        print(f"ERROR sending email to {email}: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def check_account_status():
@@ -285,9 +298,13 @@ def api_signup():
         # Send verification email
         email_sent = False
         try:
+            print(f"Preparing to send OTP email to {email} with OTP: {otp}")
             email_sent = send_verification_email(email, otp, fullname)
+            print(f"Email sending result: {email_sent}")
         except Exception as email_error:
-            print(f"Email sending error: {email_error}")
+            print(f"Email sending exception: {email_error}")
+            import traceback
+            traceback.print_exc()
             # User is created, but email failed - still return success but warn user
             return jsonify({
                 'success': True, 
@@ -389,6 +406,48 @@ def api_verify_email():
     
     except Exception as e:
         print(f"Verify email error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/get-otp', methods=['POST'])
+def api_get_otp():
+    """Get OTP for testing purposes (only for unverified users)"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+        
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        # Get OTP for unverified user
+        cursor.execute(
+            "SELECT verification_code, email_verified, created_at FROM users WHERE email = %s",
+            (email,)
+        )
+        user = cursor.fetchone()
+        
+        cursor.close()
+        db.close()
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        if user['email_verified']:
+            return jsonify({'success': False, 'message': 'Email already verified'}), 400
+        
+        if not user['verification_code']:
+            return jsonify({'success': False, 'message': 'No verification code found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'otp': user['verification_code'],
+            'message': 'OTP retrieved (for testing only)'
+        })
+    
+    except Exception as e:
+        print(f"Get OTP error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/resend-otp', methods=['POST'])
