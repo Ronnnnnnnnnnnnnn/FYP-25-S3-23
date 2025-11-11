@@ -342,12 +342,18 @@
         <p>&copy; 2025 Face Animation. All Rights Reserved.</p>
     </div>
 
-    <script>
-        // ═══════════════════════════════════════════════════
-        // CONFIGURATION - Replace with your ngrok URL
-        // ═══════════════════════════════════════════════════
-        const API_URL = 'https://crescentlike-kimberli-innovative.ngrok-free.dev';
-
+    <script type="module">
+        // ═══════════════════════════════════════════════════════════
+        // 🔥 HUGGING FACE GRADIO API CONFIGURATION 🔥
+        // ═══════════════════════════════════════════════════════════
+        const YOUR_USERNAME = "Tc12345";
+        const SPACE_NAME = "makeittalk";
+        const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
+        
+        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+        
+        window.gradioClient = client;
+        window.app = null;
         let savedVideoUrl = null;
         let videoFilename = 'talking_portrait.mp4';
 
@@ -383,28 +389,19 @@
             const animateBtn = document.getElementById('animateBtn');
             
             try {
-                console.log('🔍 Checking API connection to:', API_URL);
+                console.log('🔍 Checking connection to Hugging Face Space:', SPACE_URL);
                 
-                const response = await fetch(`${API_URL}/`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'ngrok-skip-browser-warning': 'true'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('✅ API Response:', data);
-                    
-                    statusDiv.className = 'api-status online';
-                    statusText.textContent = 'API Online ✓';
-                    animateBtn.disabled = false;
-                    
-                    return true;
-                } else {
-                    throw new Error(`HTTP ${response.status}`);
+                if (!window.app) {
+                    window.app = await window.gradioClient(SPACE_URL);
                 }
+                
+                console.log('✅ Connected to Gradio API!');
+                
+                statusDiv.className = 'api-status online';
+                statusText.textContent = 'API Online ✓';
+                animateBtn.disabled = false;
+                
+                return true;
             } catch (error) {
                 console.error('❌ API Connection Failed:', error);
                 
@@ -414,12 +411,13 @@
                 animateBtn.textContent = '❌ API Not Connected';
                 
                 showStatus(`
-                    ⚠️ Cannot connect to API<br><br>
+                    ⚠️ Cannot connect to Hugging Face API<br><br>
+                    <strong>Space:</strong> ${SPACE_URL}<br>
+                    <strong>Error:</strong> ${error.message}<br><br>
                     <strong>Quick Fix:</strong><br>
-                    1. Open this link in a new tab: <a href="${API_URL}" target="_blank" style="color: #667eea; font-weight: bold;">${API_URL}</a><br>
-                    2. Click "Visit Site" on the ngrok page<br>
-                    3. Come back here and refresh this page<br><br>
-                    <strong>Error:</strong> ${error.message}
+                    1. Make sure the Hugging Face Space is running<br>
+                    2. Check the space URL: <a href="https://huggingface.co/spaces/${SPACE_URL}" target="_blank" style="color: #667eea;">https://huggingface.co/spaces/${SPACE_URL}</a><br>
+                    3. Refresh this page
                 `, 'error');
                 
                 return false;
@@ -427,9 +425,9 @@
         }
 
         // ═══════════════════════════════════════════════════
-        // MAIN ANIMATION FUNCTION (RENAMED TO AVOID CONFLICT)
+        // MAIN ANIMATION FUNCTION
         // ═══════════════════════════════════════════════════
-        async function createAnimation() {
+        window.createAnimation = async function() {
             const imageFile = document.getElementById('imageInput').files[0];
             const audioFile = document.getElementById('audioInput').files[0];
             const btn = document.getElementById('animateBtn');
@@ -438,6 +436,11 @@
             
             if (!imageFile || !audioFile) {
                 showStatus('❌ Please upload both image and audio files', 'error');
+                return;
+            }
+
+            if (!window.app) {
+                showStatus('❌ Not connected to API. Please refresh the page.', 'error');
                 return;
             }
 
@@ -450,71 +453,47 @@
             progress.style.display = 'block';
             showStatus('🎨 Creating your talking portrait... This may take a few minutes!', 'info');
 
-            const formData = new FormData();
-            formData.append('image', imageFile);
-            formData.append('audio', audioFile);
-
             try {
-                console.log('📤 Sending request to:', `${API_URL}/animate`);
+                console.log('📤 Sending files to Gradio API...');
                 
-                const response = await fetch(`${API_URL}/animate`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'ngrok-skip-browser-warning': 'true'
-                    }
-                });
+                // Call Gradio API
+                const result = await window.app.predict("/predict", [
+                    imageFile,
+                    audioFile
+                ]);
 
-                console.log('📥 Response status:', response.status);
-
-                if (response.ok) {
-                    // ═══════════════════════════════════════════════════
-                    // SUCCESS - Handle video blob
-                    // ═══════════════════════════════════════════════════
-                    const blob = await response.blob();
-                    savedVideoUrl = URL.createObjectURL(blob);
-                    
-                    // Generate filename from image name
-                    const imageName = imageFile.name.split('.')[0];
-                    videoFilename = `${imageName}_animated.mp4`;
-                    
-                    // Show video
-                    const video = document.getElementById('resultVideo');
-                    video.src = savedVideoUrl;
-                    
-                    // Show result section
-                    resultSection.style.display = 'block';
-                    document.getElementById('videoFilename').textContent = videoFilename;
-                    
-                    // Scroll to video
-                    resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
-                    showStatus('✅ Animation complete! Your talking portrait is ready! 🎉', 'success');
-                    
-                    console.log('✅ Animation completed successfully!');
-                } else {
-                    // ═══════════════════════════════════════════════════
-                    // ERROR - Handle error response
-                    // ═══════════════════════════════════════════════════
-                    let errorMsg = 'Unknown error occurred';
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorMsg;
-                    } catch (e) {
-                        errorMsg = `Server error (${response.status})`;
-                    }
-                    
-                    console.error('❌ Server error:', errorMsg);
-                    showStatus(`❌ Error: ${errorMsg}`, 'error');
-                }
+                console.log('✅ Result received:', result);
+                
+                // Get video URL from result
+                const videoUrl = result.data[0];
+                savedVideoUrl = videoUrl;
+                
+                // Generate filename from image name
+                const imageName = imageFile.name.split('.')[0];
+                videoFilename = `${imageName}_animated.mp4`;
+                
+                // Show video
+                const video = document.getElementById('resultVideo');
+                video.src = videoUrl;
+                
+                // Show result section
+                resultSection.style.display = 'block';
+                document.getElementById('videoFilename').textContent = videoFilename;
+                
+                // Scroll to video
+                resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                showStatus('✅ Animation complete! Your talking portrait is ready! 🎉', 'success');
+                
+                console.log('✅ Animation completed successfully!');
             } catch (error) {
                 console.error('❌ Request failed:', error);
-                showStatus(`❌ Connection error: ${error.message}<br><br>
+                showStatus(`❌ Error: ${error.message}<br><br>
                     <strong>Troubleshooting:</strong><br>
-                    • Visit <a href="${API_URL}" target="_blank" style="color: #667eea;">${API_URL}</a> and click "Visit Site"<br>
-                    • Make sure Google Colab is running<br>
+                    • Check the Hugging Face Space is running: <a href="https://huggingface.co/spaces/${SPACE_URL}" target="_blank" style="color: #667eea;">View Space</a><br>
+                    • Make sure both files are valid (image and audio)<br>
                     • Check the API status indicator (top right)<br>
-                    • Refresh this page after visiting the API URL`, 'error');
+                    • Refresh this page and try again`, 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🎬 Create Talking Portrait';
@@ -542,9 +521,9 @@
         // ═══════════════════════════════════════════════════
         // RUN ON PAGE LOAD
         // ═══════════════════════════════════════════════════
-        window.addEventListener('load', () => {
-            console.log('🚀 Page loaded, checking API...');
-            checkAPIConnection();
+        window.addEventListener('load', async () => {
+            console.log('🚀 Page loaded, checking API connection...');
+            await checkAPIConnection();
             
             // Recheck connection every 30 seconds
             setInterval(checkAPIConnection, 30000);
