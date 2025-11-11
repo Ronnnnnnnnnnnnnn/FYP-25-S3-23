@@ -3,6 +3,7 @@ from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from db_config import DatabaseConnection
+from mysql.connector import Error as MySQLError
 from datetime import datetime, timedelta
 import uuid
 import os
@@ -212,8 +213,13 @@ def fomd_page():
 # ============================================
 @app.route('/api/signup', methods=['POST'])
 def api_signup():
+    db = None
+    cursor = None
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'Invalid request data'}), 400
+            
         fullname = data.get('fullname')
         email = data.get('email')
         password = data.get('password')
@@ -221,9 +227,26 @@ def api_signup():
         if not all([fullname, email, password]):
             return jsonify({'success': False, 'message': 'All fields are required'}), 400
         
-        db = get_db()
-        if not db:
-            return jsonify({'success': False, 'message': 'Database connection failed. Please try again.'}), 500
+        # Get database connection with proper error handling
+        try:
+            db = get_db()
+            if not db:
+                print("ERROR: get_db() returned None")
+                return jsonify({'success': False, 'message': 'Database connection failed. Please try again.'}), 500
+            if not db.is_connected():
+                print("ERROR: Database connection is not active")
+                return jsonify({'success': False, 'message': 'Database connection is not active. Please try again.'}), 500
+            print("Database connection successful")
+        except MySQLError as db_error:
+            print(f"Database connection error (MySQL Error): {db_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'message': f'Database connection error: {str(db_error)}'}), 500
+        except Exception as db_error:
+            print(f"Database connection error (General): {db_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'message': f'Database connection error: {str(db_error)}'}), 500
         
         cursor = db.cursor(dictionary=True)
         
@@ -252,11 +275,28 @@ def api_signup():
             (fullname, email, hashed_password, 'user', 'inactive', False, otp, expires_at)
         )
         db.commit()
-        cursor.close()
-        db.close()
+        
+        # Close cursor and connection before sending email
+        if cursor:
+            cursor.close()
+        if db:
+            db.close()
         
         # Send verification email
-        if send_verification_email(email, otp, fullname):
+        email_sent = False
+        try:
+            email_sent = send_verification_email(email, otp, fullname)
+        except Exception as email_error:
+            print(f"Email sending error: {email_error}")
+            # User is created, but email failed - still return success but warn user
+            return jsonify({
+                'success': True, 
+                'message': 'Account created but failed to send verification email. Please contact support or try resending OTP.',
+                'requires_verification': True,
+                'email_error': True
+            }), 200
+        
+        if email_sent:
             return jsonify({
                 'success': True, 
                 'message': 'Account created! Please check your email for verification code.',
@@ -264,14 +304,27 @@ def api_signup():
             })
         else:
             return jsonify({
-                'success': False, 
-                'message': 'Account created but failed to send verification email. Please contact support.'
-            }), 500
+                'success': True, 
+                'message': 'Account created but failed to send verification email. Please contact support or try resending OTP.',
+                'requires_verification': True,
+                'email_error': True
+            }), 200
     
     except Exception as e:
         print(f"Signup error: {e}")
         import traceback
         traceback.print_exc()
+        # Ensure we close connections even on error
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
+        if db:
+            try:
+                db.close()
+            except:
+                pass
         return jsonify({'success': False, 'message': f'Signup failed: {str(e)}'}), 500
 
 @app.route('/api/verify-email', methods=['POST'])
@@ -791,6 +844,18 @@ def not_found(e):
 @app.errorhandler(500)
 def internal_error(e):
     return jsonify({'success': False, 'message': 'Internal server error'}), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all unhandled exceptions and return JSON for API routes"""
+    print(f"Unhandled exception: {e}")
+    import traceback
+    traceback.print_exc()
+    # If it's an API request, return JSON
+    if request.path.startswith('/api/'):
+        return jsonify({'success': False, 'message': f'Server error: {str(e)}'}), 500
+    # Otherwise return the default error page
+    return jsonify({'success': False, 'message': 'An error occurred'}), 500
 
 # Database connection will be tested on first request
 
