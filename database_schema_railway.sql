@@ -9,18 +9,11 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     role ENUM('user', 'subscriber', 'admin') DEFAULT 'user',
     subscription_status ENUM('active', 'inactive', 'suspended') DEFAULT 'inactive',
+    email_verified BOOLEAN DEFAULT FALSE,
+    verification_code VARCHAR(6),
+    verification_code_expires_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- Avatars table
-CREATE TABLE IF NOT EXISTS avatars (
-    avatar_id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    avatar_path VARCHAR(500) NOT NULL,
-    avatar_name VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 -- Expressions table
@@ -35,14 +28,12 @@ CREATE TABLE IF NOT EXISTS expressions (
 CREATE TABLE IF NOT EXISTS animations (
     animation_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    avatar_id INT NOT NULL,
     expression_id INT,
     driving_video_path VARCHAR(500),
     animation_path VARCHAR(500) NOT NULL,
     status ENUM('processing', 'completed', 'failed') DEFAULT 'processing',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (avatar_id) REFERENCES avatars(avatar_id) ON DELETE CASCADE,
     FOREIGN KEY (expression_id) REFERENCES expressions(expression_id) ON DELETE SET NULL
 );
 
@@ -66,10 +57,6 @@ INSERT INTO expressions (expression_name, expression_description) VALUES
 ('surprised', 'Surprised expression'),
 ('sad', 'Sad expression');
 
--- Insert default admin user (password: admin123)
--- Password hash generated with werkzeug.security.generate_password_hash('admin123')
-INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
-('Admin User', 'admin@faceanimation.com', 'scrypt:32768:8:1$hBzKjLQ6HWpvYGxC$0fde8e5e5c5c8e8f8d8b8c8a8e8d8c8b8a8e8d8c8b8a8e8d8c8b8a8e8d8c8b8a8e8d8c8b8a8e8d8c8b8a8e8d8c', 'admin', 'active');
 
 -- Insert 2 basic users (password: password123 for all test users)
 INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
@@ -88,7 +75,6 @@ INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
 
 -- Create indexes for better performance
 CREATE INDEX idx_user_email ON users(email);
-CREATE INDEX idx_avatar_user ON avatars(user_id);
 CREATE INDEX idx_animation_user ON animations(user_id);
 CREATE INDEX idx_animation_status ON animations(status);
 

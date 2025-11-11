@@ -1,10 +1,13 @@
 from flask import Flask, render_template, request, jsonify, session, send_file, redirect, url_for
+from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from db_config import DatabaseConnection
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import os
+import random
+import string
 
 app = Flask(__name__, 
             static_folder='static',
@@ -13,13 +16,21 @@ app = Flask(__name__,
 
 app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key_here_change_in_production')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['AVATARS_FOLDER'] = 'static/avatars'
 app.config['ANIMATIONS_FOLDER'] = 'static/animations'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Email configuration
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', '')
+
+mail = Mail(app)
+
 # Ensure upload directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['AVATARS_FOLDER'], exist_ok=True)
 os.makedirs(app.config['ANIMATIONS_FOLDER'], exist_ok=True)
 
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -30,6 +41,38 @@ def allowed_file(filename, allowed_extensions):
 
 def get_db():
     return DatabaseConnection().get_connection()
+
+def generate_otp():
+    """Generate a 6-digit OTP"""
+    return ''.join(random.choices(string.digits, k=6))
+
+def send_verification_email(email, otp, fullname):
+    """Send OTP verification email"""
+    try:
+        msg = Message(
+            subject='Verify Your Email - FirstMod-AI',
+            recipients=[email],
+            html=f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2 style="color: #667eea;">Welcome to FirstMod-AI, {fullname}!</h2>
+                <p>Thank you for signing up. Please verify your email address by entering the OTP code below:</p>
+                <div style="background-color: #f0f0f0; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px;">
+                    <h1 style="color: #667eea; font-size: 32px; letter-spacing: 5px; margin: 0;">{otp}</h1>
+                </div>
+                <p>This code will expire in 10 minutes.</p>
+                <p>If you didn't create an account, please ignore this email.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="color: #666; font-size: 12px;">© 2025 FirstMod-AI. All rights reserved.</p>
+            </body>
+            </html>
+            """
+        )
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 def check_account_status():
     """Check if the logged-in user's account is suspended"""
@@ -181,27 +224,172 @@ def api_signup():
         db = get_db()
         cursor = db.cursor()
         
-        # Check if email exists
-        cursor.execute("SELECT user_id FROM users WHERE email = %s", (email,))
-        if cursor.fetchone():
+        # Check if email exists and is verified
+        cursor.execute("SELECT user_id, email_verified FROM users WHERE email = %s", (email,))
+        existing_user = cursor.fetchone()
+        if existing_user:
             cursor.close()
             db.close()
-            return jsonify({'success': False, 'message': 'Email already exists'}), 400
+            if existing_user[1]:  # email_verified is True
+                return jsonify({'success': False, 'message': 'Email already exists'}), 400
+            else:
+                # Email exists but not verified, delete old record and create new one
+                cursor = db.cursor()
+                cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+                db.commit()
         
-        # Insert new user
+        # Generate OTP and expiration time (10 minutes from now)
+        otp = generate_otp()
+        expires_at = datetime.now() + timedelta(minutes=10)
+        
+        # Insert new user with unverified status
         hashed_password = generate_password_hash(password)
         cursor.execute(
-            "INSERT INTO users (fullname, email, password, role, subscription_status) VALUES (%s, %s, %s, %s, %s)",
-            (fullname, email, hashed_password, 'user', 'active')
+            """INSERT INTO users (fullname, email, password, role, subscription_status, email_verified, verification_code, verification_code_expires_at) 
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+            (fullname, email, hashed_password, 'user', 'inactive', False, otp, expires_at)
         )
         db.commit()
         cursor.close()
         db.close()
         
-        return jsonify({'success': True, 'message': 'Account created successfully'})
+        # Send verification email
+        if send_verification_email(email, otp, fullname):
+            return jsonify({
+                'success': True, 
+                'message': 'Account created! Please check your email for verification code.',
+                'requires_verification': True
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'message': 'Account created but failed to send verification email. Please contact support.'
+            }), 500
     
     except Exception as e:
         print(f"Signup error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/verify-email', methods=['POST'])
+def api_verify_email():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        otp = data.get('otp')
+        
+        if not all([email, otp]):
+            return jsonify({'success': False, 'message': 'Email and OTP are required'}), 400
+        
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        # Check if user exists with this email and OTP
+        cursor.execute(
+            """SELECT user_id, verification_code, verification_code_expires_at, email_verified 
+               FROM users WHERE email = %s""",
+            (email,)
+        )
+        user = cursor.fetchone()
+        
+        if not user:
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Invalid email or OTP'}), 400
+        
+        # Check if already verified
+        if user['email_verified']:
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Email already verified'}), 400
+        
+        # Check if OTP matches
+        if user['verification_code'] != otp:
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Invalid OTP code'}), 400
+        
+        # Check if OTP expired
+        if user['verification_code_expires_at'] and datetime.now() > user['verification_code_expires_at']:
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'OTP code has expired. Please request a new one.'}), 400
+        
+        # Verify the email
+        cursor.execute(
+            """UPDATE users SET email_verified = TRUE, verification_code = NULL, 
+               verification_code_expires_at = NULL, subscription_status = 'active' 
+               WHERE user_id = %s""",
+            (user['user_id'],)
+        )
+        db.commit()
+        cursor.close()
+        db.close()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Email verified successfully! You can now login.'
+        })
+    
+    except Exception as e:
+        print(f"Verify email error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/resend-otp', methods=['POST'])
+def api_resend_otp():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+        
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        # Check if user exists and is not verified
+        cursor.execute(
+            "SELECT user_id, fullname, email_verified FROM users WHERE email = %s",
+            (email,)
+        )
+        user = cursor.fetchone()
+        
+        if not user:
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Email not found'}), 400
+        
+        if user['email_verified']:
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Email already verified'}), 400
+        
+        # Generate new OTP
+        otp = generate_otp()
+        expires_at = datetime.now() + timedelta(minutes=10)
+        
+        # Update verification code
+        cursor.execute(
+            "UPDATE users SET verification_code = %s, verification_code_expires_at = %s WHERE user_id = %s",
+            (otp, expires_at, user['user_id'])
+        )
+        db.commit()
+        cursor.close()
+        db.close()
+        
+        # Send new OTP email
+        if send_verification_email(email, otp, user['fullname']):
+            return jsonify({
+                'success': True, 
+                'message': 'New verification code sent to your email.'
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'message': 'Failed to send verification email. Please try again.'
+            }), 500
+    
+    except Exception as e:
+        print(f"Resend OTP error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
@@ -225,6 +413,14 @@ def api_login():
         
         if not user or not check_password_hash(user['password'], password):
             return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+        
+        # Check if email is verified
+        if not user.get('email_verified', False):
+            return jsonify({
+                'success': False, 
+                'message': 'Please verify your email before logging in. Check your inbox for the verification code.',
+                'requires_verification': True
+            }), 403
         
         # Check if account is suspended
         if user.get('subscription_status') == 'suspended':
@@ -551,8 +747,8 @@ def makeittalk_animate():
             cursor = db.cursor()
             
             cursor.execute(
-                "INSERT INTO animations (user_id, avatar_id, animation_path, status) VALUES (%s, %s, %s, %s)",
-                (session['user_id'], None, f'animations/{output_filename}', 'completed')
+                "INSERT INTO animations (user_id, animation_path, status) VALUES (%s, %s, %s)",
+                (session['user_id'], f'animations/{output_filename}', 'completed')
             )
             db.commit()
             
