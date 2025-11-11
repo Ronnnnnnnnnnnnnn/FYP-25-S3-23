@@ -24,9 +24,11 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USE_SSL'] = False  # Use TLS, not SSL
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', '')
+app.config['MAIL_TIMEOUT'] = 10  # 10 second timeout
 
 mail = Mail(app)
 
@@ -60,9 +62,13 @@ def send_verification_email(email, otp, fullname):
         
         print(f"Attempting to send email to {email} from {mail_username}")
         
+        print(f"Email config check - Server: {app.config.get('MAIL_SERVER')}, Port: {app.config.get('MAIL_PORT')}, TLS: {app.config.get('MAIL_USE_TLS')}")
+        print(f"Sender: {app.config.get('MAIL_DEFAULT_SENDER')}")
+        
         msg = Message(
             subject='Verify Your Email - FirstMod-AI',
             recipients=[email],
+            sender=app.config.get('MAIL_DEFAULT_SENDER') or app.config.get('MAIL_USERNAME'),
             html=f"""
             <html>
             <body style="font-family: Arial, sans-serif; padding: 20px;">
@@ -79,9 +85,22 @@ def send_verification_email(email, otp, fullname):
             </html>
             """
         )
-        mail.send(msg)
-        print(f"Email sent successfully to {email}")
-        return True
+        
+        print(f"Message created, attempting to send...")
+        # Set a timeout for email sending to prevent hanging
+        import socket
+        socket.setdefaulttimeout(10)  # 10 second timeout
+        
+        try:
+            mail.send(msg)
+            print(f"Email sent successfully to {email}")
+            return True
+        except socket.timeout:
+            print(f"ERROR: Email sending timed out after 10 seconds")
+            return False
+        except Exception as send_error:
+            print(f"ERROR during mail.send(): {send_error}")
+            raise  # Re-raise to be caught by outer exception handler
     except Exception as e:
         print(f"ERROR sending email to {email}: {e}")
         import traceback
@@ -295,12 +314,30 @@ def api_signup():
         if db:
             db.close()
         
-        # Send verification email
-        email_sent = False
+        # Send verification email asynchronously (don't block the response)
+        # Return success immediately, email will be sent in background
         try:
             print(f"Preparing to send OTP email to {email} with OTP: {otp}")
-            email_sent = send_verification_email(email, otp, fullname)
-            print(f"Email sending result: {email_sent}")
+            # Try to send email, but don't wait for it - return immediately
+            import threading
+            def send_email_async():
+                try:
+                    send_verification_email(email, otp, fullname)
+                except Exception as e:
+                    print(f"Background email sending failed: {e}")
+            
+            # Start email sending in background thread
+            email_thread = threading.Thread(target=send_email_async)
+            email_thread.daemon = True
+            email_thread.start()
+            
+            # Return success immediately - email is being sent in background
+            return jsonify({
+                'success': True, 
+                'message': 'Account created! Please check your email for verification code. If you don\'t receive it, use the "Resend OTP" option.',
+                'requires_verification': True,
+                'otp': otp  # Include OTP in response for testing (remove in production)
+            })
         except Exception as email_error:
             print(f"Email sending exception: {email_error}")
             import traceback
@@ -308,23 +345,10 @@ def api_signup():
             # User is created, but email failed - still return success but warn user
             return jsonify({
                 'success': True, 
-                'message': 'Account created but failed to send verification email. Please contact support or try resending OTP.',
+                'message': 'Account created! OTP: ' + otp + ' (Email sending failed - use this OTP to verify)',
                 'requires_verification': True,
-                'email_error': True
-            }), 200
-        
-        if email_sent:
-            return jsonify({
-                'success': True, 
-                'message': 'Account created! Please check your email for verification code.',
-                'requires_verification': True
-            })
-        else:
-            return jsonify({
-                'success': True, 
-                'message': 'Account created but failed to send verification email. Please contact support or try resending OTP.',
-                'requires_verification': True,
-                'email_error': True
+                'email_error': True,
+                'otp': otp  # Include OTP in response for testing
             }), 200
     
     except Exception as e:
