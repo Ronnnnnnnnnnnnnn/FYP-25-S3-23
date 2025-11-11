@@ -19,18 +19,16 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ANIMATIONS_FOLDER'] = 'static/animations'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Email configuration - Using Mailgun API (works with Railway, no domain verification needed)
-# Get your API key from: https://app.mailgun.com/app/api-keys
+# Email configuration - Using Resend API (works with Railway)
+# Get your API key from: https://resend.com/api-keys
 # Set these environment variables in Railway:
-# MAILGUN_API_KEY=your_mailgun_api_key_here
-# MAILGUN_DOMAIN=your_mailgun_domain (e.g., sandbox12345.mailgun.org for testing)
-# MAILGUN_FROM_EMAIL=noreply@your_mailgun_domain
+# RESEND_API_KEY=re_your_api_key_here
+# RESEND_FROM_EMAIL=noreply@your_verified_domain.com
 # 
-# Mailgun free tier: 5,000 emails/month, can send to any email address
-# No domain verification needed for sandbox domain (testing)
-MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY', '')
-MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN', '')
-MAILGUN_FROM_EMAIL = os.getenv('MAILGUN_FROM_EMAIL', '')
+# IMPORTANT: You must verify a domain in Resend to send to any email address
+# See setup instructions below
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', '')
 
 # Ensure upload directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -50,28 +48,34 @@ def generate_verification_token():
     return secrets.token_urlsafe(32)
 
 def send_verification_email(email, token, fullname):
-    """Send verification link email using Mailgun API"""
+    """Send verification link email using Resend API"""
     try:
-        # Check if Mailgun is configured
-        if not MAILGUN_API_KEY or not MAILGUN_DOMAIN or not MAILGUN_FROM_EMAIL:
-            print(f"ERROR: Mailgun not configured. Set MAILGUN_API_KEY, MAILGUN_DOMAIN, and MAILGUN_FROM_EMAIL environment variables.")
+        # Check if Resend API key is configured
+        if not RESEND_API_KEY:
+            print(f"ERROR: Resend API key not configured. Set RESEND_API_KEY environment variable.")
+            return False
+        
+        if not RESEND_FROM_EMAIL:
+            print(f"ERROR: Resend FROM email not configured. Set RESEND_FROM_EMAIL environment variable.")
             return False
         
         # Generate verification URL
         verification_url = url_for('verify_email_link', token=token, _external=True)
         
-        print(f"Attempting to send verification email to {email} via Mailgun API")
+        print(f"Attempting to send verification email to {email} via Resend API")
         print(f"Verification URL: {verification_url}")
         
-        # Mailgun API endpoint
-        url = f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages"
+        # Resend API endpoint
+        url = "https://api.resend.com/emails"
         
-        # Mailgun uses Basic Auth with api key
-        auth = ("api", MAILGUN_API_KEY)
+        headers = {
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json"
+        }
         
-        data = {
-            "from": MAILGUN_FROM_EMAIL,
-            "to": email,
+        payload = {
+            "from": RESEND_FROM_EMAIL,
+            "to": [email],
             "subject": "Verify Your Email - FirstMod-AI",
             "html": f"""
             <html>
@@ -96,14 +100,14 @@ def send_verification_email(email, token, fullname):
             """
         }
         
-        # Send email via Mailgun API
-        response = requests.post(url, auth=auth, data=data, timeout=10)
+        # Send email via Resend API
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
         
         if response.status_code == 200:
-            print(f"✓ Verification email sent successfully to {email} via Mailgun")
+            print(f"✓ Verification email sent successfully to {email} via Resend")
             return True
         else:
-            print(f"✗ ERROR: Mailgun API returned status {response.status_code}: {response.text}")
+            print(f"✗ ERROR: Resend API returned status {response.status_code}: {response.text}")
             return False
             
     except requests.exceptions.Timeout:
