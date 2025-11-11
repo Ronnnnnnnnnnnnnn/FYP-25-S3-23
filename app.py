@@ -20,22 +20,18 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ANIMATIONS_FOLDER'] = 'static/animations'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Email configuration - Supports both Gmail and SendGrid
-# For SendGrid: Set MAIL_SERVER=smtp.sendgrid.net, MAIL_USERNAME=apikey, MAIL_PASSWORD=your_sendgrid_api_key
-# For Gmail: Set MAIL_SERVER=smtp.gmail.com, MAIL_USERNAME=your_email, MAIL_PASSWORD=your_app_password
-mail_server = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+# Email configuration - Using Mailtrap for testing
+# Mailtrap is perfect for development - emails are captured and can be viewed in Mailtrap inbox
+# Get credentials from: https://mailtrap.io/ -> Inboxes -> Your Inbox -> SMTP Settings
+mail_server = os.getenv('MAIL_SERVER', 'smtp.mailtrap.io')
 app.config['MAIL_SERVER'] = mail_server
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 2525))  # Mailtrap uses 2525 or 587
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
 app.config['MAIL_USE_SSL'] = False  # Use TLS, not SSL
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', '')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@firstmod-ai.com')
 app.config['MAIL_TIMEOUT'] = 10  # 10 second timeout
-
-# If using SendGrid, set default sender from environment or use a default
-if 'sendgrid' in mail_server.lower() and not app.config['MAIL_DEFAULT_SENDER']:
-    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('SENDGRID_FROM_EMAIL', 'noreply@firstmod-ai.com')
 
 mail = Mail(app)
 
