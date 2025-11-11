@@ -19,24 +19,13 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ANIMATIONS_FOLDER'] = 'static/animations'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Email configuration - Using Gmail SMTP
+# Email configuration - Using Resend API (works with Railway)
+# Get your API key from: https://resend.com/api-keys
 # Set these environment variables in Railway:
-# MAIL_SERVER=smtp.gmail.com
-# MAIL_PORT=587
-# MAIL_USE_TLS=True
-# MAIL_USERNAME=your_gmail@gmail.com
-# MAIL_PASSWORD=your_gmail_app_password
-# MAIL_DEFAULT_SENDER=your_gmail@gmail.com
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USE_SSL'] = False  # Use TLS, not SSL
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@firstmod-ai.com')
-app.config['MAIL_TIMEOUT'] = 10  # 10 second timeout
-
-mail = Mail(app)
+# RESEND_API_KEY=re_your_api_key_here
+# RESEND_FROM_EMAIL=noreply@yourdomain.com (optional, defaults to onboarding@resend.dev)
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
 
 # Ensure upload directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
