@@ -1,5 +1,5 @@
 -- Railway-compatible database schema
--- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements
+-- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements 
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -59,19 +59,20 @@ INSERT INTO expressions (expression_name, expression_description) VALUES
 
 
 -- Insert 2 basic users (password: password123 for all test users)
-INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
-('John Doe', 'user1@example.com', 'scrypt:32768:8:1$cMpxgI2IvmyyUoI5$195ec3293a475ac13f42ac7e8dffe69f70985f2b4134cb91e535e0748fcc51c081d238ca77987921621c2fa5aa9c382d02eb3b7ca4bef563c540543bd7596be6', 'user', 'inactive'),
-('Jane Smith', 'user2@example.com', 'scrypt:32768:8:1$Omofv9wsjMy4sitA$11d1aaf9f50747efd0518d52cfd0aab5a81c1ac98657c93ea9df66edc4214549b4462cf2a9886f6e239fd39f10829afd533057b85fc961cf9e7265d169099936', 'user', 'inactive');
+-- Set email_verified = TRUE for existing test users so they can login
+INSERT INTO users (fullname, email, password, role, subscription_status, email_verified) VALUES
+('John Doe', 'user1@example.com', 'scrypt:32768:8:1$cMpxgI2IvmyyUoI5$195ec3293a475ac13f42ac7e8dffe69f70985f2b4134cb91e535e0748fcc51c081d238ca77987921621c2fa5aa9c382d02eb3b7ca4bef563c540543bd7596be6', 'user', 'inactive', TRUE),
+('Jane Smith', 'user2@example.com', 'scrypt:32768:8:1$Omofv9wsjMy4sitA$11d1aaf9f50747efd0518d52cfd0aab5a81c1ac98657c93ea9df66edc4214549b4462cf2a9886f6e239fd39f10829afd533057b85fc961cf9e7265d169099936', 'user', 'inactive', TRUE);
 
 -- Insert 2 subscribers (password: password123)
-INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
-('Alice Johnson', 'subscriber1@example.com', 'scrypt:32768:8:1$28SDIt4iRCoItfuJ$551c35735a2fbc7f34a29eec1d22f314f318223328ce90356b1a9babe61c11b0ed6fd924c4cb55256117752c432ba1200a91dff82dff977865e4be8210fbaa07', 'subscriber', 'active'),
-('Bob Williams', 'subscriber2@example.com', 'scrypt:32768:8:1$UY7p2V0jCvkD0uOq$072803b783157d3d9d60dd3f91114cc2b8f70947496efbdf862e3954fffe9cf5e9c331b2ce0a547958d198f50dbfea3ebc6652edc2a36c7ab1b7f0b623304edd', 'subscriber', 'active');
+INSERT INTO users (fullname, email, password, role, subscription_status, email_verified) VALUES
+('Alice Johnson', 'subscriber1@example.com', 'scrypt:32768:8:1$28SDIt4iRCoItfuJ$551c35735a2fbc7f34a29eec1d22f314f318223328ce90356b1a9babe61c11b0ed6fd924c4cb55256117752c432ba1200a91dff82dff977865e4be8210fbaa07', 'subscriber', 'active', TRUE),
+('Bob Williams', 'subscriber2@example.com', 'scrypt:32768:8:1$UY7p2V0jCvkD0uOq$072803b783157d3d9d60dd3f91114cc2b8f70947496efbdf862e3954fffe9cf5e9c331b2ce0a547958d198f50dbfea3ebc6652edc2a36c7ab1b7f0b623304edd', 'subscriber', 'active', TRUE);
 
 -- Insert 2 additional admins (password: password123)
-INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
-('Admin Two', 'admin2@faceanimation.com', 'scrypt:32768:8:1$vVu2kHQeJKrW064K$2d210ca74b1a6d24dfb3b65fe786e5b099c174ed81b69a6bf41b9fbfab3eb3f9e2a5e42f073c4d9a740ca0266d657a1b329e0751b6402d0d77ba9d43ac40a625', 'admin', 'active'),
-('Admin Three', 'admin3@faceanimation.com', 'scrypt:32768:8:1$mAK3LPa9LMmw6SHh$3c530bdd4a0130f6df306caf62859da85975502f566f397f62bb7b807035d606035f3634376e91549460983047729efa7b874afe57a9240c08826bd8d5398862', 'admin', 'active');
+INSERT INTO users (fullname, email, password, role, subscription_status, email_verified) VALUES
+('Admin Two', 'admin2@faceanimation.com', 'scrypt:32768:8:1$vVu2kHQeJKrW064K$2d210ca74b1a6d24dfb3b65fe786e5b099c174ed81b69a6bf41b9fbfab3eb3f9e2a5e42f073c4d9a740ca0266d657a1b329e0751b6402d0d77ba9d43ac40a625', 'admin', 'active', TRUE),
+('Admin Three', 'admin3@faceanimation.com', 'scrypt:32768:8:1$mAK3LPa9LMmw6SHh$3c530bdd4a0130f6df306caf62859da85975502f566f397f62bb7b807035d606035f3634376e91549460983047729efa7b874afe57a9240c08826bd8d5398862', 'admin', 'active', TRUE);
 
 -- Create indexes for better performance
 CREATE INDEX idx_user_email ON users(email);

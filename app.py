@@ -222,19 +222,21 @@ def api_signup():
             return jsonify({'success': False, 'message': 'All fields are required'}), 400
         
         db = get_db()
-        cursor = db.cursor()
+        if not db:
+            return jsonify({'success': False, 'message': 'Database connection failed. Please try again.'}), 500
+        
+        cursor = db.cursor(dictionary=True)
         
         # Check if email exists and is verified
         cursor.execute("SELECT user_id, email_verified FROM users WHERE email = %s", (email,))
         existing_user = cursor.fetchone()
         if existing_user:
-            cursor.close()
-            db.close()
-            if existing_user[1]:  # email_verified is True
+            if existing_user.get('email_verified', False):  # email_verified is True
+                cursor.close()
+                db.close()
                 return jsonify({'success': False, 'message': 'Email already exists'}), 400
             else:
                 # Email exists but not verified, delete old record and create new one
-                cursor = db.cursor()
                 cursor.execute("DELETE FROM users WHERE email = %s", (email,))
                 db.commit()
         
@@ -268,7 +270,9 @@ def api_signup():
     
     except Exception as e:
         print(f"Signup error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Signup failed: {str(e)}'}), 500
 
 @app.route('/api/verify-email', methods=['POST'])
 def api_verify_email():
@@ -415,7 +419,13 @@ def api_login():
             return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
         
         # Check if email is verified
-        if not user.get('email_verified', False):
+        # Allow existing users (created before email verification) to login
+        # If verification_code is NULL, it means it's an old user created before email verification feature
+        email_verified = user.get('email_verified', False)
+        verification_code = user.get('verification_code')
+        
+        # If user has verification_code but not verified, require verification
+        if verification_code is not None and not email_verified:
             return jsonify({
                 'success': False, 
                 'message': 'Please verify your email before logging in. Check your inbox for the verification code.',

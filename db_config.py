@@ -55,7 +55,10 @@ class DatabaseConnection:
         else:
             # Reconnect if connection was lost
             self.__init__()
-            return self.connection
+            if self.connection and self.connection.is_connected():
+                return self.connection
+            else:
+                raise Error("Failed to establish database connection")
     
     def close(self):
         """Close the database connection"""
