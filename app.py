@@ -167,6 +167,10 @@ def signup_page():
 def forgot_password_page():
     return render_template('forgot_password.html')
 
+@app.route('/verify-account')
+def verify_account_page():
+    return render_template('verify_account.html')
+
 @app.route('/user')
 def user_dashboard():
     if 'user_id' not in session:
