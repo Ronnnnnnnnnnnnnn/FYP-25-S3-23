@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session, send_file, redirect, url_for
-from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
+import requests
 from werkzeug.utils import secure_filename
 from db_config import DatabaseConnection
 from mysql.connector import Error as MySQLError
@@ -56,26 +56,32 @@ def generate_verification_token():
     return secrets.token_urlsafe(32)
 
 def send_verification_email(email, token, fullname):
-    """Send verification link email"""
+    """Send verification link email using Resend API"""
     try:
-        # Check if email is configured
-        mail_username = app.config.get('MAIL_USERNAME', '')
-        mail_password = app.config.get('MAIL_PASSWORD', '')
-        
-        if not mail_username or not mail_password:
-            print(f"ERROR: Email not configured. MAIL_USERNAME: {bool(mail_username)}, MAIL_PASSWORD: {bool(mail_password)}")
+        # Check if Resend API key is configured
+        if not RESEND_API_KEY:
+            print(f"ERROR: Resend API key not configured. Set RESEND_API_KEY environment variable.")
             return False
-        
-        print(f"Attempting to send verification email to {email} from {mail_username}")
         
         # Generate verification URL
         verification_url = url_for('verify_email_link', token=token, _external=True)
         
-        msg = Message(
-            subject='Verify Your Email - FirstMod-AI',
-            recipients=[email],
-            sender=app.config.get('MAIL_DEFAULT_SENDER') or app.config.get('MAIL_USERNAME'),
-            html=f"""
+        print(f"Attempting to send verification email to {email} via Resend API")
+        print(f"Verification URL: {verification_url}")
+        
+        # Resend API endpoint
+        url = "https://api.resend.com/emails"
+        
+        headers = {
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "from": RESEND_FROM_EMAIL,
+            "to": [email],
+            "subject": "Verify Your Email - FirstMod-AI",
+            "html": f"""
             <html>
             <body style="font-family: Arial, sans-serif; padding: 20px;">
                 <h2 style="color: #667eea;">Welcome to FirstMod-AI, {fullname}!</h2>
@@ -96,35 +102,23 @@ def send_verification_email(email, token, fullname):
             </body>
             </html>
             """
-        )
+        }
         
-        print(f"Message created, verification URL: {verification_url}")
-        print(f"Email config - Server: {app.config.get('MAIL_SERVER')}, Port: {app.config.get('MAIL_PORT')}, TLS: {app.config.get('MAIL_USE_TLS')}")
-        print(f"Sender: {app.config.get('MAIL_DEFAULT_SENDER')}")
+        # Send email via Resend API
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
         
-        # Set a timeout for email sending to prevent hanging
-        import socket
-        original_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(10)  # 10 second timeout
-        
-        try:
-            print(f"Attempting to send email via SMTP...")
-            mail.send(msg)
-            print(f"✓ Verification email sent successfully to {email}")
+        if response.status_code == 200:
+            print(f"✓ Verification email sent successfully to {email} via Resend")
             return True
-        except socket.timeout:
-            print(f"✗ ERROR: Email sending timed out after 10 seconds")
+        else:
+            print(f"✗ ERROR: Resend API returned status {response.status_code}: {response.text}")
             return False
-        except Exception as send_error:
-            print(f"✗ ERROR during mail.send(): {send_error}")
-            import traceback
-            traceback.print_exc()
-            raise  # Re-raise to be caught by outer exception handler
-        finally:
-            # Restore original timeout
-            socket.setdefaulttimeout(original_timeout)
+            
+    except requests.exceptions.Timeout:
+        print(f"✗ ERROR: Email sending timed out")
+        return False
     except Exception as e:
-        print(f"ERROR sending email to {email}: {e}")
+        print(f"✗ ERROR sending email to {email}: {e}")
         import traceback
         traceback.print_exc()
         return False
