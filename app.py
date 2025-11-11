@@ -24,6 +24,12 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Set these environment variables in Railway:
 # RESEND_API_KEY=re_your_api_key_here
 # RESEND_FROM_EMAIL=noreply@yourdomain.com (optional, defaults to onboarding@resend.dev)
+# 
+# NOTE: Resend free tier only sends to:
+# - Your signup email
+# - Verified domains
+# - Test recipients (add in Resend dashboard)
+# For production, verify a domain or use Mailgun/SendGrid
 RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
 RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
 
