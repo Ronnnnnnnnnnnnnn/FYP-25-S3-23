@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .verify-result-container {
+      max-width: 500px;
+      margin: 100px auto;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    .verify-result-container h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+    }
+    .success-icon {
+      font-size: 64px;
+      color: #28a745;
+      margin-bottom: 20px;
+    }
+    .error-icon {
+      font-size: 64px;
+      color: #dc3545;
+      margin-bottom: 20px;
+    }
+    .verify-result-container p {
+      color: #666;
+      font-size: 16px;
+      margin: 20px 0;
+    }
+    .verify-result-container a {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 30px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    .verify-result-container a:hover {
+      background: #5568d3;
+    }
+  </style>
+</head>
+<body>
+  <div class="verify-result-container">
+    {% if success %}
+      <div class="success-icon">✓</div>
+      <h2>Verification Successful!</h2>
+      <p>{{ message }}</p>
+      <a href="{{ url_for('login_page') }}">Go to Login</a>
+    {% else %}
+      <div class="error-icon">✗</div>
+      <h2>Verification Failed</h2>
+      <p>{{ message }}</p>
+      <a href="{{ url_for('login_page') }}">Go to Login</a>
+    {% endif %}
+  </div>
+</body>
+</html>

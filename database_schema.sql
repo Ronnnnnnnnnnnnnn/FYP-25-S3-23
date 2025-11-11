@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('user', 'subscriber', 'admin') DEFAULT 'user',
     subscription_status ENUM('active', 'inactive', 'suspended') DEFAULT 'inactive',
     email_verified BOOLEAN DEFAULT FALSE,
-    verification_code VARCHAR(6),
+    verification_code VARCHAR(255),  -- Stores verification token (URL-safe string)
     verification_code_expires_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

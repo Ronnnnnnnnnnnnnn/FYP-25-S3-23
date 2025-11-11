@@ -7,8 +7,7 @@ from mysql.connector import Error as MySQLError
 from datetime import datetime, timedelta
 import uuid
 import os
-import random
-import string
+import secrets
 
 app = Flask(__name__, 
             static_folder='static',
@@ -20,12 +19,16 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ANIMATIONS_FOLDER'] = 'static/animations'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Email configuration - Using Mailtrap for testing
-# Mailtrap is perfect for development - emails are captured and can be viewed in Mailtrap inbox
-# Get credentials from: https://mailtrap.io/ -> Inboxes -> Your Inbox -> SMTP Settings
-mail_server = os.getenv('MAIL_SERVER', 'smtp.mailtrap.io')
-app.config['MAIL_SERVER'] = mail_server
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 2525))  # Mailtrap uses 2525 or 587
+# Email configuration - Using Gmail SMTP
+# Set these environment variables in Railway:
+# MAIL_SERVER=smtp.gmail.com
+# MAIL_PORT=587
+# MAIL_USE_TLS=True
+# MAIL_USERNAME=your_gmail@gmail.com
+# MAIL_PASSWORD=your_gmail_app_password
+# MAIL_DEFAULT_SENDER=your_gmail@gmail.com
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
 app.config['MAIL_USE_SSL'] = False  # Use TLS, not SSL
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
@@ -48,12 +51,12 @@ def allowed_file(filename, allowed_extensions):
 def get_db():
     return DatabaseConnection().get_connection()
 
-def generate_otp():
-    """Generate a 6-digit OTP"""
-    return ''.join(random.choices(string.digits, k=6))
+def generate_verification_token():
+    """Generate a secure verification token"""
+    return secrets.token_urlsafe(32)
 
-def send_verification_email(email, otp, fullname):
-    """Send OTP verification email"""
+def send_verification_email(email, token, fullname):
+    """Send verification link email"""
     try:
         # Check if email is configured
         mail_username = app.config.get('MAIL_USERNAME', '')
@@ -63,10 +66,10 @@ def send_verification_email(email, otp, fullname):
             print(f"ERROR: Email not configured. MAIL_USERNAME: {bool(mail_username)}, MAIL_PASSWORD: {bool(mail_password)}")
             return False
         
-        print(f"Attempting to send email to {email} from {mail_username}")
+        print(f"Attempting to send verification email to {email} from {mail_username}")
         
-        print(f"Email config check - Server: {app.config.get('MAIL_SERVER')}, Port: {app.config.get('MAIL_PORT')}, TLS: {app.config.get('MAIL_USE_TLS')}")
-        print(f"Sender: {app.config.get('MAIL_DEFAULT_SENDER')}")
+        # Generate verification URL
+        verification_url = url_for('verify_email_link', token=token, _external=True)
         
         msg = Message(
             subject='Verify Your Email - FirstMod-AI',
@@ -76,12 +79,18 @@ def send_verification_email(email, otp, fullname):
             <html>
             <body style="font-family: Arial, sans-serif; padding: 20px;">
                 <h2 style="color: #667eea;">Welcome to FirstMod-AI, {fullname}!</h2>
-                <p>Thank you for signing up. Please verify your email address by entering the OTP code below:</p>
-                <div style="background-color: #f0f0f0; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px;">
-                    <h1 style="color: #667eea; font-size: 32px; letter-spacing: 5px; margin: 0;">{otp}</h1>
+                <p>Thank you for signing up. Please verify your email address by clicking the button below:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{verification_url}" 
+                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; 
+                              border-radius: 5px; display: inline-block; font-size: 16px; font-weight: bold;">
+                        Verify Email Address
+                    </a>
                 </div>
-                <p>This code will expire in 10 minutes.</p>
-                <p>If you didn't create an account, please ignore this email.</p>
+                <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+                <p style="color: #667eea; word-break: break-all; font-size: 12px;">{verification_url}</p>
+                <p style="color: #666; font-size: 14px;">This link will expire in 24 hours.</p>
+                <p style="color: #666; font-size: 14px;">If you didn't create an account, please ignore this email.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                 <p style="color: #666; font-size: 12px;">© 2025 FirstMod-AI. All rights reserved.</p>
             </body>
@@ -96,7 +105,7 @@ def send_verification_email(email, otp, fullname):
         
         try:
             mail.send(msg)
-            print(f"Email sent successfully to {email}")
+            print(f"Verification email sent successfully to {email}")
             return True
         except socket.timeout:
             print(f"ERROR: Email sending timed out after 10 seconds")
@@ -302,16 +311,16 @@ def api_signup():
                 cursor.execute("DELETE FROM users WHERE email = %s", (email,))
                 db.commit()
         
-        # Generate OTP and expiration time (10 minutes from now)
-        otp = generate_otp()
-        expires_at = datetime.now() + timedelta(minutes=10)
+        # Generate verification token and expiration time (24 hours from now)
+        verification_token = generate_verification_token()
+        expires_at = datetime.now() + timedelta(hours=24)
         
         # Insert new user with unverified status
         hashed_password = generate_password_hash(password)
         cursor.execute(
             """INSERT INTO users (fullname, email, password, role, subscription_status, email_verified, verification_code, verification_code_expires_at) 
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-            (fullname, email, hashed_password, 'user', 'inactive', False, otp, expires_at)
+            (fullname, email, hashed_password, 'user', 'inactive', False, verification_token, expires_at)
         )
         db.commit()
         
@@ -324,12 +333,12 @@ def api_signup():
         # Send verification email asynchronously (don't block the response)
         # Return success immediately, email will be sent in background
         try:
-            print(f"Preparing to send OTP email to {email} with OTP: {otp}")
+            print(f"Preparing to send verification email to {email}")
             # Try to send email, but don't wait for it - return immediately
             import threading
             def send_email_async():
                 try:
-                    send_verification_email(email, otp, fullname)
+                    send_verification_email(email, verification_token, fullname)
                 except Exception as e:
                     print(f"Background email sending failed: {e}")
             
@@ -341,9 +350,8 @@ def api_signup():
             # Return success immediately - email is being sent in background
             return jsonify({
                 'success': True, 
-                'message': 'Account created! Please check your email for verification code. If you don\'t receive it, use the "Resend OTP" option.',
-                'requires_verification': True,
-                'otp': otp  # Include OTP in response for testing (remove in production)
+                'message': 'Account created! Please check your email and click the verification link to activate your account.',
+                'requires_verification': True
             })
         except Exception as email_error:
             print(f"Email sending exception: {email_error}")
@@ -352,10 +360,9 @@ def api_signup():
             # User is created, but email failed - still return success but warn user
             return jsonify({
                 'success': True, 
-                'message': 'Account created! OTP: ' + otp + ' (Email sending failed - use this OTP to verify)',
+                'message': 'Account created but failed to send verification email. Please contact support.',
                 'requires_verification': True,
-                'email_error': True,
-                'otp': otp  # Include OTP in response for testing
+                'email_error': True
             }), 200
     
     except Exception as e:
@@ -375,49 +382,43 @@ def api_signup():
                 pass
         return jsonify({'success': False, 'message': f'Signup failed: {str(e)}'}), 500
 
-@app.route('/api/verify-email', methods=['POST'])
-def api_verify_email():
+@app.route('/verify-email/<token>')
+def verify_email_link(token):
+    """Verify email using verification token from link"""
     try:
-        data = request.get_json()
-        email = data.get('email')
-        otp = data.get('otp')
-        
-        if not all([email, otp]):
-            return jsonify({'success': False, 'message': 'Email and OTP are required'}), 400
-        
         db = get_db()
         cursor = db.cursor(dictionary=True)
         
-        # Check if user exists with this email and OTP
+        # Find user with this verification token
         cursor.execute(
-            """SELECT user_id, verification_code, verification_code_expires_at, email_verified 
-               FROM users WHERE email = %s""",
-            (email,)
+            """SELECT user_id, verification_code, verification_code_expires_at, email_verified, email 
+               FROM users WHERE verification_code = %s""",
+            (token,)
         )
         user = cursor.fetchone()
         
         if not user:
             cursor.close()
             db.close()
-            return jsonify({'success': False, 'message': 'Invalid email or OTP'}), 400
+            return render_template('verify_result.html', 
+                                 success=False, 
+                                 message='Invalid verification link.')
         
         # Check if already verified
         if user['email_verified']:
             cursor.close()
             db.close()
-            return jsonify({'success': False, 'message': 'Email already verified'}), 400
+            return render_template('verify_result.html', 
+                                 success=True, 
+                                 message='Email already verified! You can now login.')
         
-        # Check if OTP matches
-        if user['verification_code'] != otp:
-            cursor.close()
-            db.close()
-            return jsonify({'success': False, 'message': 'Invalid OTP code'}), 400
-        
-        # Check if OTP expired
+        # Check if token expired
         if user['verification_code_expires_at'] and datetime.now() > user['verification_code_expires_at']:
             cursor.close()
             db.close()
-            return jsonify({'success': False, 'message': 'OTP code has expired. Please request a new one.'}), 400
+            return render_template('verify_result.html', 
+                                 success=False, 
+                                 message='Verification link has expired. Please request a new one.')
         
         # Verify the email
         cursor.execute(
@@ -430,59 +431,21 @@ def api_verify_email():
         cursor.close()
         db.close()
         
-        return jsonify({
-            'success': True, 
-            'message': 'Email verified successfully! You can now login.'
-        })
+        return render_template('verify_result.html', 
+                             success=True, 
+                             message='Email verified successfully! You can now login.')
     
     except Exception as e:
         print(f"Verify email error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return render_template('verify_result.html', 
+                             success=False, 
+                             message='An error occurred during verification. Please try again.')
 
-@app.route('/api/get-otp', methods=['POST'])
-def api_get_otp():
-    """Get OTP for testing purposes (only for unverified users)"""
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        
-        if not email:
-            return jsonify({'success': False, 'message': 'Email is required'}), 400
-        
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
-        
-        # Get OTP for unverified user
-        cursor.execute(
-            "SELECT verification_code, email_verified, created_at FROM users WHERE email = %s",
-            (email,)
-        )
-        user = cursor.fetchone()
-        
-        cursor.close()
-        db.close()
-        
-        if not user:
-            return jsonify({'success': False, 'message': 'User not found'}), 404
-        
-        if user['email_verified']:
-            return jsonify({'success': False, 'message': 'Email already verified'}), 400
-        
-        if not user['verification_code']:
-            return jsonify({'success': False, 'message': 'No verification code found'}), 404
-        
-        return jsonify({
-            'success': True,
-            'otp': user['verification_code'],
-            'message': 'OTP retrieved (for testing only)'
-        })
-    
-    except Exception as e:
-        print(f"Get OTP error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/resend-otp', methods=['POST'])
-def api_resend_otp():
+@app.route('/api/resend-verification', methods=['POST'])
+def api_resend_verification():
+    """Resend verification email"""
     try:
         data = request.get_json()
         email = data.get('email')
@@ -510,33 +473,38 @@ def api_resend_otp():
             db.close()
             return jsonify({'success': False, 'message': 'Email already verified'}), 400
         
-        # Generate new OTP
-        otp = generate_otp()
-        expires_at = datetime.now() + timedelta(minutes=10)
+        # Generate new verification token
+        verification_token = generate_verification_token()
+        expires_at = datetime.now() + timedelta(hours=24)
         
-        # Update verification code
+        # Update verification token
         cursor.execute(
             "UPDATE users SET verification_code = %s, verification_code_expires_at = %s WHERE user_id = %s",
-            (otp, expires_at, user['user_id'])
+            (verification_token, expires_at, user['user_id'])
         )
         db.commit()
         cursor.close()
         db.close()
         
-        # Send new OTP email
-        if send_verification_email(email, otp, user['fullname']):
-            return jsonify({
-                'success': True, 
-                'message': 'New verification code sent to your email.'
-            })
-        else:
-            return jsonify({
-                'success': False, 
-                'message': 'Failed to send verification email. Please try again.'
-            }), 500
+        # Send new verification email
+        import threading
+        def send_email_async():
+            try:
+                send_verification_email(email, verification_token, user['fullname'])
+            except Exception as e:
+                print(f"Background email sending failed: {e}")
+        
+        email_thread = threading.Thread(target=send_email_async)
+        email_thread.daemon = True
+        email_thread.start()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Verification email sent! Please check your inbox.'
+        })
     
     except Exception as e:
-        print(f"Resend OTP error: {e}")
+        print(f"Resend verification error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
@@ -571,7 +539,7 @@ def api_login():
         if verification_code is not None and not email_verified:
             return jsonify({
                 'success': False, 
-                'message': 'Please verify your email before logging in. Check your inbox for the verification code.',
+                'message': 'Please verify your email before logging in. Check your inbox for the verification link.',
                 'requires_verification': True
             }), 403
         
