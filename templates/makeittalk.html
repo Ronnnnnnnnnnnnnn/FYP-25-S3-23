@@ -347,7 +347,7 @@
         // 🔥 HUGGING FACE GRADIO API CONFIGURATION 🔥
         // ═══════════════════════════════════════════════════════════
         const YOUR_USERNAME = "Tc12345";
-        const SPACE_NAME = "makeittalk";
+        const SPACE_NAME = "MakeItTalk";
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
         
         import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
@@ -456,8 +456,9 @@
             try {
                 console.log('📤 Sending files to Gradio API...');
                 
-                // Call Gradio API
-                const result = await window.app.predict("/predict", [
+                // Call Gradio API - use function index 0 instead of "/predict"
+                // Gradio spaces typically use function indices (0, 1, 2...) instead of endpoint names
+                const result = await window.app.predict(0, [
                     imageFile,
                     audioFile
                 ]);
