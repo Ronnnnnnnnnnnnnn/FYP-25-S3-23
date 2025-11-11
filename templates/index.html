@@ -7,15 +7,23 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  <!-- Animated Background -->
+  <div class="bg-animation">
+    <div class="particle" style="width: 100px; height: 100px; top: 10%; left: 10%; animation-delay: 0s;"></div>
+    <div class="particle" style="width: 60px; height: 60px; top: 20%; left: 80%; animation-delay: 2s;"></div>
+    <div class="particle" style="width: 80px; height: 80px; top: 60%; left: 70%; animation-delay: 4s;"></div>
+    <div class="particle" style="width: 120px; height: 120px; top: 70%; left: 20%; animation-delay: 6s;"></div>
+  </div>
 
   <!-- Navbar -->
   <header class="navbar">
     <div class="logo">FirstMod-AI</div>
     <nav>
       <ul>
-        <li><a href="#guest-dashboard" class="active">Guest Dashboard</a></li>
+        <li><a href="#guest-dashboard" class="active">Dashboard</a></li>
         <li><a href="#about">About</a></li>
-        <li><a href="{{ url_for('login_page') }}">Login</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="{{ url_for('login_page') }}" class="btn" style="padding: 10px 24px; font-size: 14px;">Login</a></li>
       </ul>
     </nav>
   </header>
@@ -23,66 +31,168 @@
   <!-- Hero Section -->
   <section class="hero">
     <div class="hero-content">
-      <h1>Welcome to FirstMod-AI</h1>
+      <h1>Bring Photos to Life</h1>
       <p>
-        Experience the future of AI-powered animation. Our platform brings static photos 
-        to life with realistic facial expressions and natural movements.
+        Experience the future of AI-powered animation. Transform static photos 
+        into expressive, lifelike videos with realistic facial movements and emotions.
       </p>
-      <a href="{{ url_for('login_page') }}" class="btn">Get Started</a>
+      <a href="{{ url_for('login_page') }}" class="btn">Get Started Free</a>
     </div>
   </section>
   
   <!-- About Section -->
   <section id="about" class="about">
-    <h2>About Face Animation</h2>
-    <p>
-      Face animation technology uses advanced deep learning to create expressive, 
-      lifelike movements from still images. It powers applications in education, 
-      healthcare, gaming, film, and virtual communication. Our platform makes it 
-      accessible for creators, professionals, and learners worldwide.
-    </p>
+    <div class="about-content">
+      <h2>The Future of Animation</h2>
+      <p>
+        Our cutting-edge face animation technology uses advanced deep learning to create 
+        expressive, lifelike movements from still images. Power your applications in education, 
+        healthcare, gaming, film, and virtual communication. Join thousands of creators, 
+        professionals, and innovators using FirstMod-AI to bring their visions to life.
+      </p>
+    </div>
   </section>
   
-  <!-- Guest Content -->
+  <!-- Guest Dashboard -->
   <section class="guest-dashboard" id="guest-dashboard">
     <div class="dashboard-container">
-      <h2>Explore Our Platform</h2>
-      <p>You are currently browsing as a guest. Sign up to unlock all features and personalized content.</p>
+      <h2>See What's Possible</h2>
+      <p>Explore sample animations created by our community. Sign up to create your own!</p>
 
       <!-- Sample Animations Gallery -->
       <div class="sample-animations">
-        <h3>Sample Videos</h3>
-        <div class="animation-list" id="sampleAnimationList">
+        <h3>Featured Animations</h3>
+        <div class="animation-list">
           <div class="animation-item">
-            <video width="320" height="240" controls>
+            <video controls>
               <source src="{{ url_for('static', filename='videos/sample1.mp4') }}" type="video/mp4">
-              Your browser does not support the video tag.
+              Your browser does not support video.
             </video>
-            <p>Sample Video 1</p>
+            <p>Expressive Portrait</p>
           </div>
 
           <div class="animation-item">
-            <video width="320" height="240" controls>
+            <video controls>
               <source src="{{ url_for('static', filename='videos/sample2.mp4') }}" type="video/mp4">
-              Your browser does not support the video tag.
+              Your browser does not support video.
             </video>
-            <p>Sample Video 2</p>
+            <p>Natural Movements</p>
           </div>
         </div>
       </div>
+
+      <!-- Contact Section -->
+      <section id="contact" class="contact-section">
+        <div class="contact-container">
+          <div class="contact-left">
+            <h3 class="help-title">Get in Touch</h3>
+
+            <div class="help-grid">
+              <div class="help-card">
+                <div class="hc-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" stroke="#667eea" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="hc-body">
+                  <h4>Text us at 309-650-8582</h4>
+                  <p class="muted">Quick responses, 7 days a week</p>
+                  <a href="#" class="help-link">Start texting →</a>
+                </div>
+              </div>
+
+              <div class="help-card">
+                <div class="hc-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 11a9 9 0 0 1 18 0v4a3 3 0 0 1-3 3h-1a2 2 0 0 1-2-2v-3" stroke="#667eea" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="hc-body">
+                  <h4>Call 1-866-983-8582</h4>
+                  <p class="muted">Available 7am-11pm CT daily</p>
+                  <a href="#" class="help-link">Call now →</a>
+                </div>
+              </div>
+
+              <div class="help-card">
+                <div class="hc-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" stroke="#667eea" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="hc-body">
+                  <h4>Live Chat Support</h4>
+                  <p class="muted">Instant help from specialists</p>
+                  <a href="#" class="help-link">Chat now →</a>
+                </div>
+              </div>
+
+              <div class="help-card">
+                <div class="hc-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 8l9 6 9-6M21 19H3V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14z" stroke="#667eea" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="hc-body">
+                  <h4>Email Support</h4>
+                  <p class="muted">Detailed inquiries welcome</p>
+                  <a href="#" class="help-link">Send email →</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="contact-right">
+            <div class="contact-card">
+              <h2>Let's Connect</h2>
+              <p>Have questions? Want to collaborate? We'd love to hear from you!</p>
+
+              <form class="contact-form">
+                <label for="fullname">Full Name</label>
+                <input type="text" id="fullname" name="fullname" placeholder="John Doe" required>
+
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" required>
+
+                <label for="message">Your Message</label>
+                <textarea id="message" name="message" rows="4" placeholder="Tell us what's on your mind..." required></textarea>
+
+                <button type="submit" class="btn">Send Message</button>
+              </form>
+
+              <div class="contact-info">
+                <div class="info-block">
+                  <h4>Email</h4>
+                  <p>hello@firstmod-ai.com</p>
+                </div>
+                <div class="info-block">
+                  <h4>Location</h4>
+                  <p>San Francisco, CA</p>
+                </div>
+              </div>
+
+              <div class="social-icons">
+                <a href="#" class="social">f</a>
+                <a href="#" class="social">in</a>
+                <a href="#" class="social">tw</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       
-      <!-- Sign Up Prompt -->
+      <!-- Signup Prompt -->
       <div class="signup-prompt">
-        <h3>Want Full Access?</h3>
-        <p>Create your free account to access more features, upload your own content, and save your progress.</p>
-        <a href="{{ url_for('signup_page') }}" class="btn">Sign Up Now</a>
+        <h3>Ready to Create?</h3>
+        <p>Join thousands of creators transforming their photos into stunning animations. Start for free today!</p>
+        <a href="{{ url_for('signup_page') }}" class="btn">Create Free Account</a>
       </div>
     </div>
   </section>
 
   <!-- Footer -->
   <footer class="footer">
-    <p>&copy; 2025 FirstMod-AI. All rights reserved.</p>
+    <p>&copy; 2025 FirstMod-AI. Empowering creators worldwide.</p>
   </footer>
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>

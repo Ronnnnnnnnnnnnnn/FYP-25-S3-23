@@ -10,7 +10,7 @@
 
 <!-- Navbar -->
 <div class="navbar">
-  <div class="logo">Face Animation</div>
+  <div class="logo">FirstMod-AI</div>
   <ul>
     <li><a href="{{ url_for('subscriber_dashboard') }}" class="active">Subscriber Dashboard</a></li>
     <li><a href="{{ url_for('fomd_page') }}">FOMD</a></li>
@@ -26,31 +26,54 @@
 
     <!-- Profile Section -->
     <div class="profile-card">
-      <h3>👤 Subscriber Profile</h3>
-      <p><strong>Username:</strong> <span id="username">JohnDoe</span></p>
-      <p><strong>Email:</strong> <span id="email">johndoe@email.com</span></p>
-      <p><strong>Subscription:</strong> Premium</p>
-      <div class="profile-actions">
-        <button class="btn small-btn" id="editProfileBtn">Edit Profile</button>
-        <button class="btn small-btn" id="changePasswordBtn">Change Password</button>
-        <button class="btn small-btn danger-btn" id="deleteAccountBtn">Delete Account</button>
-        <button class="btn small-btn danger-btn" id="logoutBtn">Logout</button>
+      <div class="profile-header">
+        <div class="profile-avatar">
+          <img src="https://i.imgur.com/6VBx3io.png" alt="Profile photo">
+        </div>
+        <div class="profile-info">
+         <h2><span id="username">John Doe</span></h2>
+           <p class="profile-title">Premium Subscriber</p>
+            <div class="profile-stats">
+              <p class="stat-item">
+                <strong>Email:</strong> <span id="email">johndoe@email.com</span>
+              </p>
+              <p class="stat-item">
+               <strong>Subscription:</strong> <span class="premium-badge">Premium Active</span>
+              </p>
+              <p class="stat-item">
+               <strong>Member Since:</strong> <span>October 2025</span>
+              </p>
+           </div>
+            <p class="profile-bio">Premium subscriber with access to all AI animation features. Create stunning facial animations with FOMD and MakeItTalk.</p>
+        </div>
       </div>
-      <div id="editProfileForm" style="display:none; margin-top:10px;">
+        
+      <div class="profile-actions">
+        <button class="btn primary-btn" id="editProfileBtn">Edit Profile</button>
+        <button class="btn outline-btn" id="changePasswordBtn">Change Password</button>
+        <button class="btn outline-btn" id="logoutBtn">Logout</button>
+        <button class="btn danger-btn" id="deleteAccountBtn">Delete Account</button>
+      </div>
+
+      <!-- Keep existing forms with IDs for JavaScript functionality -->
+      <div id="editProfileForm" style="display:none;" class="profile-form">
         <input type="text" id="newUsername" placeholder="New Username">
         <input type="email" id="newEmail" placeholder="New Email">
-        <button class="btn small-btn" id="saveProfileBtn">Save</button>
-        <button class="btn small-btn" id="cancelEditBtn">Cancel</button>
-      </div>
-      <div id="changePasswordForm" style="display:none; margin-top:10px;">
-        <input type="password" id="currentPassword" placeholder="Current Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
-        <input type="password" id="newPassword" placeholder="New Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
-        <input type="password" id="confirmPassword" placeholder="Confirm New Password" style="margin-bottom: 10px; width: 100%; padding: 8px;">
         <div class="profile-actions">
-          <button class="btn small-btn" id="savePasswordBtn">Change Password</button>
-          <button class="btn small-btn" id="cancelPasswordBtn">Cancel</button>
+          <button class="btn primary-btn" id="saveProfileBtn">Save</button>
+          <button class="btn outline-btn" id="cancelEditBtn">Cancel</button>
         </div>
-        <div id="passwordMessage" style="display: none; margin-top: 10px; padding: 10px; border-radius: 5px;"></div>
+      </div>
+
+      <div id="changePasswordForm" style="display:none;" class="profile-form">
+        <input type="password" id="currentPassword" placeholder="Current Password">
+        <input type="password" id="newPassword" placeholder="New Password">
+        <input type="password" id="confirmPassword" placeholder="Confirm New Password">
+        <div class="profile-actions">
+          <button class="btn primary-btn" id="savePasswordBtn">Change Password</button>
+          <button class="btn outline-btn" id="cancelPasswordBtn">Cancel</button>
+        </div>
+        <div id="passwordMessage" style="display: none;"></div>
       </div>
     </div>
 
@@ -76,7 +99,7 @@
 </section>
 
 <div class="footer">
-  <p>&copy; 2025 Face Animation. All Rights Reserved.</p>
+  <p>&copy; 2025 FirstMod-AI | Subscriber Panel</p>
 </div>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
