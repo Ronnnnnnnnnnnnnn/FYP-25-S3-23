@@ -479,7 +479,7 @@ def api_resend_verification():
         
         # Update verification token
         cursor.execute(
-            "UPDATE users SET verification_code = %s, verification_code_expires_at = %s WHERE user_id = %s",
+            "UPDATE users SET verification_token = %s, verification_token_expires_at = %s WHERE user_id = %s",
             (verification_token, expires_at, user['user_id'])
         )
         db.commit()
