@@ -357,6 +357,74 @@
         window.app = null;
         let savedVideoUrl = null;
         let videoFilename = 'talking_portrait.mp4';
+        
+        // Preview functions
+        window.previewImage = function(input) {
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const preview = document.getElementById('imagePreview');
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    previewContainer.classList.add('active');
+                };
+                
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                previewContainer.classList.remove('active');
+            }
+        };
+        
+        window.previewAudio = function(input) {
+            const previewContainer = document.getElementById('audioPreviewContainer');
+            const audioPreview = document.getElementById('audioPreview');
+            
+            if (input.files && input.files[0]) {
+                const url = URL.createObjectURL(input.files[0]);
+                audioPreview.src = url;
+                previewContainer.classList.add('active');
+            } else {
+                previewContainer.classList.remove('active');
+                audioPreview.src = '';
+            }
+        };
+        
+        window.playAudioPreview = function() {
+            const audioPreview = document.getElementById('audioPreview');
+            const playBtn = document.getElementById('playAudioBtn');
+            
+            if (audioPreview.src) {
+                if (audioPreview.paused) {
+                    audioPreview.play();
+                    playBtn.textContent = '⏸️ Pause';
+                } else {
+                    audioPreview.pause();
+                    playBtn.textContent = '▶️ Play';
+                }
+            }
+        };
+        
+        // Update play button when audio plays/pauses
+        document.addEventListener('DOMContentLoaded', function() {
+            const audioPreview = document.getElementById('audioPreview');
+            const playBtn = document.getElementById('playAudioBtn');
+            
+            if (audioPreview && playBtn) {
+                audioPreview.addEventListener('play', function() {
+                    playBtn.textContent = '⏸️ Pause';
+                });
+                
+                audioPreview.addEventListener('pause', function() {
+                    playBtn.textContent = '▶️ Play';
+                });
+                
+                audioPreview.addEventListener('ended', function() {
+                    playBtn.textContent = '▶️ Play';
+                });
+            }
+        });
 
         // Function to try connecting with different space name formats
         async function tryConnect(spacePath) {
