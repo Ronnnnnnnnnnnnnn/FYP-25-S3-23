@@ -91,10 +91,91 @@ if (window.location.pathname.includes('user.html') || window.location.pathname =
       if (data.success) {
         document.getElementById('username').textContent = data.user.fullname;
         document.getElementById('email').textContent = data.user.email;
+        
+        // Update profile picture if available
+        const profilePicture = document.getElementById('profilePicture');
+        if (profilePicture && data.user.profile_picture) {
+          profilePicture.src = `/static/${data.user.profile_picture}`;
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
     }
+  }
+  
+  // Handle profile picture upload
+  const profilePictureInput = document.getElementById('profilePictureInput');
+  if (profilePictureInput) {
+    profilePictureInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      // Validate file type
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Please upload a PNG, JPG, JPEG, GIF, or WEBP image.');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size too large. Please upload an image smaller than 5MB.');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('profile_picture', file);
+      
+      const statusDiv = document.getElementById('profilePictureUploadStatus');
+      if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = 'Uploading...';
+        statusDiv.style.background = '#d1ecf1';
+        statusDiv.style.color = '#0c5460';
+      }
+      
+      try {
+        const response = await fetch('/api/profile-picture', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update profile picture
+          const profilePicture = document.getElementById('profilePicture');
+          if (profilePicture) {
+            profilePicture.src = `/static/${data.profile_picture}?t=${Date.now()}`;
+          }
+          
+          if (statusDiv) {
+            statusDiv.textContent = 'Profile picture updated successfully!';
+            statusDiv.style.background = '#d4edda';
+            statusDiv.style.color = '#155724';
+            setTimeout(() => {
+              statusDiv.style.display = 'none';
+            }, 3000);
+          }
+        } else {
+          if (statusDiv) {
+            statusDiv.textContent = `Error: ${data.message}`;
+            statusDiv.style.background = '#f8d7da';
+            statusDiv.style.color = '#721c24';
+          }
+        }
+      } catch (error) {
+        console.error('Error uploading profile picture:', error);
+        if (statusDiv) {
+          statusDiv.textContent = 'Error uploading profile picture. Please try again.';
+          statusDiv.style.background = '#f8d7da';
+          statusDiv.style.color = '#721c24';
+        }
+      }
+      
+      // Reset input
+      e.target.value = '';
+    });
   }
   
   // Edit profile
@@ -417,10 +498,63 @@ if (window.location.pathname.includes('subscriber.html') || window.location.path
       if (data.success) {
         document.getElementById('username').textContent = data.user.fullname;
         document.getElementById('email').textContent = data.user.email;
+        
+        // Update profile picture if available
+        const profilePicture = document.getElementById('profilePicture');
+        if (profilePicture && data.user.profile_picture) {
+          profilePicture.src = `/static/${data.user.profile_picture}`;
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
     }
+  }
+  
+  // Handle profile picture upload (same as user dashboard)
+  const profilePictureInput = document.getElementById('profilePictureInput');
+  if (profilePictureInput) {
+    profilePictureInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Please upload a PNG, JPG, JPEG, GIF, or WEBP image.');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size too large. Please upload an image smaller than 5MB.');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('profile_picture', file);
+      
+      try {
+        const response = await fetch('/api/profile-picture', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const profilePicture = document.getElementById('profilePicture');
+          if (profilePicture) {
+            profilePicture.src = `/static/${data.profile_picture}?t=${Date.now()}`;
+          }
+          alert('Profile picture updated successfully!');
+        } else {
+          alert(`Error: ${data.message}`);
+        }
+      } catch (error) {
+        console.error('Error uploading profile picture:', error);
+        alert('Error uploading profile picture. Please try again.');
+      }
+      
+      e.target.value = '';
+    });
   }
   
   // Edit profile
@@ -597,10 +731,63 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
       if (data.success) {
         document.getElementById('adminUsername').textContent = data.user.fullname;
         document.getElementById('adminEmail').textContent = data.user.email;
+        
+        // Update profile picture if available
+        const profilePicture = document.getElementById('profilePicture');
+        if (profilePicture && data.user.profile_picture) {
+          profilePicture.src = `/static/${data.user.profile_picture}`;
+        }
       }
     } catch (error) {
       console.error('Error loading admin profile:', error);
     }
+  }
+  
+  // Handle profile picture upload for admin
+  const profilePictureInput = document.getElementById('profilePictureInput');
+  if (profilePictureInput) {
+    profilePictureInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Please upload a PNG, JPG, JPEG, GIF, or WEBP image.');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size too large. Please upload an image smaller than 5MB.');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('profile_picture', file);
+      
+      try {
+        const response = await fetch('/api/profile-picture', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const profilePicture = document.getElementById('profilePicture');
+          if (profilePicture) {
+            profilePicture.src = `/static/${data.profile_picture}?t=${Date.now()}`;
+          }
+          alert('Profile picture updated successfully!');
+        } else {
+          alert(`Error: ${data.message}`);
+        }
+      } catch (error) {
+        console.error('Error uploading profile picture:', error);
+        alert('Error uploading profile picture. Please try again.');
+      }
+      
+      e.target.value = '';
+    });
   }
   
   // Edit admin profile

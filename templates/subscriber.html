@@ -28,7 +28,11 @@
     <div class="profile-card">
       <div class="profile-header">
         <div class="profile-avatar">
-          <img src="https://i.imgur.com/6VBx3io.png" alt="Profile photo">
+          <img id="profilePicture" src="/static/uploads/profile_pictures/default.png" alt="Profile photo" onerror="this.src='https://i.imgur.com/6VBx3io.png'">
+          <label for="profilePictureInput" class="profile-picture-upload-btn" title="Change profile picture">
+            <span>📷</span>
+          </label>
+          <input type="file" id="profilePictureInput" accept="image/*" style="display: none;">
         </div>
         <div class="profile-info">
          <h2><span id="username">John Doe</span></h2>
@@ -64,6 +68,8 @@
           <button class="btn outline-btn" id="cancelEditBtn">Cancel</button>
         </div>
       </div>
+      
+      <div id="profilePictureUploadStatus" style="display:none; margin-top: 10px; padding: 10px; border-radius: 5px; text-align: center;"></div>
 
       <div id="changePasswordForm" style="display:none;" class="profile-form">
         <input type="password" id="currentPassword" placeholder="Current Password">

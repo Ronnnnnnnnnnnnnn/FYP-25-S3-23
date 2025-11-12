@@ -15,15 +15,18 @@ app = Flask(__name__,
 app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key_here_change_in_production')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ANIMATIONS_FOLDER'] = 'static/animations'
+app.config['PROFILE_PICTURES_FOLDER'] = 'static/uploads/profile_pictures'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 
 # Ensure upload directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['ANIMATIONS_FOLDER'], exist_ok=True)
+os.makedirs(app.config['PROFILE_PICTURES_FOLDER'], exist_ok=True)
 
-ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov'}
+ALLOWED_PROFILE_PICTURE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 def allowed_file(filename, allowed_extensions):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
@@ -399,7 +402,7 @@ def api_profile():
     
     try:
         if request.method == 'GET':
-            cursor.execute("SELECT user_id, fullname, email, role, subscription_status FROM users WHERE user_id = %s", 
+            cursor.execute("SELECT user_id, fullname, email, role, subscription_status, profile_picture FROM users WHERE user_id = %s", 
                          (session['user_id'],))
             user = cursor.fetchone()
             return jsonify({'success': True, 'user': user})
@@ -426,6 +429,79 @@ def api_profile():
     finally:
         cursor.close()
         db.close()
+
+@app.route('/api/profile-picture', methods=['POST'])
+def api_upload_profile_picture():
+    """Upload profile picture"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    if 'profile_picture' not in request.files:
+        return jsonify({'success': False, 'message': 'No file provided'}), 400
+    
+    file = request.files['profile_picture']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename, ALLOWED_PROFILE_PICTURE_EXTENSIONS):
+        return jsonify({'success': False, 'message': 'Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WEBP'}), 400
+    
+    try:
+        # Generate unique filename: user_id_timestamp.extension
+        user_id = session['user_id']
+        file_ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{user_id}_{int(datetime.now().timestamp())}.{file_ext}"
+        filepath = os.path.join(app.config['PROFILE_PICTURES_FOLDER'], filename)
+        
+        # Save file
+        file.save(filepath)
+        
+        # Get relative path for database storage
+        relative_path = f"uploads/profile_pictures/{filename}"
+        
+        # Update database
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        # Get old profile picture path to delete it
+        cursor.execute("SELECT profile_picture FROM users WHERE user_id = %s", (user_id,))
+        old_user = cursor.fetchone()
+        old_picture_path = old_user.get('profile_picture') if old_user else None
+        
+        # Update user's profile picture
+        cursor.execute(
+            "UPDATE users SET profile_picture = %s WHERE user_id = %s",
+            (relative_path, user_id)
+        )
+        db.commit()
+        cursor.close()
+        db.close()
+        
+        # Delete old profile picture if it exists
+        if old_picture_path and old_picture_path.startswith('uploads/'):
+            old_full_path = os.path.join('static', old_picture_path)
+            if os.path.exists(old_full_path):
+                try:
+                    os.remove(old_full_path)
+                except Exception as e:
+                    print(f"Error deleting old profile picture: {e}")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Profile picture updated successfully',
+            'profile_picture': relative_path
+        })
+    
+    except Exception as e:
+        print(f"Profile picture upload error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @app.route('/api/subscription/update', methods=['POST'])

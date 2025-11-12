@@ -28,7 +28,11 @@
       <div class="profile-card">
         <div class="profile-header">
           <div class="profile-avatar">
-            <img src="https://images.unsplash.com/photo-1618641986557-1ecd230959aa?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHByb2ZpbGV8ZW58MHx8MHx8fDA%3D&fm=jpg&q=60&w=3000" alt="Profile photo">
+            <img id="profilePicture" src="/static/uploads/profile_pictures/default.png" alt="Profile photo" onerror="this.src='https://images.unsplash.com/photo-1618641986557-1ecd230959aa?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHByb2ZpbGV8ZW58MHx8MHx8fDA%3D&fm=jpg&q=60&w=3000'">
+            <label for="profilePictureInput" class="profile-picture-upload-btn" title="Change profile picture">
+              <span>📷</span>
+            </label>
+            <input type="file" id="profilePictureInput" accept="image/*" style="display: none;">
           </div>
           <div class="profile-info">
             <h2><span id="username">John Doe</span></h2>
@@ -62,6 +66,8 @@
             <button class="btn outline-btn" id="cancelEditBtn">Cancel</button>
           </div>
         </div>
+        
+        <div id="profilePictureUploadStatus" style="display:none; margin-top: 10px; padding: 10px; border-radius: 5px; text-align: center;"></div>
 
         <div id="changePasswordForm" style="display:none;" class="profile-form">
           <input type="password" id="currentPassword" placeholder="Current Password">
