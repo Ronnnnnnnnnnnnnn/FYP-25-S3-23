@@ -405,7 +405,12 @@ def api_profile():
             cursor.execute("SELECT user_id, fullname, email, role, subscription_status, profile_picture FROM users WHERE user_id = %s", 
                          (session['user_id'],))
             user = cursor.fetchone()
-            print(f"Profile GET - User ID: {session['user_id']}, Profile Picture: {user.get('profile_picture') if user else 'None'}")
+            profile_pic = user.get('profile_picture') if user else None
+            print(f"📥 Profile GET - User ID: {session['user_id']}, Role: {user.get('role') if user else 'None'}, Profile Picture: {profile_pic}")
+            if profile_pic:
+                full_path = os.path.join('static', profile_pic)
+                file_exists = os.path.exists(full_path)
+                print(f"   → Profile picture file exists: {file_exists} at {full_path}")
             return jsonify({'success': True, 'user': user})
         
         elif request.method == 'PUT':
@@ -475,16 +480,20 @@ def api_upload_profile_picture():
         old_picture_path = old_user.get('profile_picture') if old_user else None
         
         # Update user's profile picture
+        print(f"📸 Updating profile picture for user_id {user_id} with path: {relative_path}")
         cursor.execute(
             "UPDATE users SET profile_picture = %s WHERE user_id = %s",
             (relative_path, user_id)
         )
         db.commit()
+        print(f"✓ Database UPDATE executed and committed")
         
         # Verify the update
         cursor.execute("SELECT profile_picture FROM users WHERE user_id = %s", (user_id,))
         updated_user = cursor.fetchone()
-        print(f"✓ Profile picture saved to database: {updated_user.get('profile_picture')}")
+        saved_path = updated_user.get('profile_picture') if updated_user else None
+        print(f"✓ Profile picture saved to database: {saved_path}")
+        print(f"✓ File exists check: {os.path.exists(filepath)}")
         
         cursor.close()
         db.close()

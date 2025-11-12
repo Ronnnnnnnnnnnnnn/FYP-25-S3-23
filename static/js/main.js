@@ -556,15 +556,24 @@ if (window.location.pathname.includes('subscriber.html') || window.location.path
         const data = await response.json();
         
         if (data.success) {
+          console.log('✅ Upload successful! Response:', data);
           const profilePicture = document.getElementById('profilePicture');
           if (profilePicture) {
-            profilePicture.src = `/static/${data.profile_picture}?t=${Date.now()}`;
-            console.log('Profile picture updated in DOM:', data.profile_picture);
+            const imageUrl = `/static/${data.profile_picture}?t=${Date.now()}`;
+            console.log('📸 Updating profile picture src to:', imageUrl);
+            profilePicture.src = imageUrl;
+            
+            // Wait a moment then reload profile from database
+            setTimeout(async () => {
+              console.log('🔄 Reloading profile from database...');
+              await loadProfile();
+            }, 500);
+          } else {
+            console.error('❌ Profile picture element not found after upload!');
           }
           alert('Profile picture updated successfully!');
-          // Reload profile to ensure it's saved
-          await loadProfile();
         } else {
+          console.error('❌ Upload failed:', data.message);
           alert(`Error: ${data.message}`);
         }
       } catch (error) {
@@ -744,8 +753,11 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
   // Load admin profile
   async function loadAdminProfile() {
     try {
+      console.log('🔄 Loading profile for ADMIN...');
       const response = await fetch('/api/profile');
       const data = await response.json();
+      
+      console.log('📦 Profile data received:', data);
       
       if (data.success) {
         document.getElementById('adminUsername').textContent = data.user.fullname;
@@ -756,17 +768,28 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
         if (profilePicture) {
           if (data.user.profile_picture) {
             // User has a profile picture - load it
-            profilePicture.src = `/static/${data.user.profile_picture}?t=${Date.now()}`;
-            console.log('Profile picture loaded:', data.user.profile_picture);
+            const imageUrl = `/static/${data.user.profile_picture}?t=${Date.now()}`;
+            console.log('📸 Setting profile picture src to:', imageUrl);
+            profilePicture.src = imageUrl;
+            
+            // Force image reload
+            profilePicture.onload = () => {
+              console.log('✅ Profile picture loaded successfully');
+            };
+            profilePicture.onerror = () => {
+              console.error('❌ Profile picture failed to load:', imageUrl);
+            };
           } else {
             // No profile picture - keep default or set to default
-            console.log('No profile picture found for user');
+            console.log('⚠️ No profile picture found in database for admin');
             // The onerror handler in HTML will handle fallback
           }
+        } else {
+          console.error('❌ Profile picture element not found!');
         }
       }
     } catch (error) {
-      console.error('Error loading admin profile:', error);
+      console.error('❌ Error loading admin profile:', error);
     }
   }
   
@@ -800,15 +823,24 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
         const data = await response.json();
         
         if (data.success) {
+          console.log('✅ Upload successful! Response:', data);
           const profilePicture = document.getElementById('profilePicture');
           if (profilePicture) {
-            profilePicture.src = `/static/${data.profile_picture}?t=${Date.now()}`;
-            console.log('Profile picture updated in DOM:', data.profile_picture);
+            const imageUrl = `/static/${data.profile_picture}?t=${Date.now()}`;
+            console.log('📸 Updating profile picture src to:', imageUrl);
+            profilePicture.src = imageUrl;
+            
+            // Wait a moment then reload profile from database
+            setTimeout(async () => {
+              console.log('🔄 Reloading admin profile from database...');
+              await loadAdminProfile();
+            }, 500);
+          } else {
+            console.error('❌ Profile picture element not found after upload!');
           }
           alert('Profile picture updated successfully!');
-          // Reload profile to ensure it's saved
-          await loadAdminProfile();
         } else {
+          console.error('❌ Upload failed:', data.message);
           alert(`Error: ${data.message}`);
         }
       } catch (error) {
