@@ -468,9 +468,43 @@
                 ]);
 
                 console.log('✅ Result received:', result);
+                console.log('Result structure:', JSON.stringify(result, null, 2));
                 
-                // Get video URL from result
-                const videoUrl = result.data[0];
+                // Get video URL from result - handle different result structures
+                let videoUrl = null;
+                
+                // Try different possible result structures
+                if (result.data && result.data[0]) {
+                    videoUrl = result.data[0];
+                } else if (result[0]) {
+                    videoUrl = result[0];
+                } else if (typeof result === 'string') {
+                    videoUrl = result;
+                } else if (result.url) {
+                    videoUrl = result.url;
+                } else if (result.file) {
+                    videoUrl = result.file;
+                }
+                
+                // If videoUrl is an object, try to extract URL from it
+                if (videoUrl && typeof videoUrl === 'object') {
+                    if (videoUrl.url) {
+                        videoUrl = videoUrl.url;
+                    } else if (videoUrl.file) {
+                        videoUrl = videoUrl.file;
+                    } else if (videoUrl[0]) {
+                        videoUrl = videoUrl[0];
+                    } else {
+                        console.error('Could not extract video URL from result:', videoUrl);
+                        throw new Error('Invalid video result format');
+                    }
+                }
+                
+                if (!videoUrl || typeof videoUrl !== 'string') {
+                    throw new Error('No valid video URL found in result');
+                }
+                
+                console.log('📹 Video URL:', videoUrl);
                 savedVideoUrl = videoUrl;
                 
                 // Generate filename from image name
@@ -479,7 +513,20 @@
                 
                 // Show video
                 const video = document.getElementById('resultVideo');
+                
+                // Add error handler for video
+                video.onerror = function() {
+                    console.error('Video load error');
+                    showStatus('❌ Error loading video. The video URL may be invalid or expired.', 'error');
+                };
+                
+                video.onloadeddata = function() {
+                    console.log('✅ Video loaded successfully');
+                };
+                
+                // Set video source
                 video.src = videoUrl;
+                video.load(); // Force video to reload
                 
                 // Show result section
                 resultSection.style.display = 'block';
@@ -509,18 +556,27 @@
         // ═══════════════════════════════════════════════════
         // DOWNLOAD VIDEO FUNCTION
         // ═══════════════════════════════════════════════════
-        function downloadVideo() {
+        window.downloadVideo = function() {
             if (!savedVideoUrl) {
                 alert('❌ No video available to download!');
                 return;
             }
             
-            const a = document.createElement('a');
-            a.href = savedVideoUrl;
-            a.download = videoFilename;
-            a.click();
-            
-            showStatus(`✅ Downloading ${videoFilename}... Check your Downloads folder!`, 'success');
+            try {
+                const a = document.createElement('a');
+                a.href = savedVideoUrl;
+                a.download = videoFilename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                showStatus(`✅ Downloading ${videoFilename}... Check your Downloads folder!`, 'success');
+            } catch (error) {
+                console.error('Download error:', error);
+                // Fallback: open in new tab
+                window.open(savedVideoUrl, '_blank');
+                showStatus('✅ Opening video in new tab...', 'info');
+            }
         }
 
         // ═══════════════════════════════════════════════════
