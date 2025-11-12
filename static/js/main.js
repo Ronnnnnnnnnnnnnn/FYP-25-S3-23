@@ -560,6 +560,14 @@ if (window.location.pathname.includes('subscriber.html') || window.location.path
       const formData = new FormData();
       formData.append('profile_picture', file);
       
+      const statusDiv = document.getElementById('profilePictureUploadStatus');
+      if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = 'Uploading...';
+        statusDiv.style.background = '#d1ecf1';
+        statusDiv.style.color = '#0c5460';
+      }
+      
       try {
         const response = await fetch('/api/profile-picture', {
           method: 'POST',
@@ -584,14 +592,36 @@ if (window.location.pathname.includes('subscriber.html') || window.location.path
           } else {
             console.error('❌ Profile picture element not found after upload!');
           }
-          alert('Profile picture updated successfully!');
+          
+          if (statusDiv) {
+            statusDiv.textContent = 'Profile picture updated successfully!';
+            statusDiv.style.background = '#d4edda';
+            statusDiv.style.color = '#155724';
+            setTimeout(() => {
+              statusDiv.style.display = 'none';
+            }, 3000);
+          }
         } else {
           console.error('❌ Upload failed:', data.message);
-          alert(`Error: ${data.message}`);
+          if (statusDiv) {
+            statusDiv.textContent = `Error: ${data.message}`;
+            statusDiv.style.background = '#f8d7da';
+            statusDiv.style.color = '#721c24';
+            setTimeout(() => {
+              statusDiv.style.display = 'none';
+            }, 5000);
+          }
         }
       } catch (error) {
         console.error('Error uploading profile picture:', error);
-        alert('Error uploading profile picture. Please try again.');
+        if (statusDiv) {
+          statusDiv.textContent = 'Error uploading profile picture. Please try again.';
+          statusDiv.style.background = '#f8d7da';
+          statusDiv.style.color = '#721c24';
+          setTimeout(() => {
+            statusDiv.style.display = 'none';
+          }, 5000);
+        }
       }
       
       e.target.value = '';
@@ -832,6 +862,14 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
       const formData = new FormData();
       formData.append('profile_picture', file);
       
+      const statusDiv = document.getElementById('profilePictureUploadStatus');
+      if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = 'Uploading...';
+        statusDiv.style.background = '#d1ecf1';
+        statusDiv.style.color = '#0c5460';
+      }
+      
       try {
         const response = await fetch('/api/profile-picture', {
           method: 'POST',
@@ -856,14 +894,36 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
           } else {
             console.error('❌ Profile picture element not found after upload!');
           }
-          alert('Profile picture updated successfully!');
+          
+          if (statusDiv) {
+            statusDiv.textContent = 'Profile picture updated successfully!';
+            statusDiv.style.background = '#d4edda';
+            statusDiv.style.color = '#155724';
+            setTimeout(() => {
+              statusDiv.style.display = 'none';
+            }, 3000);
+          }
         } else {
           console.error('❌ Upload failed:', data.message);
-          alert(`Error: ${data.message}`);
+          if (statusDiv) {
+            statusDiv.textContent = `Error: ${data.message}`;
+            statusDiv.style.background = '#f8d7da';
+            statusDiv.style.color = '#721c24';
+            setTimeout(() => {
+              statusDiv.style.display = 'none';
+            }, 5000);
+          }
         }
       } catch (error) {
         console.error('Error uploading profile picture:', error);
-        alert('Error uploading profile picture. Please try again.');
+        if (statusDiv) {
+          statusDiv.textContent = 'Error uploading profile picture. Please try again.';
+          statusDiv.style.background = '#f8d7da';
+          statusDiv.style.color = '#721c24';
+          setTimeout(() => {
+            statusDiv.style.display = 'none';
+          }, 5000);
+        }
       }
       
       e.target.value = '';
