@@ -100,6 +100,57 @@
             cursor: pointer;
         }
         
+        .preview-container {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .preview-container.active {
+            display: block;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-top: 10px;
+        }
+        
+        .video-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-top: 10px;
+        }
+        
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -220,8 +271,10 @@
             <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
                 Upload the face you want to animate
             </p>
-            <input type="file" id="imageInput" accept="image/*" onchange="showFileInfo('image')">
-            <div class="file-info" id="imageInfo"></div>
+            <input type="file" id="imageInput" accept="image/*" onchange="previewImage(this)">
+            <div class="preview-container" id="imagePreviewContainer">
+                <img id="imagePreview" class="image-preview" alt="Image preview">
+            </div>
         </div>
         
         <div class="upload-section">
@@ -229,13 +282,22 @@
             <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
                 Upload a video with movements to apply
             </p>
-            <input type="file" id="videoInput" accept="video/*" onchange="showFileInfo('video')">
-            <div class="file-info" id="videoInfo"></div>
+            <input type="file" id="videoInput" accept="video/*" onchange="previewVideo(this)">
+            <div class="preview-container" id="videoPreviewContainer">
+                <video id="videoPreview" class="video-preview" controls></video>
+            </div>
         </div>
         
         <button class="btn" onclick="createAnimation()" id="submitBtn">
             🎬 Create Animation
         </button>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <p id="progressText" style="text-align: center; margin-top: 10px; color: #666;"></p>
+        </div>
         
         <div id="status"></div>
         
@@ -371,6 +433,9 @@
             const imageFile = document.getElementById('imageInput').files[0];
             const videoFile = document.getElementById('videoInput').files[0];
             const btn = document.getElementById('submitBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
             const resultSection = document.getElementById('resultSection');
             
             if (!imageFile || !videoFile) {
@@ -383,17 +448,43 @@
                 return;
             }
             
+            // Reset
             resultSection.style.display = 'none';
             btn.disabled = true;
             btn.textContent = '⏳ Processing (1-3 minutes)...';
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressFill.textContent = '0%';
+            progressText.textContent = 'Uploading files...';
             showStatus('🎨 Creating animation... This takes 1-3 minutes!', 'info');
             
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += 1;
+                    progressFill.style.width = progress + '%';
+                    progressFill.textContent = progress + '%';
+                    
+                    if (progress < 20) progressText.textContent = 'Processing image...';
+                    else if (progress < 40) progressText.textContent = 'Processing video...';
+                    else if (progress < 60) progressText.textContent = 'Detecting face...';
+                    else if (progress < 80) progressText.textContent = 'Generating animation...';
+                    else progressText.textContent = 'Almost done...';
+                }
+            }, 2000); // Update every 2 seconds
+            
             try {
-                console.log('📤 Sending files...');
+                console.log('📤 Sending files to Gradio API...');
                 const result = await window.app.predict(0, [
                     imageFile,
                     videoFile
                 ]);
+                
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+                progressFill.textContent = '100%';
+                progressText.textContent = 'Complete!';
                 
                 console.log('✅ Result:', result);
                 
