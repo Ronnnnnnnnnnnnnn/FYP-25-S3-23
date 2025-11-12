@@ -544,26 +544,50 @@
             status.style.display = 'block';
         }
 
-        window.downloadVideo = function() {
+        window.downloadVideo = async function() {
             if (!savedVideoUrl) {
                 alert('❌ No video available to download!');
                 return;
             }
             
             try {
-                const a = document.createElement('a');
-                a.href = savedVideoUrl;
-                a.download = videoFilename || 'talking_portrait.mp4';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                showStatus('⏳ Preparing download...', 'info');
                 
-                showStatus('✅ Downloading video!', 'success');
+                // Fetch the video as a blob to enable download
+                console.log('📥 Fetching video from:', savedVideoUrl);
+                const response = await fetch(savedVideoUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch video: ${response.status} ${response.statusText}`);
+                }
+                
+                const blob = await response.blob();
+                console.log('✅ Video blob created, size:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
+                
+                // Create a blob URL
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                // Create download link
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = videoFilename || 'talking_portrait.mp4';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                
+                // Trigger download
+                a.click();
+                
+                // Clean up
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(blobUrl);
+                    console.log('✅ Download link cleaned up');
+                }, 100);
+                
+                showStatus('✅ Download started! Check your Downloads folder.', 'success');
             } catch (error) {
                 console.error('Download error:', error);
-                // Fallback: open in new tab
-                window.open(savedVideoUrl, '_blank');
-                showStatus('✅ Opening video in new tab...', 'info');
+                showStatus(`❌ Download failed: ${error.message}<br>Try right-clicking the video and selecting "Save video as..."`, 'error');
             }
         }
 
