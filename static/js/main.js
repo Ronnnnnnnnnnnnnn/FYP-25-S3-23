@@ -559,8 +559,11 @@ if (window.location.pathname.includes('subscriber.html') || window.location.path
           const profilePicture = document.getElementById('profilePicture');
           if (profilePicture) {
             profilePicture.src = `/static/${data.profile_picture}?t=${Date.now()}`;
+            console.log('Profile picture updated in DOM:', data.profile_picture);
           }
           alert('Profile picture updated successfully!');
+          // Reload profile to ensure it's saved
+          await loadProfile();
         } else {
           alert(`Error: ${data.message}`);
         }
@@ -800,8 +803,11 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
           const profilePicture = document.getElementById('profilePicture');
           if (profilePicture) {
             profilePicture.src = `/static/${data.profile_picture}?t=${Date.now()}`;
+            console.log('Profile picture updated in DOM:', data.profile_picture);
           }
           alert('Profile picture updated successfully!');
+          // Reload profile to ensure it's saved
+          await loadAdminProfile();
         } else {
           alert(`Error: ${data.message}`);
         }
@@ -1224,6 +1230,14 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
   
   // Initialize subscriber dashboard
   loadProfile();
+}
+
+// ============================================
+// ADMIN DASHBOARD INITIALIZATION
+// ============================================
+if (window.location.pathname.includes('admin.html') || window.location.pathname === '/admin') {
+  // Initialize admin dashboard
+  loadAdminProfile();
 }
 
 // ============================================
