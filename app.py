@@ -219,12 +219,12 @@ def api_signup():
             db.close()
             return jsonify({'success': False, 'message': 'Email already exists'}), 400
         
-        # Insert new user (email verified by default, no verification needed)
+        # Insert new user (no email verification needed)
         hashed_password = generate_password_hash(password)
         cursor.execute(
-            """INSERT INTO users (fullname, email, password, role, subscription_status, email_verified) 
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (fullname, email, hashed_password, 'user', 'inactive', True)
+            """INSERT INTO users (fullname, email, password, role, subscription_status) 
+               VALUES (%s, %s, %s, %s, %s)""",
+            (fullname, email, hashed_password, 'user', 'inactive')
         )
         db.commit()
         

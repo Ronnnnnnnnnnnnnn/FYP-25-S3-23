@@ -12,9 +12,6 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     role ENUM('user', 'subscriber', 'admin') DEFAULT 'user',
     subscription_status ENUM('active', 'inactive', 'suspended') DEFAULT 'inactive',
-    email_verified BOOLEAN DEFAULT FALSE,
-    verification_token VARCHAR(255),  -- Stores verification token for email verification link (URL-safe string)
-    verification_token_expires_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
