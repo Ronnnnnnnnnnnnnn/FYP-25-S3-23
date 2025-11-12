@@ -48,6 +48,11 @@ if (document.getElementById('signupForm')) {
     const password = document.getElementById('password').value;
     const confirm = document.getElementById('confirm').value;
     
+    if (password.length < 6) {
+      showMessage('Password must be at least 6 characters long', 'error');
+      return;
+    }
+    
     if (password !== confirm) {
       showMessage('Passwords do not match', 'error');
       return;

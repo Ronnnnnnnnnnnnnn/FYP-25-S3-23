@@ -191,6 +191,9 @@ def api_signup():
         if not all([fullname, email, password]):
             return jsonify({'success': False, 'message': 'All fields are required'}), 400
         
+        if len(password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'}), 400
+        
         # Get database connection with proper error handling
         try:
             db = get_db()
