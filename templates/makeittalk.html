@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MakeItTalk - Face Animation</title>
+    <title>MakeItTalk - Talking Portraits</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -50,7 +51,7 @@
             color: #667eea;
         }
 
-        .makeittalk-container {
+        .container {
             max-width: 900px;
             margin: 40px auto;
             background: white;
@@ -59,14 +60,14 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         
-        .makeittalk-title {
+        h1 {
             color: #667eea;
             text-align: center;
             margin-bottom: 10px;
             font-size: 2.5em;
         }
         
-        .makeittalk-subtitle {
+        .subtitle {
             text-align: center;
             color: #666;
             margin-bottom: 30px;
@@ -78,12 +79,6 @@
             border: 3px dashed #667eea;
             border-radius: 15px;
             background: #f8f9ff;
-            transition: all 0.3s;
-        }
-        
-        .upload-section:hover {
-            background: #f0f2ff;
-            border-color: #764ba2;
         }
         
         .upload-section h3 {
@@ -91,28 +86,15 @@
             margin-bottom: 10px;
         }
         
-        .upload-section p {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-        
-        .upload-input {
+        input[type="file"] {
             width: 100%;
             padding: 10px;
             border: 2px solid #ddd;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
-        }
-
-        .file-info {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #666;
         }
         
-        .makeittalk-btn {
+        .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 18px 40px;
@@ -126,85 +108,41 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
         
-        .makeittalk-btn:hover:not(:disabled) {
+        .btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
         }
         
-        .makeittalk-btn:disabled {
+        .btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             transform: none;
         }
         
-        .status-message {
+        #status {
             margin: 20px 0;
             padding: 20px;
             border-radius: 10px;
             display: none;
-            animation: slideIn 0.3s ease;
+            text-align: center;
         }
         
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-            border-left: 4px solid #28a745;
-        }
-        
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #dc3545;
-        }
-        
-        .status-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border-left: 4px solid #17a2b8;
-        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
         
         .result-section {
             margin-top: 30px;
-            padding: 20px;
-            background: #f8f9ff;
-            border-radius: 15px;
             display: none;
         }
 
-        .result-video {
+        video {
             width: 100%;
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        
-        .progress-bar-container {
-            width: 100%;
-            height: 6px;
-            background: #e0e0e0;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 10px;
-            display: none;
-        }
-        
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            width: 0%;
-            animation: progressAnim 3s ease-in-out infinite;
-        }
-        
-        @keyframes progressAnim {
-            0%, 100% { width: 0%; }
-            50% { width: 100%; }
-        }
-        
+
         .download-btn {
             background: #28a745;
             color: white;
@@ -217,53 +155,50 @@
             width: 100%;
             transition: all 0.3s;
         }
-        
+
         .download-btn:hover {
             background: #218838;
             transform: scale(1.02);
         }
 
-        .api-status {
+        .connection-status {
             position: fixed;
             top: 70px;
             right: 20px;
-            padding: 10px 15px;
+            padding: 10px 20px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
             z-index: 1000;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-        .api-status.checking {
-            background: #ffc107;
-            color: #000;
+        .status-online { background: #28a745; color: white; }
+        .status-offline { background: #dc3545; color: white; }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
         }
 
-        .api-status.online {
-            background: #28a745;
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: white;
-        }
-
-        .api-status.offline {
-            background: #dc3545;
-            color: white;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: white;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            font-weight: bold;
         }
 
         .footer {
@@ -275,12 +210,6 @@
     </style>
 </head>
 <body>
-    <!-- API Status Indicator -->
-    <div class="api-status checking" id="apiStatus">
-        <div class="status-dot"></div>
-        <span id="apiStatusText">Checking...</span>
-    </div>
-
     <!-- Navbar -->
     <div class="navbar">
         <div class="logo">🎭 Face Animation</div>
@@ -296,44 +225,45 @@
         </ul>
     </div>
 
-    <div class="makeittalk-container">
-        <h1 class="makeittalk-title">🎭 MakeItTalk</h1>
-        <p class="makeittalk-subtitle">Transform portraits into talking animations with audio</p>
+    <div id="connectionStatus" class="connection-status status-offline">
+        ⚠️ Checking connection...
+    </div>
+
+    <div class="container">
+        <h1>🎭 MakeItTalk</h1>
+        <p class="subtitle">Transform portraits into talking animations</p>
         
         <div class="upload-section">
             <h3>📷 Upload Portrait Image</h3>
-            <p>Choose a clear portrait photo (JPG, PNG)</p>
-            <input type="file" id="imageInput" class="upload-input" accept="image/*" onchange="showFileInfo('image')" required>
-            <div class="file-info" id="imageInfo"></div>
+            <input type="file" id="imageInput" accept="image/*">
         </div>
         
         <div class="upload-section">
             <h3>🎵 Upload Audio</h3>
-            <p>Choose your audio file (WAV, MP3)</p>
-            <input type="file" id="audioInput" class="upload-input" accept="audio/*" onchange="showFileInfo('audio')" required>
-            <div class="file-info" id="audioInfo"></div>
+            <input type="file" id="audioInput" accept="audio/*">
         </div>
         
-        <!-- FIXED: Changed onclick from animate() to createAnimation() -->
-        <button onclick="createAnimation()" id="animateBtn" class="makeittalk-btn">
+        <button class="btn" onclick="createAnimation()" id="submitBtn">
             🎬 Create Talking Portrait
         </button>
         
-        <div class="progress-bar-container" id="progress">
-            <div class="progress-bar-fill"></div>
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <p id="progressText" style="text-align: center; margin-top: 10px; color: #666;"></p>
         </div>
         
-        <div id="status" class="status-message"></div>
+        <div id="status"></div>
         
         <div class="result-section" id="resultSection">
-            <h3 style="color: #667eea; text-align: center; margin-bottom: 15px;">🎉 Your Animation is Ready!</h3>
-            <video id="resultVideo" class="result-video" controls autoplay></video>
+            <h3 style="color: #667eea; text-align: center; margin-bottom: 15px;">
+                🎉 Your Talking Portrait is Ready!
+            </h3>
+            <video id="resultVideo" controls autoplay></video>
             <button onclick="downloadVideo()" class="download-btn">
                 📥 Download Video
             </button>
-            <p style="text-align: center; color: #666; margin-top: 10px; font-size: 14px;">
-                Filename: <strong id="videoFilename">talking_portrait.mp4</strong>
-            </p>
         </div>
     </div>
 
@@ -346,96 +276,44 @@
         // ═══════════════════════════════════════════════════════════
         // 🔥 HUGGING FACE GRADIO API CONFIGURATION 🔥
         // ═══════════════════════════════════════════════════════════
-        const YOUR_USERNAME = "Tc12345";
+        const YOUR_USERNAME = "Tc12345";  // ← Your Hugging Face username
         const SPACE_NAME = "MakeItTalk";
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
+        // ═══════════════════════════════════════════════════════════
         
         import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
-        
+
         window.gradioClient = client;
         window.app = null;
         let savedVideoUrl = null;
         let videoFilename = 'talking_portrait.mp4';
 
-        // ═══════════════════════════════════════════════════
-        // UTILITY FUNCTIONS
-        // ═══════════════════════════════════════════════════
-        function showFileInfo(type) {
-            const input = document.getElementById(`${type}Input`);
-            const info = document.getElementById(`${type}Info`);
-            
-            if (input.files.length > 0) {
-                const file = input.files[0];
-                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-                info.textContent = `✓ ${file.name} (${sizeMB} MB)`;
-                info.style.color = '#28a745';
-                info.style.fontWeight = 'bold';
-            }
-        }
-        
-        // Make functions globally accessible for inline event handlers
-        window.showFileInfo = showFileInfo;
-        window.showStatus = showStatus;
-
-        function showStatus(message, type) {
-            const status = document.getElementById('status');
-            status.innerHTML = message;
-            status.className = 'status-message status-' + type;
-            status.style.display = 'block';
-        }
-
-        // ═══════════════════════════════════════════════════
-        // CHECK API CONNECTION ON PAGE LOAD
-        // ═══════════════════════════════════════════════════
-        async function checkAPIConnection() {
-            const statusDiv = document.getElementById('apiStatus');
-            const statusText = document.getElementById('apiStatusText');
-            const animateBtn = document.getElementById('animateBtn');
+        // Check connection on load
+        window.addEventListener('load', async () => {
+            console.log('🔍 Checking connection to:', SPACE_URL);
             
             try {
-                console.log('🔍 Checking connection to Hugging Face Space:', SPACE_URL);
-                
-                if (!window.app) {
-                    window.app = await window.gradioClient(SPACE_URL);
-                }
-                
+                window.app = await window.gradioClient(SPACE_URL);
                 console.log('✅ Connected to Gradio API!');
                 
-                statusDiv.className = 'api-status online';
-                statusText.textContent = 'API Online ✓';
-                animateBtn.disabled = false;
+                document.getElementById('connectionStatus').textContent = '✅ Connected to API';
+                document.getElementById('connectionStatus').className = 'connection-status status-online';
                 
-                return true;
             } catch (error) {
-                console.error('❌ API Connection Failed:', error);
-                
-                statusDiv.className = 'api-status offline';
-                statusText.textContent = 'API Offline ✗';
-                animateBtn.disabled = true;
-                animateBtn.textContent = '❌ API Not Connected';
-                
-                showStatus(`
-                    ⚠️ Cannot connect to Hugging Face API<br><br>
-                    <strong>Space:</strong> ${SPACE_URL}<br>
-                    <strong>Error:</strong> ${error.message}<br><br>
-                    <strong>Quick Fix:</strong><br>
-                    1. Make sure the Hugging Face Space is running<br>
-                    2. Check the space URL: <a href="https://huggingface.co/spaces/${SPACE_URL}" target="_blank" style="color: #667eea;">https://huggingface.co/spaces/${SPACE_URL}</a><br>
-                    3. Refresh this page
-                `, 'error');
-                
-                return false;
+                console.error('❌ Connection failed:', error);
+                document.getElementById('connectionStatus').textContent = '❌ API Offline';
+                document.getElementById('connectionStatus').className = 'connection-status status-offline';
+                showStatus(`⚠️ Cannot connect to API. Check username: ${YOUR_USERNAME}`, 'error');
             }
-        }
+        });
 
-        // ═══════════════════════════════════════════════════
-        // MAIN ANIMATION FUNCTION
-        // ═══════════════════════════════════════════════════
         window.createAnimation = async function() {
             const imageFile = document.getElementById('imageInput').files[0];
             const audioFile = document.getElementById('audioInput').files[0];
-            const btn = document.getElementById('animateBtn');
-            const progress = document.getElementById('progress');
+            const btn = document.getElementById('submitBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
             const resultSection = document.getElementById('resultSection');
             
             if (!imageFile || !audioFile) {
@@ -444,32 +322,62 @@
             }
 
             if (!window.app) {
-                showStatus('❌ Not connected to API. Please refresh the page.', 'error');
+                showStatus('❌ Not connected to API. Please refresh.', 'error');
                 return;
             }
 
-            // Hide previous results
+            // Reset
             resultSection.style.display = 'none';
-
-            // Show progress
             btn.disabled = true;
-            btn.textContent = '⏳ Processing... (2-5 minutes)';
-            progress.style.display = 'block';
-            showStatus('🎨 Creating your talking portrait... This may take a few minutes!', 'info');
+            btn.textContent = '⏳ Processing (2-5 minutes)...';
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressFill.textContent = '0%';
+            progressText.textContent = 'Uploading files...';
+            showStatus('🎨 Creating your talking portrait... This takes 2-5 minutes!', 'info');
+
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += 1;
+                    progressFill.style.width = progress + '%';
+                    progressFill.textContent = progress + '%';
+                    
+                    if (progress < 20) progressText.textContent = 'Processing image...';
+                    else if (progress < 40) progressText.textContent = 'Processing audio...';
+                    else if (progress < 60) progressText.textContent = 'Detecting face...';
+                    else if (progress < 80) progressText.textContent = 'Generating animation...';
+                    else progressText.textContent = 'Almost done...';
+                }
+            }, 2000); // Update every 2 seconds
 
             try {
                 console.log('📤 Sending files to Gradio API...');
-                
-                // Call Gradio API - use function index 0 instead of "/predict"
-                // Gradio spaces typically use function indices (0, 1, 2...) instead of endpoint names
-                const result = await window.app.predict(0, [
-                    imageFile,
-                    audioFile
-                ]);
+
+                // Try function index 0 first (most common), fallback to "/predict"
+                let result;
+                try {
+                    result = await window.app.predict(0, [
+                        imageFile,
+                        audioFile
+                    ]);
+                } catch (e) {
+                    console.log('Trying /predict endpoint...');
+                    result = await window.app.predict("/predict", [
+                        imageFile,
+                        audioFile
+                    ]);
+                }
+
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+                progressFill.textContent = '100%';
+                progressText.textContent = 'Complete!';
 
                 console.log('✅ Result received:', result);
                 console.log('Result structure:', JSON.stringify(result, null, 2));
-                
+
                 // Get video URL from result - handle different result structures
                 let videoUrl = null;
                 
@@ -511,7 +419,7 @@
                 const imageName = imageFile.name.split('.')[0];
                 videoFilename = `${imageName}_animated.mp4`;
                 
-                // Show video
+                // Display video
                 const video = document.getElementById('resultVideo');
                 
                 // Add error handler for video
@@ -524,38 +432,34 @@
                     console.log('✅ Video loaded successfully');
                 };
                 
-                // Set video source
                 video.src = videoUrl;
                 video.load(); // Force video to reload
                 
-                // Show result section
                 resultSection.style.display = 'block';
-                document.getElementById('videoFilename').textContent = videoFilename;
-                
-                // Scroll to video
-                resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                resultSection.scrollIntoView({ behavior: 'smooth' });
                 
                 showStatus('✅ Animation complete! Your talking portrait is ready! 🎉', 'success');
-                
-                console.log('✅ Animation completed successfully!');
+
             } catch (error) {
-                console.error('❌ Request failed:', error);
-                showStatus(`❌ Error: ${error.message}<br><br>
-                    <strong>Troubleshooting:</strong><br>
-                    • Check the Hugging Face Space is running: <a href="https://huggingface.co/spaces/${SPACE_URL}" target="_blank" style="color: #667eea;">View Space</a><br>
-                    • Make sure both files are valid (image and audio)<br>
-                    • Check the API status indicator (top right)<br>
-                    • Refresh this page and try again`, 'error');
+                clearInterval(progressInterval);
+                console.error('❌ Error:', error);
+                showStatus(`❌ Error: ${error.message}<br>Please try again or check your files.`, 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🎬 Create Talking Portrait';
-                progress.style.display = 'none';
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
             }
         }
 
-        // ═══════════════════════════════════════════════════
-        // DOWNLOAD VIDEO FUNCTION
-        // ═══════════════════════════════════════════════════
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.innerHTML = message;
+            status.className = type;
+            status.style.display = 'block';
+        }
+
         window.downloadVideo = function() {
             if (!savedVideoUrl) {
                 alert('❌ No video available to download!');
@@ -565,12 +469,12 @@
             try {
                 const a = document.createElement('a');
                 a.href = savedVideoUrl;
-                a.download = videoFilename;
+                a.download = videoFilename || 'talking_portrait.mp4';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 
-                showStatus(`✅ Downloading ${videoFilename}... Check your Downloads folder!`, 'success');
+                showStatus('✅ Downloading video!', 'success');
             } catch (error) {
                 console.error('Download error:', error);
                 // Fallback: open in new tab
@@ -579,16 +483,9 @@
             }
         }
 
-        // ═══════════════════════════════════════════════════
-        // RUN ON PAGE LOAD
-        // ═══════════════════════════════════════════════════
-        window.addEventListener('load', async () => {
-            console.log('🚀 Page loaded, checking API connection...');
-            await checkAPIConnection();
-            
-            // Recheck connection every 30 seconds
-            setInterval(checkAPIConnection, 30000);
-        });
+        window.showStatus = showStatus;
     </script>
 </body>
+</html>
+
 </html>
