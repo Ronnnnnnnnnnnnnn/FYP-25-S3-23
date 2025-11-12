@@ -512,13 +512,26 @@ if (window.location.pathname.includes('subscriber.html') || window.location.path
         if (profilePicture) {
           if (data.user.profile_picture) {
             // User has a profile picture - load it
-            profilePicture.src = `/static/${data.user.profile_picture}?t=${Date.now()}`;
-            console.log('Profile picture loaded:', data.user.profile_picture);
+            const imageUrl = `/static/${data.user.profile_picture}?t=${Date.now()}`;
+            console.log('📸 Setting profile picture src to:', imageUrl);
+            profilePicture.src = imageUrl;
+            
+            // Force image reload
+            profilePicture.onload = () => {
+              console.log('✅ Profile picture loaded successfully');
+            };
+            profilePicture.onerror = () => {
+              console.error('❌ Profile picture failed to load:', imageUrl);
+              // Fallback to default image
+              profilePicture.src = 'https://i.imgur.com/6VBx3io.png';
+            };
           } else {
-            // No profile picture - keep default or set to default
-            console.log('No profile picture found for user');
-            // The onerror handler in HTML will handle fallback
+            // No profile picture - use default
+            console.log('⚠️ No profile picture found in database for subscriber');
+            profilePicture.src = 'https://i.imgur.com/6VBx3io.png';
           }
+        } else {
+          console.error('❌ Profile picture element not found!');
         }
       }
     } catch (error) {
@@ -742,6 +755,9 @@ if (window.location.pathname.includes('subscriber.html') || window.location.path
       }
     });
   }
+  
+  // Initialize subscriber dashboard
+  loadProfile();
 }
 
 // ============================================
@@ -778,11 +794,13 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
             };
             profilePicture.onerror = () => {
               console.error('❌ Profile picture failed to load:', imageUrl);
+              // Fallback to default image
+              profilePicture.src = 'https://i.imgur.com/6VBx3io.png';
             };
           } else {
-            // No profile picture - keep default or set to default
+            // No profile picture - use default
             console.log('⚠️ No profile picture found in database for admin');
-            // The onerror handler in HTML will handle fallback
+            profilePicture.src = 'https://i.imgur.com/6VBx3io.png';
           }
         } else {
           console.error('❌ Profile picture element not found!');
@@ -1260,16 +1278,9 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
     });
   }
   
-  // Initialize subscriber dashboard
-  loadProfile();
-}
-
-// ============================================
-// ADMIN DASHBOARD INITIALIZATION
-// ============================================
-if (window.location.pathname.includes('admin.html') || window.location.pathname === '/admin') {
   // Initialize admin dashboard
   loadAdminProfile();
+  loadUsers();
 }
 
 // ============================================
