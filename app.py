@@ -405,6 +405,7 @@ def api_profile():
             cursor.execute("SELECT user_id, fullname, email, role, subscription_status, profile_picture FROM users WHERE user_id = %s", 
                          (session['user_id'],))
             user = cursor.fetchone()
+            print(f"Profile GET - User ID: {session['user_id']}, Profile Picture: {user.get('profile_picture') if user else 'None'}")
             return jsonify({'success': True, 'user': user})
         
         elif request.method == 'PUT':
@@ -479,6 +480,12 @@ def api_upload_profile_picture():
             (relative_path, user_id)
         )
         db.commit()
+        
+        # Verify the update
+        cursor.execute("SELECT profile_picture FROM users WHERE user_id = %s", (user_id,))
+        updated_user = cursor.fetchone()
+        print(f"✓ Profile picture saved to database: {updated_user.get('profile_picture')}")
+        
         cursor.close()
         db.close()
         

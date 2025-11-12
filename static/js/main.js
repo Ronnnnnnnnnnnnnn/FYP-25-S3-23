@@ -94,8 +94,16 @@ if (window.location.pathname.includes('user.html') || window.location.pathname =
         
         // Update profile picture if available
         const profilePicture = document.getElementById('profilePicture');
-        if (profilePicture && data.user.profile_picture) {
-          profilePicture.src = `/static/${data.user.profile_picture}`;
+        if (profilePicture) {
+          if (data.user.profile_picture) {
+            // User has a profile picture - load it
+            profilePicture.src = `/static/${data.user.profile_picture}?t=${Date.now()}`;
+            console.log('Profile picture loaded:', data.user.profile_picture);
+          } else {
+            // No profile picture - keep default or set to default
+            console.log('No profile picture found for user');
+            // The onerror handler in HTML will handle fallback
+          }
         }
       }
     } catch (error) {
@@ -501,8 +509,16 @@ if (window.location.pathname.includes('subscriber.html') || window.location.path
         
         // Update profile picture if available
         const profilePicture = document.getElementById('profilePicture');
-        if (profilePicture && data.user.profile_picture) {
-          profilePicture.src = `/static/${data.user.profile_picture}`;
+        if (profilePicture) {
+          if (data.user.profile_picture) {
+            // User has a profile picture - load it
+            profilePicture.src = `/static/${data.user.profile_picture}?t=${Date.now()}`;
+            console.log('Profile picture loaded:', data.user.profile_picture);
+          } else {
+            // No profile picture - keep default or set to default
+            console.log('No profile picture found for user');
+            // The onerror handler in HTML will handle fallback
+          }
         }
       }
     } catch (error) {
@@ -734,8 +750,16 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
         
         // Update profile picture if available
         const profilePicture = document.getElementById('profilePicture');
-        if (profilePicture && data.user.profile_picture) {
-          profilePicture.src = `/static/${data.user.profile_picture}`;
+        if (profilePicture) {
+          if (data.user.profile_picture) {
+            // User has a profile picture - load it
+            profilePicture.src = `/static/${data.user.profile_picture}?t=${Date.now()}`;
+            console.log('Profile picture loaded:', data.user.profile_picture);
+          } else {
+            // No profile picture - keep default or set to default
+            console.log('No profile picture found for user');
+            // The onerror handler in HTML will handle fallback
+          }
         }
       }
     } catch (error) {
