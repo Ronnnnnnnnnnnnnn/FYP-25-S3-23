@@ -1,13 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session, send_file, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
-import requests
 from werkzeug.utils import secure_filename
 from db_config import DatabaseConnection
 from mysql.connector import Error as MySQLError
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
 import os
-import secrets
 
 app = Flask(__name__, 
             static_folder='static',
@@ -19,18 +17,6 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ANIMATIONS_FOLDER'] = 'static/animations'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Email configuration - Using Mailgun API (works with Railway, no domain verification needed)
-# Get your API key from: https://app.mailgun.com/app/api-keys
-# Set these environment variables in Railway:
-# MAILGUN_API_KEY=your_mailgun_api_key_here
-# MAILGUN_DOMAIN=your_mailgun_domain (e.g., sandbox12345.mailgun.org for testing)
-# MAILGUN_FROM_EMAIL=noreply@your_mailgun_domain
-# 
-# Mailgun free tier: 5,000 emails/month, can send to any email address
-# No domain verification needed for sandbox domain (testing)
-MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY', '')
-MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN', '')
-MAILGUN_FROM_EMAIL = os.getenv('MAILGUN_FROM_EMAIL', '')
 
 # Ensure upload directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -45,75 +31,6 @@ def allowed_file(filename, allowed_extensions):
 def get_db():
     return DatabaseConnection().get_connection()
 
-def generate_verification_token():
-    """Generate a secure verification token"""
-    return secrets.token_urlsafe(32)
-
-def send_verification_email(email, token, fullname):
-    """Send verification link email using Mailgun API"""
-    try:
-        # Check if Mailgun is configured
-        if not MAILGUN_API_KEY or not MAILGUN_DOMAIN or not MAILGUN_FROM_EMAIL:
-            print(f"ERROR: Mailgun not configured. Set MAILGUN_API_KEY, MAILGUN_DOMAIN, and MAILGUN_FROM_EMAIL environment variables.")
-            return False
-        
-        # Generate verification URL
-        verification_url = url_for('verify_email_link', token=token, _external=True)
-        
-        print(f"Attempting to send verification email to {email} via Mailgun API")
-        print(f"Verification URL: {verification_url}")
-        
-        # Mailgun API endpoint
-        url = f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages"
-        
-        # Mailgun uses Basic Auth with api key
-        auth = ("api", MAILGUN_API_KEY)
-        
-        data = {
-            "from": MAILGUN_FROM_EMAIL,
-            "to": email,
-            "subject": "Verify Your Email - FirstMod-AI",
-            "html": f"""
-            <html>
-            <body style="font-family: Arial, sans-serif; padding: 20px;">
-                <h2 style="color: #667eea;">Welcome to FirstMod-AI, {fullname}!</h2>
-                <p>Thank you for signing up. Please verify your email address by clicking the button below:</p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{verification_url}" 
-                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; 
-                              border-radius: 5px; display: inline-block; font-size: 16px; font-weight: bold;">
-                        Verify Email Address
-                    </a>
-                </div>
-                <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
-                <p style="color: #667eea; word-break: break-all; font-size: 12px;">{verification_url}</p>
-                <p style="color: #666; font-size: 14px;">This link will expire in 24 hours.</p>
-                <p style="color: #666; font-size: 14px;">If you didn't create an account, please ignore this email.</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="color: #666; font-size: 12px;">© 2025 FirstMod-AI. All rights reserved.</p>
-            </body>
-            </html>
-            """
-        }
-        
-        # Send email via Mailgun API
-        response = requests.post(url, auth=auth, data=data, timeout=10)
-        
-        if response.status_code == 200:
-            print(f"✓ Verification email sent successfully to {email} via Mailgun")
-            return True
-        else:
-            print(f"✗ ERROR: Mailgun API returned status {response.status_code}: {response.text}")
-            return False
-            
-    except requests.exceptions.Timeout:
-        print(f"✗ ERROR: Email sending timed out")
-        return False
-    except Exception as e:
-        print(f"✗ ERROR sending email to {email}: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
 
 def check_account_status():
     """Check if the logged-in user's account is suspended"""
@@ -294,73 +211,30 @@ def api_signup():
         
         cursor = db.cursor(dictionary=True)
         
-        # Check if email exists and is verified
-        cursor.execute("SELECT user_id, email_verified FROM users WHERE email = %s", (email,))
+        # Check if email already exists
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (email,))
         existing_user = cursor.fetchone()
         if existing_user:
-            if existing_user.get('email_verified', False):  # email_verified is True
-                cursor.close()
-                db.close()
-                return jsonify({'success': False, 'message': 'Email already exists'}), 400
-            else:
-                # Email exists but not verified, delete old record and create new one
-                cursor.execute("DELETE FROM users WHERE email = %s", (email,))
-                db.commit()
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Email already exists'}), 400
         
-        # Generate verification token and expiration time (24 hours from now)
-        verification_token = generate_verification_token()
-        expires_at = datetime.now() + timedelta(hours=24)
-        
-        # Insert new user with unverified status
+        # Insert new user (email verified by default, no verification needed)
         hashed_password = generate_password_hash(password)
         cursor.execute(
-            """INSERT INTO users (fullname, email, password, role, subscription_status, email_verified, verification_token, verification_token_expires_at) 
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-            (fullname, email, hashed_password, 'user', 'inactive', False, verification_token, expires_at)
+            """INSERT INTO users (fullname, email, password, role, subscription_status, email_verified) 
+               VALUES (%s, %s, %s, %s, %s, %s)""",
+            (fullname, email, hashed_password, 'user', 'inactive', True)
         )
         db.commit()
         
-        # Close cursor and connection before sending email
-        if cursor:
-            cursor.close()
-        if db:
-            db.close()
+        cursor.close()
+        db.close()
         
-        # Send verification email
-        # Try to send email synchronously first to catch errors immediately
-        print(f"Preparing to send verification email to {email} with token: {verification_token[:20]}...")
-        email_sent = False
-        email_error_msg = None
-        
-        try:
-            email_sent = send_verification_email(email, verification_token, fullname)
-            if email_sent:
-                print(f"✓ Verification email sent successfully to {email}")
-            else:
-                print(f"✗ Verification email failed to send to {email}")
-                email_error_msg = "Email sending returned False"
-        except Exception as email_error:
-            print(f"✗ Exception during email sending: {email_error}")
-            import traceback
-            traceback.print_exc()
-            email_error_msg = str(email_error)
-        
-        # Return response based on email sending result
-        if email_sent:
-            return jsonify({
-                'success': True, 
-                'message': 'Account created! Please check your email and click the verification link to activate your account.',
-                'requires_verification': True
-            })
-        else:
-            # Email failed, but account is created - user can request resend
-            return jsonify({
-                'success': True, 
-                'message': f'Account created but verification email failed to send. Error: {email_error_msg}. Please use "Resend Verification" or contact support.',
-                'requires_verification': True,
-                'email_error': True,
-                'verification_token': verification_token  # Include token for manual verification if needed
-            }), 200
+        return jsonify({
+            'success': True, 
+            'message': 'Account created successfully! You can now login.'
+        })
     
     except Exception as e:
         print(f"Signup error: {e}")
@@ -378,131 +252,6 @@ def api_signup():
             except:
                 pass
         return jsonify({'success': False, 'message': f'Signup failed: {str(e)}'}), 500
-
-@app.route('/verify-email/<token>')
-def verify_email_link(token):
-    """Verify email using verification token from link"""
-    try:
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
-        
-        # Find user with this verification token
-        cursor.execute(
-            """SELECT user_id, verification_token, verification_token_expires_at, email_verified, email 
-               FROM users WHERE verification_token = %s""",
-            (token,)
-        )
-        user = cursor.fetchone()
-        
-        if not user:
-            cursor.close()
-            db.close()
-            return render_template('verify_result.html', 
-                                 success=False, 
-                                 message='Invalid verification link.')
-        
-        # Check if already verified
-        if user['email_verified']:
-            cursor.close()
-            db.close()
-            return render_template('verify_result.html', 
-                                 success=True, 
-                                 message='Email already verified! You can now login.')
-        
-        # Check if token expired
-        if user['verification_token_expires_at'] and datetime.now() > user['verification_token_expires_at']:
-            cursor.close()
-            db.close()
-            return render_template('verify_result.html', 
-                                 success=False, 
-                                 message='Verification link has expired. Please request a new one.')
-        
-        # Verify the email
-        cursor.execute(
-            """UPDATE users SET email_verified = TRUE, verification_token = NULL, 
-               verification_token_expires_at = NULL, subscription_status = 'active' 
-               WHERE user_id = %s""",
-            (user['user_id'],)
-        )
-        db.commit()
-        cursor.close()
-        db.close()
-        
-        return render_template('verify_result.html', 
-                             success=True, 
-                             message='Email verified successfully! You can now login.')
-    
-    except Exception as e:
-        print(f"Verify email error: {e}")
-        import traceback
-        traceback.print_exc()
-        return render_template('verify_result.html', 
-                             success=False, 
-                             message='An error occurred during verification. Please try again.')
-
-@app.route('/api/resend-verification', methods=['POST'])
-def api_resend_verification():
-    """Resend verification email"""
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        
-        if not email:
-            return jsonify({'success': False, 'message': 'Email is required'}), 400
-        
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
-        
-        # Check if user exists and is not verified
-        cursor.execute(
-            "SELECT user_id, fullname, email_verified FROM users WHERE email = %s",
-            (email,)
-        )
-        user = cursor.fetchone()
-        
-        if not user:
-            cursor.close()
-            db.close()
-            return jsonify({'success': False, 'message': 'Email not found'}), 400
-        
-        if user['email_verified']:
-            cursor.close()
-            db.close()
-            return jsonify({'success': False, 'message': 'Email already verified'}), 400
-        
-        # Generate new verification token
-        verification_token = generate_verification_token()
-        expires_at = datetime.now() + timedelta(hours=24)
-        
-        # Update verification token
-        cursor.execute(
-            "UPDATE users SET verification_token = %s, verification_token_expires_at = %s WHERE user_id = %s",
-            (verification_token, expires_at, user['user_id'])
-        )
-        db.commit()
-        cursor.close()
-        db.close()
-        
-        # Send new verification email
-        import threading
-        def send_email_async():
-            try:
-                send_verification_email(email, verification_token, user['fullname'])
-            except Exception as e:
-                print(f"Background email sending failed: {e}")
-        
-        email_thread = threading.Thread(target=send_email_async)
-        email_thread.daemon = True
-        email_thread.start()
-        
-        return jsonify({
-            'success': True, 
-            'message': 'Verification email sent! Please check your inbox.'
-        })
-    
-    except Exception as e:
-        print(f"Resend verification error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
@@ -525,20 +274,6 @@ def api_login():
         
         if not user or not check_password_hash(user['password'], password):
             return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
-        
-        # Check if email is verified
-        # Allow existing users (created before email verification) to login
-        # If verification_token is NULL, it means it's an old user created before email verification feature
-        email_verified = user.get('email_verified', False)
-        verification_token = user.get('verification_token')
-        
-        # If user has verification_token but not verified, require verification
-        if verification_token is not None and not email_verified:
-            return jsonify({
-                'success': False, 
-                'message': 'Please verify your email before logging in. Check your inbox for the verification link.',
-                'requires_verification': True
-            }), 403
         
         # Check if account is suspended
         if user.get('subscription_status') == 'suspended':
