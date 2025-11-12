@@ -427,8 +427,35 @@
                 // Get video URL from result - handle different result structures
                 let videoUrl = null;
                 
+                // Handle result structure: {video: {...}, subtitles: null}
+                if (result.video) {
+                    const videoObj = result.video;
+                    console.log('📹 Video object structure:', videoObj);
+                    console.log('📹 Video object type:', typeof videoObj);
+                    console.log('📹 Video object keys:', Object.keys(videoObj));
+                    
+                    // videoObj might be a string URL, or an object with url/file property
+                    if (typeof videoObj === 'string') {
+                        videoUrl = videoObj;
+                        console.log('✅ Found video URL as string:', videoUrl);
+                    } else if (videoObj.url) {
+                        videoUrl = videoObj.url;
+                        console.log('✅ Found video URL in .url property:', videoUrl);
+                    } else if (videoObj.file) {
+                        videoUrl = videoObj.file;
+                        console.log('✅ Found video URL in .file property:', videoUrl);
+                    } else if (videoObj[0]) {
+                        videoUrl = videoObj[0];
+                        console.log('✅ Found video URL in [0] index:', videoUrl);
+                    } else if (typeof videoObj === 'object' && Object.keys(videoObj).length > 0) {
+                        // Try to get the first property value
+                        const firstKey = Object.keys(videoObj)[0];
+                        videoUrl = videoObj[firstKey];
+                        console.log(`✅ Found video URL in first key "${firstKey}":`, videoUrl);
+                    }
+                }
                 // Try different possible result structures
-                if (result.data && result.data[0]) {
+                else if (result.data && result.data[0]) {
                     videoUrl = result.data[0];
                 } else if (result[0]) {
                     videoUrl = result[0];
@@ -440,7 +467,7 @@
                     videoUrl = result.file;
                 }
                 
-                // If videoUrl is an object, try to extract URL from it
+                // If videoUrl is still an object, try to extract URL from it
                 if (videoUrl && typeof videoUrl === 'object') {
                     if (videoUrl.url) {
                         videoUrl = videoUrl.url;
@@ -448,14 +475,25 @@
                         videoUrl = videoUrl.file;
                     } else if (videoUrl[0]) {
                         videoUrl = videoUrl[0];
+                    } else if (typeof videoUrl === 'object' && Object.keys(videoUrl).length > 0) {
+                        // Try to get the first property value
+                        const firstKey = Object.keys(videoUrl)[0];
+                        videoUrl = videoUrl[firstKey];
+                        // If still an object, try one more level
+                        if (videoUrl && typeof videoUrl === 'object' && videoUrl.url) {
+                            videoUrl = videoUrl.url;
+                        }
                     } else {
                         console.error('Could not extract video URL from result:', videoUrl);
-                        throw new Error('Invalid video result format');
+                        console.error('Full result:', result);
+                        throw new Error('Invalid video result format. Result structure: ' + JSON.stringify(result));
                     }
                 }
                 
                 if (!videoUrl || typeof videoUrl !== 'string') {
-                    throw new Error('No valid video URL found in result');
+                    console.error('Video URL is not a string:', videoUrl);
+                    console.error('Full result:', result);
+                    throw new Error('No valid video URL found in result. Got: ' + typeof videoUrl);
                 }
                 
                 console.log('📹 Video URL:', videoUrl);
