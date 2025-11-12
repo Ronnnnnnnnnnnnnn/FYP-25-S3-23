@@ -332,33 +332,39 @@ def api_delete_account():
                 except Exception as e:
                     print(f"Error deleting profile picture: {e}")
         
-        # Delete user's animations
-        cursor.execute("SELECT animation_path FROM animations WHERE user_id = %s", (user_id,))
-        animations = cursor.fetchall()
+        # Delete user's animations (if table exists)
+        try:
+            cursor.execute("SELECT animation_path FROM animations WHERE user_id = %s", (user_id,))
+            animations = cursor.fetchall()
+            
+            for anim in animations:
+                if anim[0]:
+                    anim_path = os.path.join('static', anim[0])
+                    if os.path.exists(anim_path):
+                        try:
+                            os.remove(anim_path)
+                            print(f"Deleted animation: {anim_path}")
+                        except Exception as e:
+                            print(f"Error deleting animation: {e}")
+        except Exception as e:
+            print(f"Animations table may not exist or error accessing it: {e}")
         
-        for anim in animations:
-            if anim[0]:
-                anim_path = os.path.join('static', anim[0])
-                if os.path.exists(anim_path):
-                    try:
-                        os.remove(anim_path)
-                        print(f"Deleted animation: {anim_path}")
-                    except Exception as e:
-                        print(f"Error deleting animation: {e}")
-        
-        # Delete user's avatars
-        cursor.execute("SELECT avatar_path FROM avatars WHERE user_id = %s", (user_id,))
-        avatars = cursor.fetchall()
-        
-        for avatar in avatars:
-            if avatar[0]:
-                avatar_path = os.path.join('static', avatar[0])
-                if os.path.exists(avatar_path):
-                    try:
-                        os.remove(avatar_path)
-                        print(f"Deleted avatar: {avatar_path}")
-                    except Exception as e:
-                        print(f"Error deleting avatar: {e}")
+        # Delete user's avatars (if table exists)
+        try:
+            cursor.execute("SELECT avatar_path FROM avatars WHERE user_id = %s", (user_id,))
+            avatars = cursor.fetchall()
+            
+            for avatar in avatars:
+                if avatar[0]:
+                    avatar_path = os.path.join('static', avatar[0])
+                    if os.path.exists(avatar_path):
+                        try:
+                            os.remove(avatar_path)
+                            print(f"Deleted avatar: {avatar_path}")
+                        except Exception as e:
+                            print(f"Error deleting avatar: {e}")
+        except Exception as e:
+            print(f"Avatars table may not exist or error accessing it: {e}")
         
         # Delete user from database
         cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
