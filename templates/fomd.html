@@ -327,17 +327,40 @@
         window.app = null;
         let savedVideoUrl = null;
         let videoFilename = 'fomd_animation.mp4';
-
-        window.showFileInfo = function(type) {
-            const input = document.getElementById(`${type}Input`);
-            const info = document.getElementById(`${type}Info`);
+        
+        // Preview functions
+        window.previewImage = function(input) {
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const preview = document.getElementById('imagePreview');
             
-            if (input.files.length > 0) {
-                const file = input.files[0];
-                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-                info.textContent = `✓ ${file.name} (${sizeMB} MB)`;
-                info.style.color = '#28a745';
-                info.style.fontWeight = 'bold';
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    previewContainer.classList.add('active');
+                };
+                
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                previewContainer.classList.remove('active');
+            }
+        };
+        
+        window.previewVideo = function(input) {
+            const previewContainer = document.getElementById('videoPreviewContainer');
+            const videoPreview = document.getElementById('videoPreview');
+            
+            if (input.files && input.files[0]) {
+                const url = URL.createObjectURL(input.files[0]);
+                videoPreview.src = url;
+                previewContainer.classList.add('active');
+            } else {
+                previewContainer.classList.remove('active');
+                if (videoPreview.src) {
+                    URL.revokeObjectURL(videoPreview.src);
+                }
+                videoPreview.src = '';
             }
         };
 
@@ -567,11 +590,15 @@
                 showStatus('✅ Animation complete! Your FOMD animation is ready! 🎉', 'success');
 
             } catch (error) {
+                clearInterval(progressInterval);
                 console.error('❌ Error:', error);
                 showStatus(`❌ Error: ${error.message}<br>Please try again or check your files.`, 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🎬 Create Animation';
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
             }
         };
 
