@@ -338,6 +338,38 @@ if (window.location.pathname.includes('user.html') || window.location.pathname =
     });
   }
   
+  // Delete account
+  if (document.getElementById('deleteAccountBtn')) {
+    document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to delete your account? This action cannot be undone. All your data, animations, and avatars will be permanently deleted.')) {
+        return;
+      }
+      
+      if (!confirm('This is your final warning. Are you absolutely sure you want to delete your account?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/account/delete', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showMessage('Account deleted successfully. Redirecting to home page...', 'success');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 2000);
+        } else {
+          showMessage(data.message || 'Failed to delete account', 'error');
+        }
+      } catch (error) {
+        showMessage('Delete failed: ' + error.message, 'error');
+      }
+    });
+  }
+  
   // Upload avatar
   if (document.getElementById('uploadAvatarBtn')) {
     document.getElementById('uploadAvatarBtn').addEventListener('click', async () => {
