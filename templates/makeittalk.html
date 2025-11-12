@@ -211,19 +211,28 @@
 </head>
 <body>
     <!-- Navbar -->
-    <div class="navbar">
+    <nav class="navbar">
         <div class="logo">🎭 Face Animation</div>
         <ul>
-            {% if user_role == 'subscriber' or user_role == 'admin' %}
-            <li><a href="{{ url_for('subscriber_dashboard') }}">Subscriber Dashboard</a></li>
-            <li><a href="{{ url_for('fomd_page') }}">FOMD</a></li>
-            <li><a href="{{ url_for('makeittalk_page') }}" class="active">MakeItTalk</a></li>
+            {% if user_role %}
+                {% if user_role == 'user' %}
+                    <li><a href="/user">Dashboard</a></li>
+                {% elif user_role == 'subscriber' %}
+                    <li><a href="/subscriber">Dashboard</a></li>
+                {% elif user_role == 'admin' %}
+                    <li><a href="/admin">Dashboard</a></li>
+                {% endif %}
+                <li><a href="/fomd">FOMD</a></li>
+                <li><a href="/makeittalk" class="active">MakeItTalk</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
             {% else %}
-            <li><a href="{{ url_for('user_dashboard') }}">User Dashboard</a></li>
+                <li><a href="/">Home</a></li>
+                <li><a href="/fomd">FOMD</a></li>
+                <li><a href="/makeittalk" class="active">MakeItTalk</a></li>
+                <li><a href="/login">Login</a></li>
             {% endif %}
-            <li><a href="{{ url_for('login_page') }}">Logout</a></li>
         </ul>
-    </div>
+    </nav>
 
     <div id="connectionStatus" class="connection-status status-offline">
         ⚠️ Checking connection...
@@ -592,8 +601,22 @@
         }
 
         window.showStatus = showStatus;
+
+        // Logout function
+        window.logout = async function() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/';
+            }
+        };
     </script>
 </body>
-</html>
-
 </html>
