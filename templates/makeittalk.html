@@ -277,7 +277,7 @@
         // 🔥 HUGGING FACE GRADIO API CONFIGURATION 🔥
         // ═══════════════════════════════════════════════════════════
         const YOUR_USERNAME = "Tc12345";  // ← Your Hugging Face username
-        const SPACE_NAME = "MakeItTalk";
+        const SPACE_NAME = "MakeItTalk";  // Try: "MakeItTalk", "makeittalk", or check your actual space name
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
         // ═══════════════════════════════════════════════════════════
         
@@ -288,22 +288,68 @@
         let savedVideoUrl = null;
         let videoFilename = 'talking_portrait.mp4';
 
+        // Function to try connecting with different space name formats
+        async function tryConnect(spacePath) {
+            try {
+                console.log('Attempting to connect to:', spacePath);
+                const app = await window.gradioClient(spacePath);
+                console.log('✅ Connected successfully!');
+                return app;
+            } catch (error) {
+                console.log('Failed to connect to:', spacePath, error.message);
+                throw error;
+            }
+        }
+
         // Check connection on load
         window.addEventListener('load', async () => {
             console.log('🔍 Checking connection to:', SPACE_URL);
             
-            try {
-                window.app = await window.gradioClient(SPACE_URL);
-                console.log('✅ Connected to Gradio API!');
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.textContent = '⏳ Connecting...';
+            statusDiv.className = 'connection-status status-offline';
+            
+            // Try different space name variations
+            const spaceVariations = [
+                SPACE_URL,  // Original: "Tc12345/MakeItTalk"
+                `${YOUR_USERNAME}/${SPACE_NAME.toLowerCase()}`,  // "Tc12345/makeittalk"
+                `${YOUR_USERNAME}/${SPACE_NAME.toUpperCase()}`,  // "Tc12345/MAKEITTALK"
+            ];
+            
+            let connected = false;
+            let lastError = null;
+            
+            for (const spacePath of spaceVariations) {
+                try {
+                    window.app = await tryConnect(spacePath);
+                    connected = true;
+                    statusDiv.textContent = '✅ Connected to API';
+                    statusDiv.className = 'connection-status status-online';
+                    console.log(`✅ Successfully connected to: ${spacePath}`);
+                    break;
+                } catch (error) {
+                    lastError = error;
+                    console.log(`❌ Failed to connect to: ${spacePath}`);
+                }
+            }
+            
+            if (!connected) {
+                console.error('❌ All connection attempts failed');
+                statusDiv.textContent = '❌ API Offline';
+                statusDiv.className = 'connection-status status-offline';
                 
-                document.getElementById('connectionStatus').textContent = '✅ Connected to API';
-                document.getElementById('connectionStatus').className = 'connection-status status-online';
-                
-            } catch (error) {
-                console.error('❌ Connection failed:', error);
-                document.getElementById('connectionStatus').textContent = '❌ API Offline';
-                document.getElementById('connectionStatus').className = 'connection-status status-offline';
-                showStatus(`⚠️ Cannot connect to API. Check username: ${YOUR_USERNAME}`, 'error');
+                const spaceLink = `https://huggingface.co/spaces/${SPACE_URL}`;
+                showStatus(`
+                    ⚠️ Cannot connect to Gradio API<br><br>
+                    <strong>Tried:</strong> ${spaceVariations.join(', ')}<br>
+                    <strong>Error:</strong> ${lastError ? lastError.message : 'Unknown error'}<br><br>
+                    <strong>Please check:</strong><br>
+                    1. The space exists: <a href="${spaceLink}" target="_blank" style="color: #667eea;">${spaceLink}</a><br>
+                    2. The space is <strong>public</strong> and <strong>running</strong><br>
+                    3. Verify the exact space name in your Hugging Face account<br>
+                    4. Make sure the space name matches exactly (case-sensitive)<br>
+                    5. Try refreshing this page
+                `, 'error');
             }
         });
 
