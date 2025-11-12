@@ -208,7 +208,7 @@
     </nav>
 
     <div id="connectionStatus" class="connection-status status-offline">
-        ⚠️ Checking connection...
+        ⏳ Connecting...
     </div>
 
     <div class="container">
@@ -304,20 +304,66 @@
             }
         };
 
+        // Function to try connecting with different space name formats
+        async function tryConnect(spacePath) {
+            try {
+                console.log('Attempting to connect to:', spacePath);
+                const app = await window.gradioClient(spacePath);
+                console.log('✅ Connected successfully!');
+                return app;
+            } catch (error) {
+                console.log('Failed to connect to:', spacePath, error.message);
+                throw error;
+            }
+        }
+
+        // Check connection on load
         window.addEventListener('load', async () => {
             console.log('🔍 Checking connection to:', SPACE_URL);
             
-            try {
-                window.app = await window.gradioClient(SPACE_URL);
-                console.log('✅ Connected!');
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.textContent = '⏳ Connecting...';
+            statusDiv.className = 'connection-status status-offline';
+            
+            // Try different space name variations
+            const spaceVariations = [
+                SPACE_URL,  // Original: "Tc12345/fomd"
+                `${YOUR_USERNAME}/${SPACE_NAME.toLowerCase()}`,  // "Tc12345/fomd"
+                `${YOUR_USERNAME}/${SPACE_NAME.toUpperCase()}`,  // "Tc12345/FOMD"
+            ];
+            
+            let connected = false;
+            let lastError = null;
+            
+            for (const spacePath of spaceVariations) {
+                try {
+                    window.app = await tryConnect(spacePath);
+                    connected = true;
+                    statusDiv.textContent = '✅ Connected to API';
+                    statusDiv.className = 'connection-status status-online';
+                    console.log(`✅ Successfully connected to: ${spacePath}`);
+                    break;
+                } catch (error) {
+                    lastError = error;
+                    console.log(`❌ Failed to connect to: ${spacePath}`);
+                }
+            }
+            
+            if (!connected) {
+                console.error('❌ All connection attempts failed');
+                statusDiv.textContent = '❌ API Offline';
+                statusDiv.className = 'connection-status status-offline';
                 
-                document.getElementById('connectionStatus').textContent = '✅ Connected to API';
-                document.getElementById('connectionStatus').className = 'connection-status status-online';
-                
-            } catch (error) {
-                console.error('❌ Connection failed:', error);
-                document.getElementById('connectionStatus').textContent = '❌ API Offline';
-                showStatus(`⚠️ Cannot connect. Check space: ${SPACE_URL}`, 'error');
+                const spaceLink = `https://huggingface.co/spaces/${SPACE_URL}`;
+                showStatus(`
+                    ⚠️ Cannot connect to Gradio API<br><br>
+                    <strong>Tried:</strong> ${spaceVariations.join(', ')}<br>
+                    <strong>Error:</strong> ${lastError ? lastError.message : 'Unknown error'}<br><br>
+                    Please check:<br>
+                    1. The space name is correct: <a href="${spaceLink}" target="_blank">${SPACE_URL}</a><br>
+                    2. The space is set to <strong>Public</strong> on Hugging Face<br>
+                    3. The space is <strong>Running</strong> (not sleeping)
+                `, 'error');
             }
         });
 
