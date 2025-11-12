@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>First Order Motion Model - Face Animation</title>
+    <title>FOMD - Face Animation</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -15,13 +16,44 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 0;
-            margin: 0;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .navbar ul {
+            list-style: none;
+            display: flex;
+            gap: 30px;
+        }
+
+        .navbar a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .navbar a:hover,
+        .navbar a.active {
+            color: #667eea;
         }
 
         .container {
             max-width: 900px;
-            margin: 20px auto;
+            margin: 40px auto;
             background: white;
             padding: 40px;
             border-radius: 20px;
@@ -47,12 +79,6 @@
             border: 3px dashed #667eea;
             border-radius: 15px;
             background: #f8f9ff;
-            transition: all 0.3s;
-        }
-        
-        .upload-section:hover {
-            background: #f0f2ff;
-            border-color: #764ba2;
         }
         
         .upload-section h3 {
@@ -60,15 +86,9 @@
             margin-bottom: 10px;
         }
         
-        .upload-section p {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-        
         .file-info {
             margin-top: 10px;
-            font-size: 13px;
+            font-size: 14px;
             color: #666;
         }
         
@@ -78,10 +98,9 @@
             border: 2px solid #ddd;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
         }
         
-        button {
+        .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 18px 40px;
@@ -95,12 +114,12 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
         
-        button:hover:not(:disabled) {
+        .btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
         }
         
-        button:disabled {
+        .btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             transform: none;
@@ -111,67 +130,23 @@
             padding: 20px;
             border-radius: 10px;
             display: none;
-            animation: slideIn 0.3s ease;
+            text-align: center;
         }
         
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .success {
-            background: #d4edda;
-            color: #155724;
-            border-left: 4px solid #28a745;
-        }
-        
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #dc3545;
-        }
-        
-        .info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border-left: 4px solid #17a2b8;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: #e0e0e0;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 10px;
-            display: none;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            width: 0%;
-            animation: progress 3s ease-in-out infinite;
-        }
-        
-        @keyframes progress {
-            0%, 100% { width: 0%; }
-            50% { width: 100%; }
-        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
         
         .result-section {
             margin-top: 30px;
-            padding: 20px;
-            background: #f8f9ff;
-            border-radius: 15px;
             display: none;
         }
-
+        
         video {
             width: 100%;
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         
         .download-btn {
@@ -184,197 +159,113 @@
             font-size: 16px;
             font-weight: bold;
             width: 100%;
-            transition: all 0.3s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
         
         .download-btn:hover {
-            background: #218838;
-            transform: scale(1.02);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
         }
-
-        .api-status {
+        
+        .connection-status {
             position: fixed;
             top: 20px;
             right: 20px;
-            padding: 10px 15px;
+            padding: 10px 20px;
             border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .api-status.checking {
-            background: #ffc107;
-            color: #000;
-        }
-
-        .api-status.online {
-            background: #28a745;
-            color: white;
-        }
-
-        .api-status.offline {
-            background: #dc3545;
-            color: white;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: white;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 8px;
-        }
-
-        .info-box h4 {
-            color: #1976d2;
-            margin-bottom: 8px;
-        }
-
-        .info-box p {
-            color: #555;
             font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .navbar .logo {
-            font-size: 24px;
             font-weight: bold;
-            color: #667eea;
+            z-index: 1000;
         }
-
-        .navbar ul {
-            list-style: none;
-            display: flex;
-            gap: 30px;
-            margin: 0;
-            padding: 0;
-        }
-
-        .navbar a {
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .navbar a:hover,
-        .navbar a.active {
-            color: #667eea;
-        }
+        
+        .status-online { background: #28a745; color: white; }
+        .status-offline { background: #dc3545; color: white; }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <div class="navbar">
+    <nav class="navbar">
         <div class="logo">🎭 Face Animation</div>
         <ul>
-            {% if user_role == 'subscriber' or user_role == 'admin' %}
-            <li><a href="{{ url_for('subscriber_dashboard') }}">Subscriber Dashboard</a></li>
-            <li><a href="{{ url_for('fomd_page') }}" class="active">FOMD</a></li>
-            <li><a href="{{ url_for('makeittalk_page') }}">MakeItTalk</a></li>
-            {% else %}
-            <li><a href="{{ url_for('user_dashboard') }}">User Dashboard</a></li>
+            <li><a href="/">Home</a></li>
+            {% if user_role %}
+                {% if user_role == 'user' %}
+                    <li><a href="/user">Dashboard</a></li>
+                {% elif user_role == 'subscriber' %}
+                    <li><a href="/subscriber">Dashboard</a></li>
+                {% elif user_role == 'admin' %}
+                    <li><a href="/admin">Dashboard</a></li>
+                {% endif %}
             {% endif %}
-            <li><a href="{{ url_for('login_page') }}">Logout</a></li>
+            <li><a href="/makeittalk">MakeItTalk</a></li>
+            <li><a href="/fomd" class="active">FOMD</a></li>
+            {% if user_role %}
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            {% else %}
+                <li><a href="/login">Login</a></li>
+            {% endif %}
         </ul>
-    </div>
+    </nav>
 
-    <!-- API Status Indicator -->
-    <div class="api-status checking" id="apiStatus">
-        <div class="status-dot"></div>
-        <span id="apiStatusText">Checking...</span>
+    <div id="connectionStatus" class="connection-status status-offline">
+        ⚠️ Checking connection...
     </div>
 
     <div class="container">
         <h1>🎭 First Order Motion Model</h1>
-        <p class="subtitle">Animate faces from photos using driving videos</p>
-        
-        <div class="info-box">
-            <h4>ℹ️ How it works:</h4>
-            <p>
-                Upload a portrait photo and a driving video. The face from your photo will be 
-                animated to match the movements in the video. For best results, use a video 
-                with clear facial movements.
-            </p>
-        </div>
+        <p class="subtitle">Animate faces using driving videos</p>
         
         <div class="upload-section">
-            <h3>📷 Upload Source Image</h3>
-            <p>Choose a portrait photo (the face you want to animate)</p>
-            <input type="file" id="imageInput" accept="image/*" onchange="showFileInfo('image')" required>
+            <h3>📷 Source Image</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                Upload the face you want to animate
+            </p>
+            <input type="file" id="imageInput" accept="image/*" onchange="showFileInfo('image')">
             <div class="file-info" id="imageInfo"></div>
         </div>
         
         <div class="upload-section">
-            <h3>🎥 Upload Driving Video</h3>
-            <p>Choose a video (movements that will drive the animation)</p>
-            <input type="file" id="videoInput" accept="video/*" onchange="showFileInfo('video')" required>
+            <h3>🎥 Driving Video</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                Upload a video with movements to apply
+            </p>
+            <input type="file" id="videoInput" accept="video/*" onchange="showFileInfo('video')">
             <div class="file-info" id="videoInfo"></div>
         </div>
         
-        <button onclick="createAnimation()" id="animateBtn">
+        <button class="btn" onclick="createAnimation()" id="submitBtn">
             🎬 Create Animation
         </button>
-        
-        <div class="progress-bar" id="progress">
-            <div class="progress-fill"></div>
-        </div>
         
         <div id="status"></div>
         
         <div class="result-section" id="resultSection">
-            <h3 style="color: #667eea; text-align: center; margin-bottom: 15px;">🎉 Your Animation is Ready!</h3>
+            <h3 style="color: #667eea; text-align: center; margin-bottom: 15px;">
+                🎉 Your Animation is Ready!
+            </h3>
             <video id="resultVideo" controls autoplay></video>
             <button onclick="downloadVideo()" class="download-btn">
-                📥 Download Animation
+                📥 Download Video
             </button>
-            <p style="text-align: center; color: #666; margin-top: 10px; font-size: 14px;">
-                Filename: <strong id="videoFilename">animation.mp4</strong>
-            </p>
         </div>
     </div>
 
-    <script>
-        // ═══════════════════════════════════════════════════
-        // CONFIGURATION - Replace with your ngrok URL from Colab
-        // ═══════════════════════════════════════════════════
-        const API_URL = 'https://raelene-covariant-doyle.ngrok-free.dev';
+    <script type="module">
+        // ═══════════════════════════════════════════════════════════
+        // REPLACE WITH YOUR HUGGING FACE USERNAME!
+        // ═══════════════════════════════════════════════════════════
+        const YOUR_USERNAME = "Tc12345";  // ← Your HF username
+        const SPACE_NAME = "fomd";  // ← Your FOMD space name
+        const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
+        // ═══════════════════════════════════════════════════════════
 
+        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+
+        window.gradioClient = client;
+        window.app = null;
         let savedVideoUrl = null;
-        let videoFilename = 'animation.mp4';
+        let videoFilename = 'fomd_animation.mp4';
 
-        // ═══════════════════════════════════════════════════
-        // UTILITY FUNCTIONS
-        // ═══════════════════════════════════════════════════
-        function showFileInfo(type) {
+        window.showFileInfo = function(type) {
             const input = document.getElementById(`${type}Input`);
             const info = document.getElementById(`${type}Info`);
             
@@ -385,7 +276,7 @@
                 info.style.color = '#28a745';
                 info.style.fontWeight = 'bold';
             }
-        }
+        };
 
         function showStatus(message, type) {
             const status = document.getElementById('status');
@@ -394,183 +285,204 @@
             status.style.display = 'block';
         }
 
-        // ═══════════════════════════════════════════════════
-        // CHECK API CONNECTION
-        // ═══════════════════════════════════════════════════
-        async function checkAPIConnection() {
-            const statusDiv = document.getElementById('apiStatus');
-            const statusText = document.getElementById('apiStatusText');
-            const animateBtn = document.getElementById('animateBtn');
-            
+        window.showStatus = showStatus;
+
+        // Logout function
+        window.logout = async function() {
             try {
-                console.log('🔍 Checking API connection to:', API_URL);
-                
-                // FIXED: Added ngrok bypass headers
-                const response = await fetch(`${API_URL}/`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'ngrok-skip-browser-warning': 'true',
-                        'User-Agent': 'CustomClient'
-                    }
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
                 });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('✅ API Response:', data);
-                    
-                    statusDiv.className = 'api-status online';
-                    statusText.textContent = 'API Online ✓';
-                    animateBtn.disabled = false;
-                    
-                    return true;
-                } else {
-                    throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/';
                 }
             } catch (error) {
-                console.error('❌ API Connection Failed:', error);
-                
-                statusDiv.className = 'api-status offline';
-                statusText.textContent = 'API Offline ✗';
-                animateBtn.disabled = true;
-                animateBtn.textContent = '❌ API Not Connected';
-                
-                showStatus(`
-                    ⚠️ Cannot connect to API<br><br>
-                    <strong>Quick Fix:</strong><br>
-                    1. Make sure Google Colab is running<br>
-                    2. Check if ngrok URL is correct: <code>${API_URL}</code><br>
-                    3. Open <a href="${API_URL}" target="_blank" style="color: #667eea; font-weight: bold;">${API_URL}</a> in a new tab<br>
-                    4. Click "Visit Site" if you see ngrok warning<br>
-                    5. Come back and refresh this page<br><br>
-                    <strong>Error:</strong> ${error.message}
-                `, 'error');
-                
-                return false;
+                console.error('Logout error:', error);
+                window.location.href = '/';
             }
-        }
+        };
 
-        // ═══════════════════════════════════════════════════
-        // MAIN ANIMATION FUNCTION
-        // ═══════════════════════════════════════════════════
-        async function createAnimation() {
+        window.addEventListener('load', async () => {
+            console.log('🔍 Checking connection to:', SPACE_URL);
+            
+            try {
+                window.app = await window.gradioClient(SPACE_URL);
+                console.log('✅ Connected!');
+                
+                document.getElementById('connectionStatus').textContent = '✅ Connected to API';
+                document.getElementById('connectionStatus').className = 'connection-status status-online';
+                
+            } catch (error) {
+                console.error('❌ Connection failed:', error);
+                document.getElementById('connectionStatus').textContent = '❌ API Offline';
+                showStatus(`⚠️ Cannot connect. Check space: ${SPACE_URL}`, 'error');
+            }
+        });
+
+        window.createAnimation = async function() {
             const imageFile = document.getElementById('imageInput').files[0];
             const videoFile = document.getElementById('videoInput').files[0];
-            const btn = document.getElementById('animateBtn');
-            const progress = document.getElementById('progress');
+            const btn = document.getElementById('submitBtn');
             const resultSection = document.getElementById('resultSection');
             
             if (!imageFile || !videoFile) {
                 showStatus('❌ Please upload both image and video files', 'error');
                 return;
             }
-
-            // Hide previous results
+            
+            if (!window.app) {
+                showStatus('❌ Not connected to API. Please refresh.', 'error');
+                return;
+            }
+            
             resultSection.style.display = 'none';
-
-            // Show progress
             btn.disabled = true;
-            btn.textContent = '⏳ Processing... (2-5 minutes)';
-            progress.style.display = 'block';
-            showStatus('🎨 Creating your animation... This may take a few minutes!', 'info');
-
-            const formData = new FormData();
-            formData.append('image', imageFile);
-            formData.append('video', videoFile);
-
+            btn.textContent = '⏳ Processing (1-3 minutes)...';
+            showStatus('🎨 Creating animation... This takes 1-3 minutes!', 'info');
+            
             try {
-                console.log('📤 Sending request to:', `${API_URL}/animate`);
+                console.log('📤 Sending files...');
+                const result = await window.app.predict(0, [
+                    imageFile,
+                    videoFile
+                ]);
                 
-                // FIXED: Added ngrok bypass headers to the POST request
-                const response = await fetch(`${API_URL}/animate`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'ngrok-skip-browser-warning': 'true',
-                        'User-Agent': 'CustomClient'
+                console.log('✅ Result:', result);
+                
+                // Extract video URL from result
+                let videoUrl = null;
+                
+                if (result.data && result.data[0]) {
+                    // Try different possible structures
+                    const videoObj = result.data[0];
+                    if (typeof videoObj === 'string') {
+                        videoUrl = videoObj;
+                    } else if (videoObj.url) {
+                        videoUrl = videoObj.url;
+                    } else if (videoObj.file) {
+                        videoUrl = videoObj.file;
+                    } else if (videoObj[0]) {
+                        videoUrl = videoObj[0];
+                    } else if (videoObj.video) {
+                        // Handle nested video object
+                        const nestedVideo = videoObj.video;
+                        if (typeof nestedVideo === 'string') {
+                            videoUrl = nestedVideo;
+                        } else if (nestedVideo.url) {
+                            videoUrl = nestedVideo.url;
+                        } else if (nestedVideo.file) {
+                            videoUrl = nestedVideo.file;
+                        } else if (nestedVideo[0]) {
+                            videoUrl = nestedVideo[0];
+                        } else {
+                            // Try first property
+                            const firstKey = Object.keys(nestedVideo)[0];
+                            if (firstKey) {
+                                videoUrl = nestedVideo[firstKey];
+                            }
+                        }
+                    } else {
+                        // Try first property
+                        const firstKey = Object.keys(videoObj)[0];
+                        if (firstKey) {
+                            videoUrl = videoObj[firstKey];
+                        }
                     }
-                });
-
-                console.log('📥 Response status:', response.status);
-
-                if (response.ok) {
-                    // Get video blob
-                    const blob = await response.blob();
-                    savedVideoUrl = URL.createObjectURL(blob);
-                    
-                    // Generate filename
-                    const imageName = imageFile.name.split('.')[0];
-                    videoFilename = `${imageName}_animated.mp4`;
-                    
-                    // Show video
-                    const video = document.getElementById('resultVideo');
-                    video.src = savedVideoUrl;
-                    
-                    // Show result section
-                    resultSection.style.display = 'block';
-                    document.getElementById('videoFilename').textContent = videoFilename;
-                    
-                    // Scroll to video
-                    resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
-                    showStatus('✅ Animation complete! Your video is ready! 🎉', 'success');
-                    
-                    console.log('✅ Animation completed successfully!');
-                } else {
-                    let errorMsg = 'Unknown error occurred';
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorMsg;
-                    } catch (e) {
-                        errorMsg = `Server error (${response.status})`;
-                    }
-                    
-                    console.error('❌ Server error:', errorMsg);
-                    showStatus(`❌ Error: ${errorMsg}`, 'error');
+                } else if (result.url) {
+                    videoUrl = result.url;
+                } else if (result.file) {
+                    videoUrl = result.file;
                 }
+                
+                if (!videoUrl) {
+                    console.error('Could not extract video URL from result:', result);
+                    throw new Error('Invalid video result format');
+                }
+                
+                console.log('📹 Video URL:', videoUrl);
+                savedVideoUrl = videoUrl;
+                
+                // Generate filename from image name
+                const imageName = imageFile.name.split('.')[0];
+                videoFilename = `${imageName}_fomd_animation.mp4`;
+                
+                // Display video
+                const video = document.getElementById('resultVideo');
+                
+                // Add error handler for video
+                video.onerror = function() {
+                    console.error('Video load error');
+                    showStatus('❌ Error loading video. The video URL may be invalid or expired.', 'error');
+                };
+                
+                video.onloadeddata = function() {
+                    console.log('✅ Video loaded successfully');
+                };
+                
+                video.src = videoUrl;
+                video.load(); // Force video to reload
+                
+                resultSection.style.display = 'block';
+                resultSection.scrollIntoView({ behavior: 'smooth' });
+                
+                showStatus('✅ Animation complete! Your FOMD animation is ready! 🎉', 'success');
+
             } catch (error) {
-                console.error('❌ Request failed:', error);
-                showStatus(`❌ Connection error: ${error.message}<br><br>
-                    <strong>Troubleshooting:</strong><br>
-                    • Make sure Google Colab is running<br>
-                    • Visit <a href="${API_URL}" target="_blank" style="color: #667eea;">${API_URL}</a> and click "Visit Site"<br>
-                    • Check the API status indicator (top right)<br>
-                    • Verify the ngrok URL is correct<br>
-                    • Refresh this page after visiting the API URL`, 'error');
+                console.error('❌ Error:', error);
+                showStatus(`❌ Error: ${error.message}<br>Please try again or check your files.`, 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🎬 Create Animation';
-                progress.style.display = 'none';
             }
-        }
+        };
 
-        // ═══════════════════════════════════════════════════
-        // DOWNLOAD VIDEO
-        // ═══════════════════════════════════════════════════
-        function downloadVideo() {
+        window.downloadVideo = async function() {
             if (!savedVideoUrl) {
                 alert('❌ No video available to download!');
                 return;
             }
             
-            const a = document.createElement('a');
-            a.href = savedVideoUrl;
-            a.download = videoFilename;
-            a.click();
-            
-            showStatus(`✅ Downloading ${videoFilename}... Check your Downloads folder!`, 'success');
-        }
-
-        // ═══════════════════════════════════════════════════
-        // RUN ON PAGE LOAD
-        // ═══════════════════════════════════════════════════
-        window.addEventListener('load', () => {
-            console.log('🚀 Page loaded, checking API...');
-            checkAPIConnection();
-            
-            // Recheck connection every 30 seconds
-            setInterval(checkAPIConnection, 30000);
-        });
+            try {
+                showStatus('⏳ Preparing download...', 'info');
+                
+                // Fetch the video as a blob to enable download
+                console.log('📥 Fetching video from:', savedVideoUrl);
+                const response = await fetch(savedVideoUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch video: ${response.status} ${response.statusText}`);
+                }
+                
+                const blob = await response.blob();
+                console.log('✅ Video blob created, size:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
+                
+                // Create a blob URL
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                // Create download link
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = videoFilename || 'fomd_animation.mp4';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                
+                // Trigger download
+                a.click();
+                
+                // Clean up
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(blobUrl);
+                    console.log('✅ Download link cleaned up');
+                }, 100);
+                
+                showStatus('✅ Download started! Check your Downloads folder.', 'success');
+            } catch (error) {
+                console.error('Download error:', error);
+                showStatus(`❌ Download failed: ${error.message}<br>Try right-clicking the video and selecting "Save video as..."`, 'error');
+            }
+        };
     </script>
 </body>
 </html>
