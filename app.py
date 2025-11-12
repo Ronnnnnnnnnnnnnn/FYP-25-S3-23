@@ -307,6 +307,81 @@ def api_logout():
     session.clear()
     return jsonify({'success': True, 'message': 'Logged out successfully'})
 
+@app.route('/api/account/delete', methods=['POST'])
+def api_delete_account():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = None
+    cursor = None
+    try:
+        user_id = session['user_id']
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Delete user's profile picture if exists
+        cursor.execute("SELECT profile_picture FROM users WHERE user_id = %s", (user_id,))
+        user = cursor.fetchone()
+        
+        if user and user[0]:
+            profile_pic_path = os.path.join('static', user[0])
+            if os.path.exists(profile_pic_path):
+                try:
+                    os.remove(profile_pic_path)
+                    print(f"Deleted profile picture: {profile_pic_path}")
+                except Exception as e:
+                    print(f"Error deleting profile picture: {e}")
+        
+        # Delete user's animations
+        cursor.execute("SELECT animation_path FROM animations WHERE user_id = %s", (user_id,))
+        animations = cursor.fetchall()
+        
+        for anim in animations:
+            if anim[0]:
+                anim_path = os.path.join('static', anim[0])
+                if os.path.exists(anim_path):
+                    try:
+                        os.remove(anim_path)
+                        print(f"Deleted animation: {anim_path}")
+                    except Exception as e:
+                        print(f"Error deleting animation: {e}")
+        
+        # Delete user's avatars
+        cursor.execute("SELECT avatar_path FROM avatars WHERE user_id = %s", (user_id,))
+        avatars = cursor.fetchall()
+        
+        for avatar in avatars:
+            if avatar[0]:
+                avatar_path = os.path.join('static', avatar[0])
+                if os.path.exists(avatar_path):
+                    try:
+                        os.remove(avatar_path)
+                        print(f"Deleted avatar: {avatar_path}")
+                    except Exception as e:
+                        print(f"Error deleting avatar: {e}")
+        
+        # Delete user from database
+        cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+        db.commit()
+        
+        # Clear session
+        session.clear()
+        
+        return jsonify({'success': True, 'message': 'Account deleted successfully'})
+    
+    except Exception as e:
+        print(f"Delete account error: {e}")
+        import traceback
+        traceback.print_exc()
+        if db:
+            db.rollback()
+        return jsonify({'success': False, 'message': f'Failed to delete account: {str(e)}'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if db:
+            db.close()
+
 @app.route('/api/forgot-password', methods=['POST'])
 def api_forgot_password():
     try:
