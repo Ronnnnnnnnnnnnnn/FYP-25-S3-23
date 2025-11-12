@@ -94,6 +94,58 @@
             cursor: pointer;
         }
         
+        .preview-container {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .preview-container.active {
+            display: block;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-top: 10px;
+        }
+        
+        .audio-preview-container {
+            margin-top: 10px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .audio-preview-container audio {
+            flex: 1;
+        }
+        
+        .play-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .play-btn:hover {
+            background: #218838;
+        }
+        
+        .play-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -244,12 +296,21 @@
         
         <div class="upload-section">
             <h3>📷 Upload Portrait Image</h3>
-            <input type="file" id="imageInput" accept="image/*">
+            <input type="file" id="imageInput" accept="image/*" onchange="previewImage(this)">
+            <div class="preview-container" id="imagePreviewContainer">
+                <img id="imagePreview" class="image-preview" alt="Image preview">
+            </div>
         </div>
         
         <div class="upload-section">
             <h3>🎵 Upload Audio</h3>
-            <input type="file" id="audioInput" accept="audio/*">
+            <input type="file" id="audioInput" accept="audio/*" onchange="previewAudio(this)">
+            <div class="preview-container" id="audioPreviewContainer">
+                <div class="audio-preview-container">
+                    <audio id="audioPreview" controls></audio>
+                    <button class="play-btn" onclick="playAudioPreview()" id="playAudioBtn">▶️ Play</button>
+                </div>
+            </div>
         </div>
         
         <button class="btn" onclick="createAnimation()" id="submitBtn">
