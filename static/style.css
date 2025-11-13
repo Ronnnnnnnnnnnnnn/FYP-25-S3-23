@@ -292,10 +292,12 @@ body {
 
 .dashboard-container h2 {
   color: white;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 100%);
+  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradientText 5s ease infinite;
+  background-size: 200% 200%;
 }
 
 .dashboard-container p {
@@ -846,10 +848,12 @@ body {
   color: white;
   font-size: 32px;
   font-weight: 800;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 100%);
+  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradientText 5s ease infinite;
+  background-size: 200% 200%;
 }
 
 label {
@@ -942,16 +946,32 @@ textarea:focus {
   color: rgba(255, 255, 255, 0.8);
 }
 
+.toggle-text.gradient-text {
+  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientText 5s ease infinite;
+  background-size: 200% 200%;
+  display: inline-block;
+}
+
 .toggle-text a {
   color: #111439;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s;
+  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientText 5s ease infinite;
+  background-size: 200% 200%;
 }
 
 .toggle-text a:hover {
-  color: #111439;
   text-decoration: underline;
+  opacity: 0.9;
 }
 
 /* MESSAGE STYLES */
@@ -1204,11 +1224,13 @@ textarea:focus {
   font-weight: 900;
   color: white;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 100%);
+  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   display: inline-block;
+  animation: gradientText 5s ease infinite;
+  background-size: 200% 200%;
 }
 
 @keyframes rotate3d {
@@ -1413,10 +1435,12 @@ textarea:focus {
   font-size: 3rem;
   font-weight: 800;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 100%);
+  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradientText 5s ease infinite;
+  background-size: 200% 200%;
 }
 
 .section-subtitle {
