@@ -799,10 +799,12 @@
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
         // ═══════════════════════════════════════════════════════════
 
-        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+        import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client@1.4.0/+esm";
 
-        window.gradioClient = client;
-        window.app = null;
+        let imageFile = null;
+        let videoFile = null;
+        let resultBlob = null;
+        let client = null;
         let savedVideoUrl = null;
         let videoFilename = 'fomd_animation.mp4';
         
@@ -824,6 +826,30 @@
         }
         createParticles();
         
+        // Initialize client
+        async function initClient() {
+            if (!client) {
+                try {
+                    client = await Client.connect(SPACE_URL);
+                    console.log("✅ Connected to Gradio space");
+                    const statusDiv = document.getElementById('connectionStatus');
+                    if (statusDiv) {
+                        statusDiv.textContent = '✅ Connected to API';
+                        statusDiv.className = 'connection-status status-online';
+                    }
+                } catch (error) {
+                    console.error("❌ Failed to connect:", error);
+                    const statusDiv = document.getElementById('connectionStatus');
+                    if (statusDiv) {
+                        statusDiv.textContent = '❌ API Offline';
+                        statusDiv.className = 'connection-status status-offline';
+                    }
+                    showStatus("Failed to connect to server", "error");
+                }
+            }
+            return client;
+        }
+
         // Preview functions
         window.previewImage = function(input) {
             const previewContainer = document.getElementById('imagePreviewContainer');
@@ -832,21 +858,26 @@
             const imageName = document.getElementById('imageName');
             
             if (input.files && input.files[0]) {
-                const file = input.files[0];
+                imageFile = input.files[0];
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
                     preview.src = e.target.result;
+                    preview.classList.add('show');
                     previewContainer.classList.add('active');
-                    imageName.textContent = '✓ ' + file.name;
+                    imageName.textContent = '✓ ' + imageFile.name;
                     imageBox.classList.add('active');
+                    checkReadyToAnimate();
                 };
                 
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(imageFile);
             } else {
+                imageFile = null;
                 previewContainer.classList.remove('active');
+                preview.classList.remove('show');
                 imageName.textContent = '';
                 imageBox.classList.remove('active');
+                checkReadyToAnimate();
             }
         };
         
@@ -857,22 +888,34 @@
             const videoName = document.getElementById('videoName');
             
             if (input.files && input.files[0]) {
-                const file = input.files[0];
-                const url = URL.createObjectURL(file);
+                videoFile = input.files[0];
+                const url = URL.createObjectURL(videoFile);
                 videoPreview.src = url;
+                videoPreview.classList.add('show');
                 previewContainer.classList.add('active');
-                videoName.textContent = '✓ ' + file.name;
+                videoName.textContent = '✓ ' + videoFile.name;
                 videoBox.classList.add('active');
+                checkReadyToAnimate();
             } else {
+                videoFile = null;
                 previewContainer.classList.remove('active');
+                videoPreview.classList.remove('show');
                 if (videoPreview.src) {
                     URL.revokeObjectURL(videoPreview.src);
                 }
                 videoPreview.src = '';
                 videoName.textContent = '';
                 videoBox.classList.remove('active');
+                checkReadyToAnimate();
             }
         };
+
+        function checkReadyToAnimate() {
+            const btn = document.getElementById('submitBtn');
+            if (btn) {
+                btn.disabled = !(imageFile && videoFile);
+            }
+        }
 
         function showStatus(message, type) {
             const status = document.getElementById('status');
@@ -898,534 +941,110 @@
             }
         };
 
-        // Function to try connecting with different space name formats
-        async function tryConnect(spacePath) {
-            try {
-                console.log('Attempting to connect to:', spacePath);
-                const app = await window.gradioClient(spacePath);
-                console.log('✅ Connected successfully!');
-                return app;
-            } catch (error) {
-                console.log('Failed to connect to:', spacePath, error.message);
-                throw error;
-            }
-        }
-
         // Check connection on load
         window.addEventListener('load', async () => {
+            console.log("🚀 Client ready");
             console.log('🔍 Checking connection to:', SPACE_URL);
             
             const statusDiv = document.getElementById('connectionStatus');
-            statusDiv.textContent = '⏳ Connecting...';
-            statusDiv.className = 'connection-status status-offline';
-            
-            // Try different space name variations
-            const spaceVariations = [
-                SPACE_URL,  // Original: "Tc12345/fomd"
-                `${YOUR_USERNAME}/${SPACE_NAME.toLowerCase()}`,  // "Tc12345/fomd"
-                `${YOUR_USERNAME}/${SPACE_NAME.toUpperCase()}`,  // "Tc12345/FOMD"
-            ];
-            
-            let connected = false;
-            let lastError = null;
-            
-            for (const spacePath of spaceVariations) {
-                try {
-                    window.app = await tryConnect(spacePath);
-                    connected = true;
-                    statusDiv.textContent = '✅ Connected to API';
-                    statusDiv.className = 'connection-status status-online';
-                    console.log(`✅ Successfully connected to: ${spacePath}`);
-                    break;
-                } catch (error) {
-                    lastError = error;
-                    console.log(`❌ Failed to connect to: ${spacePath}`);
-                }
-            }
-            
-            if (!connected) {
-                console.error('❌ All connection attempts failed');
-                statusDiv.textContent = '❌ API Offline';
+            if (statusDiv) {
+                statusDiv.textContent = '⏳ Connecting...';
                 statusDiv.className = 'connection-status status-offline';
-                
-                const spaceLink = `https://huggingface.co/spaces/${SPACE_URL}`;
-                showStatus(`
-                    ⚠️ Cannot connect to Gradio API<br><br>
-                    <strong>Tried:</strong> ${spaceVariations.join(', ')}<br>
-                    <strong>Error:</strong> ${lastError ? lastError.message : 'Unknown error'}<br><br>
-                    Please check:<br>
-                    1. The space name is correct: <a href="${spaceLink}" target="_blank">${SPACE_URL}</a><br>
-                    2. The space is set to <strong>Public</strong> on Hugging Face<br>
-                    3. The space is <strong>Running</strong> (not sleeping)
-                `, 'error');
             }
+            
+            // Initialize client
+            await initClient();
         });
 
         window.createAnimation = async function() {
-            const imageFile = document.getElementById('imageInput').files[0];
-            const videoFile = document.getElementById('videoInput').files[0];
-            const btn = document.getElementById('submitBtn');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressFill = document.getElementById('progressFill');
-            const progressText = document.getElementById('progressText');
-            const resultSection = document.getElementById('resultSection');
-            
             if (!imageFile || !videoFile) {
                 showStatus('❌ Please upload both image and video files', 'error');
                 return;
             }
+
+            const btn = document.getElementById('submitBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const progressPercent = document.getElementById('progressPercent');
+            const resultSection = document.getElementById('resultSection');
             
-            if (!window.app) {
-                showStatus('❌ Not connected to API. Please refresh.', 'error');
-                return;
-            }
-            
-            // Reset
-            resultSection.classList.remove('show');
             btn.disabled = true;
             btn.innerHTML = '<span>⏳</span><span>Processing...</span>';
+            
+            // Reset UI
+            resultSection.classList.remove('show');
             progressContainer.classList.add('show');
             progressFill.style.width = '0%';
             progressFill.textContent = '0%';
-            const progressPercent = document.getElementById('progressPercent');
             if (progressPercent) progressPercent.textContent = '0%';
             progressText.textContent = 'Uploading files...';
-            showStatus('🎨 Creating animation... This takes 1-3 minutes!', 'info');
-            
-            // Simulate progress
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                if (progress < 90) {
-                    progress += 1;
-                    progressFill.style.width = progress + '%';
-                    progressFill.textContent = progress + '%';
-                    if (progressPercent) progressPercent.textContent = progress + '%';
-                    
-                    if (progress < 20) progressText.textContent = 'Processing image...';
-                    else if (progress < 40) progressText.textContent = 'Processing video...';
-                    else if (progress < 60) progressText.textContent = 'Detecting face...';
-                    else if (progress < 80) progressText.textContent = 'Generating animation...';
-                    else progressText.textContent = 'Almost done...';
-                }
-            }, 2000); // Update every 2 seconds
+            showStatus("Uploading files...", "loading");
+            updateProgress(5);
             
             try {
-                console.log('📤 Preparing files for Gradio API...');
-                console.log('Image file:', imageFile.name, imageFile.type, imageFile.size);
-                console.log('Video file:', videoFile.name, videoFile.type, videoFile.size);
+                // Initialize client
+                const gradioClient = await initClient();
                 
-                // Gradio client expects File objects directly
-                // Make sure files are valid File objects
-                if (!(imageFile instanceof File)) {
-                    throw new Error('Image file is not a valid File object');
-                }
-                if (!(videoFile instanceof File)) {
-                    throw new Error('Video file is not a valid File object');
-                }
+                updateProgress(10);
+                showStatus("Processing image...", "loading");
                 
-                console.log('📤 Sending files to Gradio API...');
+                // Create file handles - THIS IS THE KEY FIX
+                // We need to send files in a way that bypasses the VideoData validation
+                const imageHandle = await gradioClient.upload_file(imageFile);
+                updateProgress(20);
                 
-                // Check API structure to understand expected format
-                if (window.app && window.app.config) {
-                    console.log('API config:', window.app.config);
-                    console.log('API components:', window.app.config.components);
-                    
-                    // Log the input components to see what they expect
-                    if (window.app.config.components && window.app.config.components.length > 0) {
-                        const inputComponents = window.app.config.components
-                            .filter(c => c.props && c.props.visible !== false)
-                            .map(c => ({
-                                type: c.type,
-                                label: c.label || c.props?.label,
-                                component: c.component,
-                                props: c.props
-                            }));
-                        console.log('Input components:', inputComponents);
-                        
-                        // Check if we need to upload files first
-                        const hasVideoComponent = inputComponents.some(c => 
-                            c.type === 'video' || c.component === 'Video' || 
-                            (c.props && (c.props.file_types || c.props.file_types === undefined))
-                        );
-                        console.log('Has video component:', hasVideoComponent);
-                    }
-                }
+                showStatus("Processing video...", "loading");
+                const videoHandle = await gradioClient.upload_file(videoFile);
+                updateProgress(30);
                 
-                // The error suggests the API expects a 'video' field in the input
-                // Try different approaches to match the expected format
-                let predictResult;
+                showStatus("Generating animation... This may take 1-3 minutes", "loading");
                 
-                // The error from Hugging Face shows the space expects VideoData format
-                // but receives FileData. This is likely a space configuration issue.
-                // We'll try passing files directly - the Gradio client should handle conversion
-                let imageInput = imageFile;
-                let videoInput = videoFile;
-                
-                // Check component types to understand expected format
-                let imageComponentType = null;
-                let videoComponentType = null;
-                
-                if (window.app && window.app.config && window.app.config.components) {
-                    const components = window.app.config.components;
-                    console.log('Total components:', components.length);
-                    
-                    // Find input components - check all components to find inputs
-                    const inputComponents = components.filter(c => 
-                        c.props && 
-                        (c.props.visible !== false) && 
-                        (c.type === 'image' || c.type === 'video' || c.component === 'Image' || c.component === 'Video')
-                    );
-                    
-                    console.log('Input components found:', inputComponents.map(c => ({
-                        id: c.id,
-                        type: c.type,
-                        component: c.component,
-                        label: c.props?.label,
-                        props: Object.keys(c.props || {})
-                    })));
-                    
-                    // Also check the API endpoint structure
-                    if (window.app.config.dependencies) {
-                        console.log('API dependencies:', window.app.config.dependencies.slice(0, 1).map(d => ({
-                            inputs: d.inputs,
-                            outputs: d.outputs,
-                            fn: d.fn?.name
-                        })));
-                    }
-                    
-                    if (inputComponents.length >= 2) {
-                        imageComponentType = inputComponents[0].type || inputComponents[0].component;
-                        videoComponentType = inputComponents[1].type || inputComponents[1].component;
-                        console.log('Image component type:', imageComponentType);
-                        console.log('Video component type:', videoComponentType);
-                        console.log('Video component props:', inputComponents[1].props);
-                    }
-                }
-                
-                // The error suggests the space expects VideoData format
-                // This is likely a bug/mismatch in the Gradio space configuration
-                // We'll log what we're sending to help debug
-                console.log('📤 Preparing to send:');
-                console.log('  Image:', {
-                    name: imageFile.name,
-                    type: imageFile.type,
-                    size: imageFile.size,
-                    isFile: imageFile instanceof File
-                });
-                console.log('  Video:', {
-                    name: videoFile.name,
-                    type: videoFile.type,
-                    size: videoFile.size,
-                    isFile: videoFile instanceof File
+                // Call the predict function with file handles
+                // The key is to pass the file URL/path as a string
+                const result = await gradioClient.predict("/animate", {
+                    source_image: imageHandle,
+                    driving_video: videoHandle
                 });
                 
-                try {
-                    // Approach 1: Try using submit API with files directly
-                    console.log('Attempt 1: Using submit API with File objects');
-                    predictResult = await window.app.submit(0, [
-                        imageInput,
-                        videoInput
-                    ]);
-                } catch (submitError) {
-                    console.error('Attempt 1 (submit) failed:', submitError);
-                    
-                    // Approach 2: Try predict API
-                    try {
-                        console.log('Attempt 2: Using predict API');
-                        predictResult = await window.app.predict(0, [
-                            imageInput,
-                            videoInput
-                        ]);
-                    } catch (predictError) {
-                        console.error('Attempt 2 (predict) failed:', predictError);
-                        
-                        // Approach 3: Try swapping the order
-                        try {
-                            console.log('Attempt 3: Swapping input order (video first)');
-                            predictResult = await window.app.submit(0, [
-                                videoInput,
-                                imageInput
-                            ]);
-                        } catch (swapError) {
-                            console.error('Attempt 3 failed:', swapError);
-                            
-                            // All attempts failed - show detailed error
-                            throw new Error(
-                                `Gradio API Error: ${submitError.message || predictError.message}\n\n` +
-                                `The space expects a different input format. ` +
-                                `Please check:\n` +
-                                `1. Visit https://huggingface.co/spaces/${SPACE_URL} to see the expected interface\n` +
-                                `2. Check if the space expects inputs in a different order\n` +
-                                `3. Verify the space is running and accessible`
-                            );
-                        }
+                updateProgress(90);
+                showStatus("Almost done...", "loading");
+                
+                // Get the result video URL
+                let videoUrl;
+                if (result.data && result.data[0]) {
+                    // Handle different response formats
+                    if (typeof result.data[0] === 'string') {
+                        videoUrl = result.data[0];
+                    } else if (result.data[0].url) {
+                        videoUrl = result.data[0].url;
+                    } else if (result.data[0].video) {
+                        videoUrl = result.data[0].video;
                     }
-                }
-                
-                // Handle async generator/iterator result
-                // Gradio client returns an async generator that needs to be iterated
-                let result = null;
-                
-                if (predictResult && typeof predictResult.next === 'function') {
-                    // It's an async generator/iterator - iterate through it
-                    console.log('📦 Result is an async generator, iterating...');
-                    try {
-                        // Get the final result from the generator
-                        let generatorResult;
-                        let lastValue = null;
-                        let lastDataValue = null;
-                        let iterationCount = 0;
-                        const maxIterations = 1000; // Safety limit
-                        const timeoutMs = 5 * 60 * 1000; // 5 minutes timeout
-                        const startTime = Date.now();
-                        
-                        // Clear the simulated progress interval since we'll use real progress
-                        clearInterval(progressInterval);
-                        
-                        while (iterationCount < maxIterations) {
-                            // Check for timeout
-                            if (Date.now() - startTime > timeoutMs) {
-                                console.error('Generator iteration timeout after 5 minutes');
-                                throw new Error('Processing timeout - the operation took too long. Please try again.');
-                            }
-                            
-                            // Add timeout to each next() call to prevent infinite waiting
-                            // First step gets longer timeout (3 minutes) since processing can take time
-                            // Subsequent steps get shorter timeout (30 seconds)
-                            const stepTimeout = iterationCount === 0 ? 180000 : 30000; // 3 min for first, 30s for others
-                            
-                            console.log(`Waiting for generator step ${iterationCount + 1} (timeout: ${stepTimeout/1000}s)...`);
-                            
-                            const nextPromise = predictResult.next();
-                            const timeoutPromise = new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error(`Generator step ${iterationCount + 1} timeout after ${stepTimeout/1000}s`)), stepTimeout)
-                            );
-                            
-                            try {
-                                generatorResult = await Promise.race([nextPromise, timeoutPromise]);
-                                console.log(`✅ Generator step ${iterationCount + 1} completed`);
-                            } catch (stepError) {
-                                console.error(`❌ Error at generator step ${iterationCount + 1}:`, stepError);
-                                
-                                // If it's the first step and times out, the API might be processing
-                                // but not yielding updates. This could be a space configuration issue.
-                                if (iterationCount === 0) {
-                                    throw new Error(
-                                        `The Gradio space is not responding. This could be:\n` +
-                                        `1. The space is processing but not sending progress updates\n` +
-                                        `2. The space is hanging or crashed\n` +
-                                        `3. Network connectivity issues\n\n` +
-                                        `Please check the space directly at: https://huggingface.co/spaces/${SPACE_URL}`
-                                    );
-                                }
-                                
-                                // If we have data so far, try to use it
-                                if (lastDataValue || lastValue) {
-                                    console.warn('Using last available data due to error');
-                                    result = lastDataValue || lastValue;
-                                    break;
-                                }
-                                throw stepError;
-                            }
-                            
-                            iterationCount++;
-                            
-                            console.log(`Generator step ${iterationCount}:`, {
-                                done: generatorResult.done,
-                                hasValue: !!generatorResult.value,
-                                valueType: typeof generatorResult.value,
-                                valueKeys: generatorResult.value && typeof generatorResult.value === 'object' 
-                                    ? Object.keys(generatorResult.value) 
-                                    : 'N/A'
-                            });
-                            
-                            if (generatorResult.done) {
-                                // Generator is done
-                                console.log('✅ Generator completed');
-                                // Use the value from done, or last data value, or last value
-                                result = generatorResult.value || lastDataValue || lastValue;
-                                break;
-                            } else {
-                                const value = generatorResult.value;
-                                
-                                // Check if this is a status update or data
-                                if (value && typeof value === 'object') {
-                                    // Check for progress updates
-                                    if (value.progress !== undefined) {
-                                        const progress = value.progress;
-                                        console.log('📊 Progress update:', progress);
-                                        if (progressFill && progressText) {
-                                            progressFill.style.width = (progress * 100) + '%';
-                                            progressFill.textContent = Math.round(progress * 100) + '%';
-                                            progressText.textContent = `Processing... ${Math.round(progress * 100)}%`;
-                                        }
-                                    }
-                                    
-                                    // Check for status messages
-                                    if (value.type === 'status') {
-                                        console.log('📋 Status update:', value);
-                                        if (value.stage && progressText) {
-                                            progressText.textContent = value.stage || 'Processing...';
-                                        }
-                                        // Continue - don't store status as result
-                                        continue;
-                                    }
-                                    
-                                    // Check if this contains actual data
-                                    if (value.data !== undefined) {
-                                        console.log('✅ Found data in generator value:', value);
-                                        lastDataValue = value;
-                                        // Continue to get final result
-                                    }
-                                    
-                                    // Check for final result structure (array with video data)
-                                    if (Array.isArray(value) && value.length > 0) {
-                                        console.log('✅ Found array result:', value);
-                                        lastDataValue = value;
-                                        // This might be the final result, but continue to be sure
-                                    }
-                                    
-                                    // Check for file/url in object
-                                    if (value.url || value.file || (value.path && !value.type)) {
-                                        console.log('✅ Found file/url result:', value);
-                                        lastDataValue = value;
-                                    }
-                                } else if (value !== null && value !== undefined) {
-                                    // Store any non-null value
-                                    console.log('📦 Storing value:', typeof value, value);
-                                    lastValue = value;
-                                }
-                            }
-                        }
-                        
-                        if (iterationCount >= maxIterations) {
-                            console.warn('⚠️ Reached max iterations, using last value');
-                            result = lastDataValue || lastValue;
-                        }
-                        
-                        if (!result && lastDataValue) {
-                            console.log('Using lastDataValue as result');
-                            result = lastDataValue;
-                        }
-                        
-                        if (!result && lastValue) {
-                            console.log('Using lastValue as result');
-                            result = lastValue;
-                        }
-                        
-                        console.log('🎯 Final result after iteration:', result);
-                    } catch (genError) {
-                        console.error('❌ Error iterating generator:', genError);
-                        throw new Error(`Error processing API response: ${genError.message}`);
-                    }
-                } else {
-                    // Not a generator, use directly
-                    result = predictResult;
-                }
-                
-                clearInterval(progressInterval);
-                progressFill.style.width = '100%';
-                progressFill.textContent = '100%';
-                const progressPercent = document.getElementById('progressPercent');
-                if (progressPercent) progressPercent.textContent = '100%';
-                progressText.textContent = 'Complete!';
-                
-                console.log('✅ Result received:', result);
-                console.log('✅ Result type:', typeof result);
-                console.log('✅ Result keys:', result ? Object.keys(result) : 'null');
-                console.log('✅ Full result structure:', JSON.stringify(result, null, 2));
-                
-                // Extract video URL from result - try multiple formats
-                let videoUrl = null;
-                
-                // Helper function to extract URL from various formats
-                function extractUrl(obj) {
-                    if (!obj) return null;
-                    
-                    // If it's a string, return it
-                    if (typeof obj === 'string') {
-                        return obj;
-                    }
-                    
-                    // Try common property names
-                    const urlProps = ['url', 'file', 'path', 'src', 'video', 'video_url', 'output', 'output_url'];
-                    for (const prop of urlProps) {
-                        if (obj[prop]) {
-                            const value = obj[prop];
-                            if (typeof value === 'string') {
-                                return value;
-                            }
-                            // Recursively check nested objects
-                            const nested = extractUrl(value);
-                            if (nested) return nested;
-                        }
-                    }
-                    
-                    // If it's an array, check first element
-                    if (Array.isArray(obj) && obj.length > 0) {
-                        return extractUrl(obj[0]);
-                    }
-                    
-                    // Try first property value
-                    const keys = Object.keys(obj);
-                    if (keys.length > 0) {
-                        return extractUrl(obj[keys[0]]);
-                    }
-                    
-                    return null;
-                }
-                
-                // Try different result structures
-                // 1. result.data[0] (standard Gradio format)
-                if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-                    videoUrl = extractUrl(result.data[0]);
-                }
-                
-                // 2. result.data (if it's the video directly)
-                if (!videoUrl && result.data) {
-                    videoUrl = extractUrl(result.data);
-                }
-                
-                // 3. result[0] (if result is an array)
-                if (!videoUrl && Array.isArray(result) && result.length > 0) {
-                    videoUrl = extractUrl(result[0]);
-                }
-                
-                // 4. result directly
-                if (!videoUrl) {
-                    videoUrl = extractUrl(result);
-                }
-                
-                // 5. Check for nested structures
-                if (!videoUrl && result.output) {
-                    videoUrl = extractUrl(result.output);
-                }
-                
-                if (!videoUrl && result.result) {
-                    videoUrl = extractUrl(result.result);
                 }
                 
                 if (!videoUrl) {
-                    console.error('❌ Could not extract video URL from result');
-                    console.error('Result structure:', result);
-                    console.error('Result keys:', result ? Object.keys(result) : 'null');
-                    
-                    // Show helpful error with result structure
-                    throw new Error(
-                        `Could not extract video URL from API response.\n\n` +
-                        `Result structure: ${JSON.stringify(result, null, 2)}\n\n` +
-                        `Please check the browser console for full details.`
-                    );
+                    throw new Error("No video URL in response");
                 }
                 
-                console.log('📹 Video URL:', videoUrl);
+                // Make URL absolute if needed
+                if (!videoUrl.startsWith('http')) {
+                    videoUrl = new URL(videoUrl, 'https://huggingface.co/spaces/' + SPACE_URL).href;
+                }
+                
+                updateProgress(100);
+                showStatus("✅ Animation complete!", "success");
+                
+                // Fetch and display result
+                const response = await fetch(videoUrl);
+                resultBlob = await response.blob();
                 savedVideoUrl = videoUrl;
                 
                 // Generate filename from image name
                 const imageName = imageFile.name.split('.')[0];
                 videoFilename = `${imageName}_fomd_animation.mp4`;
                 
-                // Display video
+                const resultUrl = URL.createObjectURL(resultBlob);
                 const video = document.getElementById('resultVideo');
                 
                 // Add error handler for video
@@ -1438,18 +1057,21 @@
                     console.log('✅ Video loaded successfully');
                 };
                 
-                video.src = videoUrl;
-                video.load(); // Force video to reload
+                video.src = resultUrl;
+                video.load();
                 
                 resultSection.classList.add('show');
                 resultSection.scrollIntoView({ behavior: 'smooth' });
                 
-                showStatus('✅ Animation complete! Your FOMD animation is ready! 🎉', 'success');
+                // Hide status after 3 seconds
+                setTimeout(() => {
+                    const status = document.getElementById('status');
+                    if (status) status.classList.remove('show');
+                }, 3000);
 
             } catch (error) {
-                clearInterval(progressInterval);
-                console.error('❌ Error:', error);
-                showStatus(`❌ Error: ${error.message}<br>Please try again or check your files.`, 'error');
+                console.error("❌ Error:", error);
+                showStatus("❌ Error: " + error.message, "error");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span>🚀</span><span>Create Animation</span>';
@@ -1459,51 +1081,32 @@
             }
         };
 
-        window.downloadVideo = async function() {
-            if (!savedVideoUrl) {
+        function updateProgress(percent) {
+            const progressFill = document.getElementById('progressFill');
+            const progressPercent = document.getElementById('progressPercent');
+            if (progressFill) {
+                progressFill.style.width = percent + '%';
+                progressFill.textContent = percent + '%';
+            }
+            if (progressPercent) {
+                progressPercent.textContent = percent + '%';
+            }
+        }
+
+        window.downloadVideo = function() {
+            if (!resultBlob) {
                 alert('❌ No video available to download!');
                 return;
             }
             
-            try {
-                showStatus('⏳ Preparing download...', 'info');
-                
-                // Fetch the video as a blob to enable download
-                console.log('📥 Fetching video from:', savedVideoUrl);
-                const response = await fetch(savedVideoUrl);
-                
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch video: ${response.status} ${response.statusText}`);
-                }
-                
-                const blob = await response.blob();
-                console.log('✅ Video blob created, size:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
-                
-                // Create a blob URL
-                const blobUrl = window.URL.createObjectURL(blob);
-                
-                // Create download link
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = videoFilename || 'fomd_animation.mp4';
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                
-                // Trigger download
-                a.click();
-                
-                // Clean up
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(blobUrl);
-                    console.log('✅ Download link cleaned up');
-                }, 100);
-                
-                showStatus('✅ Download started! Check your Downloads folder.', 'success');
-            } catch (error) {
-                console.error('Download error:', error);
-                showStatus(`❌ Download failed: ${error.message}<br>Try right-clicking the video and selecting "Save video as..."`, 'error');
-            }
+            const url = URL.createObjectURL(resultBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'animated_face_' + Date.now() + '.mp4';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         };
     </script>
 </body>
