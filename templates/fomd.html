@@ -498,11 +498,51 @@
             }, 2000); // Update every 2 seconds
             
             try {
+                console.log('📤 Preparing files for Gradio API...');
+                console.log('Image file:', imageFile.name, imageFile.type, imageFile.size);
+                console.log('Video file:', videoFile.name, videoFile.type, videoFile.size);
+                
+                // Gradio client expects File objects directly
+                // Make sure files are valid File objects
+                if (!(imageFile instanceof File)) {
+                    throw new Error('Image file is not a valid File object');
+                }
+                if (!(videoFile instanceof File)) {
+                    throw new Error('Video file is not a valid File object');
+                }
+                
                 console.log('📤 Sending files to Gradio API...');
-                const result = await window.app.predict(0, [
-                    imageFile,
-                    videoFile
-                ]);
+                
+                // Check API structure to understand expected format
+                if (window.app && window.app.config) {
+                    console.log('API config:', window.app.config);
+                    console.log('API components:', window.app.config.components);
+                }
+                
+                // Gradio client should handle File objects automatically
+                // The error might be due to API expecting different format
+                // Try with explicit null handling or check if API needs different structure
+                let result;
+                
+                try {
+                    // First try: Pass files directly (standard approach)
+                    result = await window.app.predict(0, [
+                        imageFile,
+                        videoFile
+                    ]);
+                } catch (predictError) {
+                    console.error('Predict error:', predictError);
+                    
+                    // If error mentions video field, try alternative approaches
+                    if (predictError.message && predictError.message.includes('video')) {
+                        console.log('Trying alternative input format...');
+                        
+                        // Try: Check if API expects files in different structure
+                        // Some Gradio spaces might need files uploaded first
+                        throw new Error(`API Error: ${predictError.message}. The Gradio space might be expecting a different input format. Please check the space configuration.`);
+                    }
+                    throw predictError;
+                }
                 
                 clearInterval(progressInterval);
                 progressFill.style.width = '100%';
