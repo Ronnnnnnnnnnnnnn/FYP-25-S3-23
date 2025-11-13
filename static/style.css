@@ -1184,23 +1184,16 @@ textarea:focus {
 }
 
 .logo-icon {
-  font-size: 2rem;
+  font-size: 2.5rem;
   line-height: 1;
   display: inline-block;
-  align-items: center;
-  justify-content: center;
   animation: rotate3d 3s ease-in-out infinite;
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
   font-style: normal;
   font-weight: normal;
   vertical-align: middle;
-  width: auto;
-  height: auto;
-  min-width: 1.5rem;
-  min-height: 1.5rem;
   visibility: visible;
   opacity: 1;
-  color: inherit;
 }
 
 .logo-text {
