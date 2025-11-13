@@ -1043,58 +1043,136 @@
                 
                 updateProgress(80, 'Finalizing...');
                 
-                // Handle result
+                // Handle result with timeout protection
                 console.log('📦 Raw result type:', typeof result, result);
                 let finalResult = result;
+                
                 if (result && typeof result.next === 'function') {
                     console.log('📦 Result is an async generator, iterating...');
-                    for await (const chunk of result) {
-                        if (chunk && chunk.data) {
-                            // chunk.data is an array: [image, status_message]
-                            // We want the first element (image)
-                            if (Array.isArray(chunk.data) && chunk.data.length > 0) {
-                                finalResult = chunk.data; // Keep the full array
-                            } else if (chunk.data) {
-                                finalResult = chunk.data;
+                    
+                    // Add timeout for generator iteration
+                    const generatorTimeout = setTimeout(() => {
+                        console.warn('⚠️ Generator iteration timeout - using direct result');
+                    }, 30000); // 30 second timeout
+                    
+                    try {
+                        let lastChunk = null;
+                        let chunkCount = 0;
+                        
+                        for await (const chunk of result) {
+                            chunkCount++;
+                            lastChunk = chunk;
+                            console.log(`📦 Generator chunk ${chunkCount}:`, chunk);
+                            
+                            if (chunk && chunk.data) {
+                                // chunk.data is an array: [image, status_message]
+                                // We want the first element (image)
+                                if (Array.isArray(chunk.data) && chunk.data.length > 0) {
+                                    finalResult = chunk.data; // Keep the full array
+                                    console.log('✅ Got result array:', finalResult);
+                                } else if (chunk.data) {
+                                    finalResult = chunk.data;
+                                    console.log('✅ Got result data:', finalResult);
+                                }
+                            }
+                            
+                            if (chunk && chunk.progress) {
+                                const progress = 50 + (chunk.progress * 0.3);
+                                updateProgress(Math.min(progress, 95), 'Processing...');
+                            }
+                            
+                            // If we got a result, we can break early
+                            if (finalResult && finalResult !== result) {
+                                console.log('✅ Got final result, breaking from generator');
+                                break;
                             }
                         }
-                        if (chunk && chunk.progress) {
-                            updateProgress(50 + (chunk.progress * 0.3), 'Processing...');
+                        
+                        clearTimeout(generatorTimeout);
+                        console.log(`✅ Generator completed after ${chunkCount} chunks`);
+                        
+                        // If we didn't get a result from chunks, use the last chunk
+                        if (finalResult === result && lastChunk) {
+                            console.log('⚠️ Using last chunk as result');
+                            if (lastChunk.data) {
+                                finalResult = lastChunk.data;
+                            } else {
+                                finalResult = lastChunk;
+                            }
+                        }
+                    } catch (genError) {
+                        clearTimeout(generatorTimeout);
+                        console.error('❌ Generator iteration error:', genError);
+                        // Try to use the direct result as fallback
+                        if (finalResult === result) {
+                            throw new Error(`Generator iteration failed: ${genError.message}`);
                         }
                     }
+                } else {
+                    console.log('📦 Result is not a generator, using directly');
                 }
+                
+                updateProgress(90, 'Extracting result...');
                 
                 // Extract image URL
                 // Note: Backend returns [image, status_message], so we need the first element
+                console.log('🔍 Extracting image URL from result:', finalResult);
                 let imageUrl = null;
                 
                 // Handle array result (multiple outputs)
                 if (Array.isArray(finalResult)) {
+                    console.log('📋 Result is array with', finalResult.length, 'elements');
                     // First element is the image, second is status message
                     const imageResult = finalResult[0];
+                    console.log('🖼️ Image result:', imageResult);
+                    
                     if (typeof imageResult === 'string') {
                         imageUrl = imageResult;
+                        console.log('✅ Image URL (string):', imageUrl);
                     } else if (imageResult && imageResult.url) {
                         imageUrl = imageResult.url;
+                        console.log('✅ Image URL (object.url):', imageUrl);
                     } else if (imageResult && imageResult.data) {
                         imageUrl = imageResult.data;
+                        console.log('✅ Image URL (object.data):', imageUrl);
+                    } else if (imageResult && typeof imageResult === 'object') {
+                        // Try to find any string property that looks like a URL
+                        for (const key in imageResult) {
+                            const value = imageResult[key];
+                            if (typeof value === 'string' && (value.startsWith('http') || value.startsWith('/tmp') || value.endsWith('.png') || value.endsWith('.jpg'))) {
+                                imageUrl = value;
+                                console.log(`✅ Image URL (found in ${key}):`, imageUrl);
+                                break;
+                            }
+                        }
                     }
                 } else if (typeof finalResult === 'string') {
                     imageUrl = finalResult;
+                    console.log('✅ Image URL (direct string):', imageUrl);
                 } else if (finalResult && finalResult.url) {
                     imageUrl = finalResult.url;
+                    console.log('✅ Image URL (result.url):', imageUrl);
                 } else if (finalResult && finalResult.data) {
                     if (Array.isArray(finalResult.data)) {
                         imageUrl = finalResult.data[0];
+                        console.log('✅ Image URL (result.data[0]):', imageUrl);
                     } else {
                         imageUrl = finalResult.data;
+                        console.log('✅ Image URL (result.data):', imageUrl);
                     }
                 }
                 
                 if (!imageUrl) {
-                    console.error('Result structure:', finalResult);
-                    throw new Error('Could not extract image URL from result. Result structure: ' + JSON.stringify(finalResult));
+                    console.error('❌ Could not extract image URL. Result structure:', finalResult);
+                    console.error('Result type:', typeof finalResult);
+                    console.error('Is array:', Array.isArray(finalResult));
+                    if (finalResult && typeof finalResult === 'object') {
+                        console.error('Result keys:', Object.keys(finalResult));
+                    }
+                    throw new Error('Could not extract image URL from result. Check console for details.');
                 }
+                
+                console.log('✅ Final image URL:', imageUrl);
                 
                 updateProgress(100, 'Complete! ✓');
                 showStatus('✅ Face swap successful! 🎉', 'success');
