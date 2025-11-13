@@ -292,7 +292,7 @@ body {
 
 .dashboard-container h2 {
   color: white;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -320,7 +320,7 @@ body {
 
 .profile-card h3 {
   color: white;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -515,7 +515,7 @@ body {
   margin-bottom: 15px;
   color: white;
   font-weight: 700;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -860,7 +860,7 @@ body {
   color: white;
   font-size: 32px;
   font-weight: 800;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -959,7 +959,7 @@ textarea:focus {
 }
 
 .toggle-text.gradient-text {
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -973,7 +973,7 @@ textarea:focus {
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1236,7 +1236,7 @@ textarea:focus {
   font-weight: 900;
   color: white;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1346,7 +1346,7 @@ textarea:focus {
   margin: 0 auto 1.5rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1447,7 +1447,7 @@ textarea:focus {
   font-size: 3rem;
   font-weight: 800;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
+  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
