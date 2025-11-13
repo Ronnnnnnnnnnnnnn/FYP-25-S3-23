@@ -584,56 +584,92 @@
                 progressFill.textContent = '100%';
                 progressText.textContent = 'Complete!';
                 
-                console.log('✅ Result:', result);
+                console.log('✅ Result received:', result);
+                console.log('✅ Result type:', typeof result);
+                console.log('✅ Result keys:', result ? Object.keys(result) : 'null');
+                console.log('✅ Full result structure:', JSON.stringify(result, null, 2));
                 
-                // Extract video URL from result
+                // Extract video URL from result - try multiple formats
                 let videoUrl = null;
                 
-                if (result.data && result.data[0]) {
-                    // Try different possible structures
-                    const videoObj = result.data[0];
-                    if (typeof videoObj === 'string') {
-                        videoUrl = videoObj;
-                    } else if (videoObj.url) {
-                        videoUrl = videoObj.url;
-                    } else if (videoObj.file) {
-                        videoUrl = videoObj.file;
-                    } else if (videoObj[0]) {
-                        videoUrl = videoObj[0];
-                    } else if (videoObj.video) {
-                        // Handle nested video object
-                        const nestedVideo = videoObj.video;
-                        if (typeof nestedVideo === 'string') {
-                            videoUrl = nestedVideo;
-                        } else if (nestedVideo.url) {
-                            videoUrl = nestedVideo.url;
-                        } else if (nestedVideo.file) {
-                            videoUrl = nestedVideo.file;
-                        } else if (nestedVideo[0]) {
-                            videoUrl = nestedVideo[0];
-                        } else {
-                            // Try first property
-                            const firstKey = Object.keys(nestedVideo)[0];
-                            if (firstKey) {
-                                videoUrl = nestedVideo[firstKey];
+                // Helper function to extract URL from various formats
+                function extractUrl(obj) {
+                    if (!obj) return null;
+                    
+                    // If it's a string, return it
+                    if (typeof obj === 'string') {
+                        return obj;
+                    }
+                    
+                    // Try common property names
+                    const urlProps = ['url', 'file', 'path', 'src', 'video', 'video_url', 'output', 'output_url'];
+                    for (const prop of urlProps) {
+                        if (obj[prop]) {
+                            const value = obj[prop];
+                            if (typeof value === 'string') {
+                                return value;
                             }
-                        }
-                    } else {
-                        // Try first property
-                        const firstKey = Object.keys(videoObj)[0];
-                        if (firstKey) {
-                            videoUrl = videoObj[firstKey];
+                            // Recursively check nested objects
+                            const nested = extractUrl(value);
+                            if (nested) return nested;
                         }
                     }
-                } else if (result.url) {
-                    videoUrl = result.url;
-                } else if (result.file) {
-                    videoUrl = result.file;
+                    
+                    // If it's an array, check first element
+                    if (Array.isArray(obj) && obj.length > 0) {
+                        return extractUrl(obj[0]);
+                    }
+                    
+                    // Try first property value
+                    const keys = Object.keys(obj);
+                    if (keys.length > 0) {
+                        return extractUrl(obj[keys[0]]);
+                    }
+                    
+                    return null;
+                }
+                
+                // Try different result structures
+                // 1. result.data[0] (standard Gradio format)
+                if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+                    videoUrl = extractUrl(result.data[0]);
+                }
+                
+                // 2. result.data (if it's the video directly)
+                if (!videoUrl && result.data) {
+                    videoUrl = extractUrl(result.data);
+                }
+                
+                // 3. result[0] (if result is an array)
+                if (!videoUrl && Array.isArray(result) && result.length > 0) {
+                    videoUrl = extractUrl(result[0]);
+                }
+                
+                // 4. result directly
+                if (!videoUrl) {
+                    videoUrl = extractUrl(result);
+                }
+                
+                // 5. Check for nested structures
+                if (!videoUrl && result.output) {
+                    videoUrl = extractUrl(result.output);
+                }
+                
+                if (!videoUrl && result.result) {
+                    videoUrl = extractUrl(result.result);
                 }
                 
                 if (!videoUrl) {
-                    console.error('Could not extract video URL from result:', result);
-                    throw new Error('Invalid video result format');
+                    console.error('❌ Could not extract video URL from result');
+                    console.error('Result structure:', result);
+                    console.error('Result keys:', result ? Object.keys(result) : 'null');
+                    
+                    // Show helpful error with result structure
+                    throw new Error(
+                        `Could not extract video URL from API response.\n\n` +
+                        `Result structure: ${JSON.stringify(result, null, 2)}\n\n` +
+                        `Please check the browser console for full details.`
+                    );
                 }
                 
                 console.log('📹 Video URL:', videoUrl);
