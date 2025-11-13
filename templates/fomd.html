@@ -533,49 +533,45 @@
                 let predictResult;
                 
                 try {
-                    // Approach 1: Pass files directly (standard Gradio approach)
-                    console.log('Attempt 1: Passing File objects directly');
-                    predictResult = await window.app.predict(0, [
+                    // Approach 1: Try using submit API (more reliable for async operations)
+                    console.log('Attempt 1: Using submit API');
+                    predictResult = await window.app.submit(0, [
                         imageFile,
                         videoFile
                     ]);
-                } catch (predictError) {
-                    console.error('Attempt 1 failed:', predictError);
+                } catch (submitError) {
+                    console.error('Attempt 1 (submit) failed:', submitError);
                     
-                    // Approach 2: Try swapping the order (maybe video should be first)
-                    if (predictError.message && predictError.message.includes('video')) {
+                    // Approach 2: Try predict API
+                    try {
+                        console.log('Attempt 2: Using predict API');
+                        predictResult = await window.app.predict(0, [
+                            imageFile,
+                            videoFile
+                        ]);
+                    } catch (predictError) {
+                        console.error('Attempt 2 (predict) failed:', predictError);
+                        
+                        // Approach 3: Try swapping the order
                         try {
-                            console.log('Attempt 2: Swapping input order (video first)');
-                            predictResult = await window.app.predict(0, [
+                            console.log('Attempt 3: Swapping input order (video first)');
+                            predictResult = await window.app.submit(0, [
                                 videoFile,
                                 imageFile
                             ]);
                         } catch (swapError) {
-                            console.error('Attempt 2 failed:', swapError);
+                            console.error('Attempt 3 failed:', swapError);
                             
-                            // Approach 3: Try using submit API instead of predict
-                            try {
-                                console.log('Attempt 3: Using submit API');
-                                predictResult = await window.app.submit(0, [
-                                    imageFile,
-                                    videoFile
-                                ]);
-                            } catch (submitError) {
-                                console.error('Attempt 3 failed:', submitError);
-                                
-                                // All attempts failed - show detailed error
-                                throw new Error(
-                                    `Gradio API Error: ${predictError.message}\n\n` +
-                                    `The space expects a different input format. ` +
-                                    `Please check:\n` +
-                                    `1. Visit https://huggingface.co/spaces/${SPACE_URL} to see the expected interface\n` +
-                                    `2. Check if the space expects inputs in a different order\n` +
-                                    `3. Verify the space is running and accessible`
-                                );
-                            }
+                            // All attempts failed - show detailed error
+                            throw new Error(
+                                `Gradio API Error: ${submitError.message || predictError.message}\n\n` +
+                                `The space expects a different input format. ` +
+                                `Please check:\n` +
+                                `1. Visit https://huggingface.co/spaces/${SPACE_URL} to see the expected interface\n` +
+                                `2. Check if the space expects inputs in a different order\n` +
+                                `3. Verify the space is running and accessible`
+                            );
                         }
-                    } else {
-                        throw predictError;
                     }
                 }
                 
@@ -590,34 +586,82 @@
                         // Get the final result from the generator
                         let generatorResult;
                         let lastValue = null;
+                        let lastDataValue = null;
+                        let iterationCount = 0;
+                        const maxIterations = 1000; // Safety limit
                         
-                        while (true) {
+                        // Clear the simulated progress interval since we'll use real progress
+                        clearInterval(progressInterval);
+                        
+                        while (iterationCount < maxIterations) {
                             generatorResult = await predictResult.next();
-                            console.log('Generator step:', generatorResult);
+                            iterationCount++;
+                            
+                            console.log(`Generator step ${iterationCount}:`, generatorResult);
                             
                             if (generatorResult.done) {
-                                // Generator is done, use the last value or the value from done
-                                result = generatorResult.value || lastValue;
+                                // Generator is done
+                                console.log('Generator completed');
+                                // Use the value from done, or last data value, or last value
+                                result = generatorResult.value || lastDataValue || lastValue;
                                 break;
                             } else {
-                                // Store intermediate values
-                                lastValue = generatorResult.value;
-                                // Update progress if available
-                                if (generatorResult.value && typeof generatorResult.value === 'object') {
-                                    if (generatorResult.value.progress !== undefined) {
-                                        const progress = generatorResult.value.progress;
+                                const value = generatorResult.value;
+                                
+                                // Check if this is a status update or data
+                                if (value && typeof value === 'object') {
+                                    // Check for progress updates
+                                    if (value.progress !== undefined) {
+                                        const progress = value.progress;
+                                        console.log('Progress update:', progress);
                                         if (progressFill && progressText) {
                                             progressFill.style.width = (progress * 100) + '%';
                                             progressFill.textContent = Math.round(progress * 100) + '%';
+                                            progressText.textContent = `Processing... ${Math.round(progress * 100)}%`;
                                         }
                                     }
-                                    // If we get data directly, use it
-                                    if (generatorResult.value.data) {
-                                        result = generatorResult.value;
+                                    
+                                    // Check for status messages
+                                    if (value.type === 'status') {
+                                        console.log('Status update:', value);
+                                        if (value.stage && progressText) {
+                                            progressText.textContent = value.stage || 'Processing...';
+                                        }
                                     }
+                                    
+                                    // Check if this contains actual data
+                                    if (value.data !== undefined) {
+                                        console.log('Found data in generator value:', value);
+                                        lastDataValue = value;
+                                        // Don't break, continue to get final result
+                                    }
+                                    
+                                    // Check for final result structure
+                                    if (value.url || value.file || (Array.isArray(value) && value.length > 0)) {
+                                        console.log('Found result data:', value);
+                                        lastDataValue = value;
+                                    }
+                                } else if (value !== null && value !== undefined) {
+                                    // Store any non-null value
+                                    lastValue = value;
                                 }
                             }
                         }
+                        
+                        if (iterationCount >= maxIterations) {
+                            console.warn('Reached max iterations, using last value');
+                            result = lastDataValue || lastValue;
+                        }
+                        
+                        if (!result && lastDataValue) {
+                            result = lastDataValue;
+                        }
+                        
+                        if (!result && lastValue) {
+                            result = lastValue;
+                        }
+                        
+                        console.log('Final result after iteration:', result);
                     } catch (genError) {
                         console.error('Error iterating generator:', genError);
                         throw new Error(`Error processing API response: ${genError.message}`);
