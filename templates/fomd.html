@@ -678,15 +678,35 @@
                             }
                             
                             // Add timeout to each next() call to prevent infinite waiting
+                            // First step gets longer timeout (3 minutes) since processing can take time
+                            // Subsequent steps get shorter timeout (30 seconds)
+                            const stepTimeout = iterationCount === 0 ? 180000 : 30000; // 3 min for first, 30s for others
+                            
+                            console.log(`Waiting for generator step ${iterationCount + 1} (timeout: ${stepTimeout/1000}s)...`);
+                            
                             const nextPromise = predictResult.next();
                             const timeoutPromise = new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error('Generator step timeout')), 60000) // 60s per step
+                                setTimeout(() => reject(new Error(`Generator step ${iterationCount + 1} timeout after ${stepTimeout/1000}s`)), stepTimeout)
                             );
                             
                             try {
                                 generatorResult = await Promise.race([nextPromise, timeoutPromise]);
+                                console.log(`✅ Generator step ${iterationCount + 1} completed`);
                             } catch (stepError) {
-                                console.error(`Error at generator step ${iterationCount + 1}:`, stepError);
+                                console.error(`❌ Error at generator step ${iterationCount + 1}:`, stepError);
+                                
+                                // If it's the first step and times out, the API might be processing
+                                // but not yielding updates. This could be a space configuration issue.
+                                if (iterationCount === 0) {
+                                    throw new Error(
+                                        `The Gradio space is not responding. This could be:\n` +
+                                        `1. The space is processing but not sending progress updates\n` +
+                                        `2. The space is hanging or crashed\n` +
+                                        `3. Network connectivity issues\n\n` +
+                                        `Please check the space directly at: https://huggingface.co/spaces/${SPACE_URL}`
+                                    );
+                                }
+                                
                                 // If we have data so far, try to use it
                                 if (lastDataValue || lastValue) {
                                     console.warn('Using last available data due to error');
