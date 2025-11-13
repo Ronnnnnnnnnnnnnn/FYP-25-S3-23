@@ -120,18 +120,18 @@ body {
 
 /* Button variations */
 .primary-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #B794F6 0%, #C8A8E9 100%);
   color: white;
 }
 
 .outline-btn {
   background: transparent;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: #B794F6;
+  border: 2px solid #B794F6;
 }
 
 .outline-btn:hover {
-  background: #667eea;
+  background: #B794F6;
   color: white;
 }
 
@@ -167,7 +167,7 @@ body {
 .navbar .logo {
   font-size: 28px;
   font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #B794F6 0%, #C8A8E9 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -196,7 +196,7 @@ body {
   left: 0;
   width: 0;
   height: 2px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #B794F6 0%, #C8A8E9 100%);
   transition: width 0.3s;
 }
 
@@ -237,7 +237,7 @@ body {
   font-weight: 800;
   color: #333;
   margin-bottom: 30px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #B794F6 0%, #C8A8E9 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -292,7 +292,7 @@ body {
 
 .dashboard-container h2 {
   color: white;
-  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #fff 0%, #B794F6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -352,7 +352,7 @@ body {
   position: absolute;
   bottom: -10px;
   right: -10px;
-  background: #667eea;
+  background: #B794F6;
   color: white;
   width: 40px;
   height: 40px;
@@ -367,7 +367,7 @@ body {
 }
 
 .profile-picture-upload-btn:hover {
-  background: #764ba2;
+  background: #C8A8E9;
   transform: scale(1.1);
 }
 
@@ -387,7 +387,7 @@ body {
 }
 
 .profile-title {
-  color: #667eea;
+  color: #B794F6;
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 20px;
@@ -419,7 +419,7 @@ body {
 .premium-badge {
   display: inline-flex;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #B794F6 0%, #C8A8E9 100%);
   color: white;
   padding: 6px 14px;
   border-radius: 20px;
@@ -480,9 +480,9 @@ body {
 .profile-form input:focus,
 .profile-form textarea:focus,
 .profile-form select:focus {
-  border-color: #667eea;
+  border-color: #B794F6;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 0 3px rgba(183, 148, 246, 0.3);
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -612,8 +612,8 @@ body {
 
 .avatar-item img:hover {
   transform: scale(1.05);
-  border-color: #667eea;
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+  border-color: #B794F6;
+  box-shadow: 0 8px 20px rgba(183, 148, 246, 0.3);
 }
 
 /* CONTACT SECTION */
@@ -658,9 +658,9 @@ body {
 }
 
 .help-card:hover {
-  border-color: #667eea;
+  border-color: #B794F6;
   transform: translateX(5px);
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 5px 20px rgba(183, 148, 246, 0.2);
 }
 
 .hc-icon {
@@ -689,7 +689,7 @@ body {
 }
 
 .help-link {
-  color: #667eea;
+  color: #B794F6;
   font-weight: 600;
   text-decoration: none;
   font-size: 14px;
@@ -697,11 +697,11 @@ body {
 }
 
 .help-link:hover {
-  color: #764ba2;
+  color: #C8A8E9;
 }
 
 .contact-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #B794F6 0%, #C8A8E9 100%);
   padding: 50px;
   border-radius: 20px;
   color: white;
@@ -755,7 +755,7 @@ body {
   margin-top: 20px;
   width: 100%;
   background: white;
-  color: #667eea;
+  color: #B794F6;
 }
 
 .contact-info {
@@ -801,7 +801,7 @@ body {
 
 .social:hover {
   background: white;
-  color: #667eea;
+  color: #B794F6;
   transform: translateY(-3px);
 }
 
@@ -846,7 +846,7 @@ body {
   color: white;
   font-size: 32px;
   font-weight: 800;
-  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #fff 0%, #B794F6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -879,9 +879,9 @@ input::placeholder {
 }
 
 input:focus {
-  border-color: #667eea;
+  border-color: #B794F6;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 0 3px rgba(183, 148, 246, 0.3);
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -899,9 +899,9 @@ select {
 }
 
 select:focus {
-  border-color: #667eea;
+  border-color: #B794F6;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 0 3px rgba(183, 148, 246, 0.3);
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -929,9 +929,9 @@ textarea::placeholder {
 }
 
 textarea:focus {
-  border-color: #667eea;
+  border-color: #B794F6;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 0 0 3px rgba(183, 148, 246, 0.3);
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -943,14 +943,14 @@ textarea:focus {
 }
 
 .toggle-text a {
-  color: #a855f7;
+  color: #B794F6;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s;
 }
 
 .toggle-text a:hover {
-  color: #667eea;
+  color: #B794F6;
   text-decoration: underline;
 }
 
@@ -1034,13 +1034,16 @@ textarea:focus {
    ============================================ */
 
 :root {
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
-  --secondary: #8b5cf6;
-  --accent: #ec4899;
+  --primary: #B794F6;
+  --primary-dark: #A78BFA;
+  --secondary: #C8A8E9;
+  --accent: #D4B5F0;
   --success: #10b981;
   --cyan: #06b6d4;
-  --purple: #a855f7;
+  --purple: #E8D5FF;
+  --neutral-bg: #F5F5F5;
+  --neutral-light: #FAFAFA;
+  --neutral-dark: #E8E8E8;
 }
 
 /* Animated Gradient Background */
@@ -1051,7 +1054,7 @@ textarea:focus {
   width: 100%;
   height: 100%;
   z-index: 0;
-  background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #667eea);
+  background: linear-gradient(45deg, #E8D5FF, #D4B5F0, #C8A8E9, #B794F6);
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
 }
@@ -1199,7 +1202,7 @@ textarea:focus {
   font-weight: 900;
   color: white;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #fff 0%, #B794F6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1307,7 +1310,7 @@ textarea:focus {
   margin: 0 auto 1.5rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #fff 0%, #a855f7 50%, #06b6d4 100%);
+  background: linear-gradient(135deg, #fff 0%, #B794F6 50%, #06b6d4 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1346,14 +1349,14 @@ textarea:focus {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #B794F6 0%, #C8A8E9 100%);
   color: white;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 30px rgba(183, 148, 246, 0.4);
 }
 
 .btn-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+  box-shadow: 0 15px 40px rgba(183, 148, 246, 0.6);
 }
 
 .btn-secondary {
@@ -1408,7 +1411,7 @@ textarea:focus {
   font-size: 3rem;
   font-weight: 800;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #fff 0%, #B794F6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1488,7 +1491,7 @@ textarea:focus {
 
 .tool-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 25px 60px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 25px 60px rgba(183, 148, 246, 0.4);
   border-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -1502,7 +1505,7 @@ textarea:focus {
   justify-content: center;
   font-size: 3.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 30px rgba(183, 148, 246, 0.4);
   position: relative;
   z-index: 1;
   animation: floatIcon 3s ease-in-out infinite;
@@ -1692,7 +1695,7 @@ textarea:focus {
   font-size: 2.5rem;
   font-weight: 800;
   margin: 0 auto 2rem;
-  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #fff 0%, #B794F6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1765,7 +1768,7 @@ textarea:focus {
   font-size: 2.5rem;
   font-weight: 800;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #fff 0%, #B794F6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
