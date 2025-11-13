@@ -680,44 +680,44 @@
 
     <div class="content">
         <!-- Navbar -->
-        <nav class="navbar">
+    <nav class="navbar">
             <div class="nav-container">
                 <a href="/" class="logo">
                     <span class="logo-icon">🎭</span>
                     <span>AI Studio</span>
                 </a>
                 <ul class="nav-links">
-                    {% if user_role %}
-                        {% if user_role == 'user' %}
-                            <li><a href="/user">Dashboard</a></li>
-                        {% elif user_role == 'subscriber' %}
-                            <li><a href="/subscriber">Dashboard</a></li>
-                        {% elif user_role == 'admin' %}
-                            <li><a href="/admin">Dashboard</a></li>
-                        {% endif %}
-                        <li><a href="/fomd" class="active">FOMD</a></li>
-                        <li><a href="/makeittalk">MakeItTalk</a></li>
-                        <li><a href="#" onclick="logout()">Logout</a></li>
-                    {% else %}
-                        <li><a href="/">Home</a></li>
-                        <li><a href="/fomd" class="active">FOMD</a></li>
-                        <li><a href="/makeittalk">MakeItTalk</a></li>
-                        <li><a href="/login">Login</a></li>
-                    {% endif %}
-                </ul>
+            {% if user_role %}
+                {% if user_role == 'user' %}
+                    <li><a href="/user">Dashboard</a></li>
+                {% elif user_role == 'subscriber' %}
+                    <li><a href="/subscriber">Dashboard</a></li>
+                {% elif user_role == 'admin' %}
+                    <li><a href="/admin">Dashboard</a></li>
+                {% endif %}
+                <li><a href="/fomd" class="active">FOMD</a></li>
+                <li><a href="/makeittalk">MakeItTalk</a></li>
+                <li><a href="#" onclick="logout()">Logout</a></li>
+            {% else %}
+                <li><a href="/">Home</a></li>
+                <li><a href="/fomd" class="active">FOMD</a></li>
+                <li><a href="/makeittalk">MakeItTalk</a></li>
+                <li><a href="/login">Login</a></li>
+            {% endif %}
+        </ul>
             </div>
-        </nav>
+    </nav>
 
-        <div id="connectionStatus" class="connection-status status-offline">
-            ⏳ Connecting...
-        </div>
+    <div id="connectionStatus" class="connection-status status-offline">
+        ⏳ Connecting...
+    </div>
 
         <div class="hero">
             <h1>First Order Motion Model</h1>
             <p>Animate faces from photos using driving videos with AI-powered motion transfer</p>
         </div>
 
-        <div class="container">
+    <div class="container">
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">🎬</div>
@@ -733,42 +733,42 @@
                         <div class="upload-text">Source Image</div>
                         <div class="upload-subtext">JPG, PNG • Portrait to animate</div>
                         <div class="file-name" id="imageName"></div>
-                        <input type="file" id="imageInput" accept="image/*" onchange="previewImage(this)">
-                        <div class="preview-container" id="imagePreviewContainer">
-                            <img id="imagePreview" class="image-preview" alt="Image preview">
-                        </div>
-                    </div>
-
+            <input type="file" id="imageInput" accept="image/*" onchange="previewImage(this)">
+            <div class="preview-container" id="imagePreviewContainer">
+                <img id="imagePreview" class="image-preview" alt="Image preview">
+            </div>
+        </div>
+        
                     <div class="upload-box" id="videoBox" onclick="document.getElementById('videoInput').click()">
                         <div class="upload-icon">🎥</div>
                         <div class="upload-text">Driving Video</div>
                         <div class="upload-subtext">MP4, MOV • Movements to apply</div>
                         <div class="file-name" id="videoName"></div>
-                        <input type="file" id="videoInput" accept="video/*" onchange="previewVideo(this)">
-                        <div class="preview-container" id="videoPreviewContainer">
-                            <video id="videoPreview" class="video-preview" controls></video>
+            <input type="file" id="videoInput" accept="video/*" onchange="previewVideo(this)">
+            <div class="preview-container" id="videoPreviewContainer">
+                <video id="videoPreview" class="video-preview" controls></video>
                         </div>
-                    </div>
-                </div>
-                
+            </div>
+        </div>
+        
                 <button class="btn btn-primary" onclick="createAnimation()" id="submitBtn">
                     <span>🚀</span>
                     <span>Create Animation</span>
-                </button>
-                
-                <div class="progress-container" id="progressContainer">
+        </button>
+        
+        <div class="progress-container" id="progressContainer">
                     <div class="progress-label">
                         <span id="progressText">Processing...</span>
                         <span id="progressPercent">0%</span>
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill">0%</div>
-                    </div>
-                </div>
-                
-                <div id="status"></div>
-                
-                <div class="result-section" id="resultSection">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div class="result-section" id="resultSection">
                     <div class="result-header">
                         <span style="font-size: 2.5rem;">🎉</span>
                         <h3>Your Animated Result</h3>
@@ -776,10 +776,10 @@
                     <div class="video-container">
                         <video id="resultVideo" controls autoplay loop></video>
                     </div>
-                    <button onclick="downloadVideo()" class="download-btn">
+            <button onclick="downloadVideo()" class="download-btn">
                         <span>📥</span>
                         <span>Download Video</span>
-                    </button>
+            </button>
                 </div>
             </div>
         </div>
@@ -900,7 +900,7 @@
             }
             return window.app;
         }
-
+        
         // Preview functions
         window.previewImage = function(input) {
             const previewContainer = document.getElementById('imagePreviewContainer');
@@ -999,8 +999,8 @@
             
             const statusDiv = document.getElementById('connectionStatus');
             if (statusDiv) {
-                statusDiv.textContent = '⏳ Connecting...';
-                statusDiv.className = 'connection-status status-offline';
+            statusDiv.textContent = '⏳ Connecting...';
+            statusDiv.className = 'connection-status status-offline';
             }
             
             // Initialize client
@@ -1044,9 +1044,33 @@
                 updateProgress(10);
                 showStatus("Processing image...", "loading");
                 
-                // Pass files directly (same as makeittalk approach)
-                const imageHandle = imageFile;
-                const videoHandle = videoFile;
+                // Upload files to Gradio if upload method is available
+                let imageHandle = imageFile;
+                let videoHandle = videoFile;
+                
+                try {
+                    // Try to upload files using Gradio client's upload method
+                    if (window.app && typeof window.app.upload_file === 'function') {
+                        console.log('📤 Uploading image file...');
+                        imageHandle = await window.app.upload_file(imageFile);
+                        console.log('✅ Image uploaded:', imageHandle);
+                        
+                        updateProgress(15);
+                        console.log('📤 Uploading video file...');
+                        videoHandle = await window.app.upload_file(videoFile);
+                        console.log('✅ Video uploaded:', videoHandle);
+                    } else if (window.gradioClient && typeof window.gradioClient.upload_file === 'function') {
+                        console.log('📤 Uploading files via gradioClient...');
+                        imageHandle = await window.gradioClient.upload_file(imageFile);
+                        videoHandle = await window.gradioClient.upload_file(videoFile);
+                        console.log('✅ Files uploaded via gradioClient');
+                    } else {
+                        console.log('⚠️ No upload_file method found, using files directly');
+                    }
+                } catch (uploadError) {
+                    console.log('⚠️ File upload failed, using files directly:', uploadError.message);
+                    // Continue with direct file objects
+                }
                 
                 updateProgress(20);
                 showStatus("Processing video...", "loading");
@@ -1057,6 +1081,43 @@
                 console.log('📤 Sending files to Gradio API...');
                 console.log('Image file:', imageFile.name, imageFile.type, imageFile.size);
                 console.log('Video file:', videoFile.name, videoFile.type, videoFile.size);
+                
+                // Validate and fix video file type if needed
+                const videoMimeTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'];
+                const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'];
+                const fileExt = videoFile.name.split('.').pop()?.toLowerCase();
+                const isVideoFile = videoMimeTypes.includes(videoFile.type) || videoExtensions.includes(fileExt);
+                
+                if (!isVideoFile) {
+                    console.warn('⚠️ Video file type might not be recognized:', videoFile.type);
+                    console.warn('⚠️ File extension:', fileExt);
+                } else {
+                    console.log('✅ Video file type validated:', videoFile.type || `extension: .${fileExt}`);
+                }
+                
+                // Ensure video file has correct MIME type
+                if (!videoFile.type || !videoMimeTypes.includes(videoFile.type)) {
+                    // Try to set correct MIME type based on extension
+                    let correctMimeType = 'video/mp4'; // Default
+                    if (fileExt === 'webm') correctMimeType = 'video/webm';
+                    else if (fileExt === 'ogg') correctMimeType = 'video/ogg';
+                    else if (fileExt === 'mov') correctMimeType = 'video/quicktime';
+                    else if (fileExt === 'avi') correctMimeType = 'video/x-msvideo';
+                    
+                    console.log(`🔄 Creating new File object with MIME type: ${correctMimeType}`);
+                    videoHandle = new File([videoFile], videoFile.name, { type: correctMimeType });
+                    console.log('✅ Video file recreated with type:', videoHandle.type);
+                }
+                
+                // Log the handles we're using
+                console.log('📤 Image handle type:', typeof imageHandle, imageHandle);
+                console.log('📤 Video handle type:', typeof videoHandle, videoHandle);
+                if (imageHandle instanceof File) {
+                    console.log('📤 Image handle - name:', imageHandle.name, 'type:', imageHandle.type);
+                }
+                if (videoHandle instanceof File) {
+                    console.log('📤 Video handle - name:', videoHandle.name, 'type:', videoHandle.type);
+                }
                 
                 // Inspect app structure to find available endpoints and component types
                 let availableFunctions = [];
@@ -1223,6 +1284,20 @@
                     let detailedError = `Failed to call Gradio API. Tried all available methods.\n` +
                         `Last error: ${errorMsg}\n\n`;
                     
+                    // Check if it's a file type validation error
+                    if (errorMsg.includes('Invalid file type') || errorMsg.includes('formats:') || errorMsg.includes('video')) {
+                        detailedError += `⚠️ File type validation error detected.\n` +
+                            `The Gradio space is rejecting the video file format.\n\n` +
+                            `Possible solutions:\n` +
+                            `1. Ensure your video file is a valid video format (MP4, WebM, etc.)\n` +
+                            `2. Try uploading a different video file\n` +
+                            `3. Check if the Hugging Face space backend needs to be updated\n\n` +
+                            `File info:\n` +
+                            `- Video file: ${videoFile.name}\n` +
+                            `- Video type: ${videoFile.type || 'unknown'}\n` +
+                            `- Video size: ${(videoFile.size / 1024 / 1024).toFixed(2)} MB\n\n`;
+                    }
+                    
                     // Check if it's a VideoData validation error
                     if (errorMsg.includes('VideoData') || errorMsg.includes('Field required')) {
                         detailedError += `⚠️ This appears to be a Gradio version/format mismatch issue.\n` +
@@ -1356,9 +1431,9 @@
                         videoUrl = videoObj[0];
                     } else if (typeof videoObj === 'object' && Object.keys(videoObj).length > 0) {
                         const firstKey = Object.keys(videoObj)[0];
-                        videoUrl = videoObj[firstKey];
+                            videoUrl = videoObj[firstKey];
+                        }
                     }
-                }
                 // Try different possible result structures
                 else if (finalResult.data && finalResult.data[0]) {
                     videoUrl = finalResult.data[0];
@@ -1468,12 +1543,12 @@
             }
             
             const url = URL.createObjectURL(resultBlob);
-            const a = document.createElement('a');
+                const a = document.createElement('a');
             a.href = url;
             a.download = 'animated_face_' + Date.now() + '.mp4';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+                document.body.appendChild(a);
+                a.click();
+                    document.body.removeChild(a);
             URL.revokeObjectURL(url);
         };
     </script>
