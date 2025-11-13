@@ -799,12 +799,14 @@
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
         // ═══════════════════════════════════════════════════════════
 
-        import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client@1.4.0/+esm";
+        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
 
+        window.gradioClient = client;
+        window.app = null;
+        
         let imageFile = null;
         let videoFile = null;
         let resultBlob = null;
-        let client = null;
         let savedVideoUrl = null;
         let videoFilename = 'fomd_animation.mp4';
         
@@ -826,16 +828,64 @@
         }
         createParticles();
         
-        // Initialize client
+        // Function to try connecting with different space name formats
+        async function tryConnect(spacePath) {
+            try {
+                console.log('Attempting to connect to:', spacePath);
+                const app = await window.gradioClient(spacePath);
+                console.log('✅ Connected successfully!');
+                return app;
+            } catch (error) {
+                console.log('Failed to connect to:', spacePath, error.message);
+                throw error;
+            }
+        }
+        
+        // Initialize client (using same pattern as makeittalk)
         async function initClient() {
-            if (!client) {
+            if (!window.app) {
                 try {
-                    client = await Client.connect(SPACE_URL);
-                    console.log("✅ Connected to Gradio space");
+                    console.log('🔍 Checking connection to:', SPACE_URL);
+                    
                     const statusDiv = document.getElementById('connectionStatus');
                     if (statusDiv) {
-                        statusDiv.textContent = '✅ Connected to API';
-                        statusDiv.className = 'connection-status status-online';
+                        statusDiv.textContent = '⏳ Connecting...';
+                        statusDiv.className = 'connection-status status-offline';
+                    }
+                    
+                    // Try different space name variations
+                    const spaceVariations = [
+                        SPACE_URL,
+                        `${YOUR_USERNAME}/${SPACE_NAME.toLowerCase()}`,
+                        `${YOUR_USERNAME}/${SPACE_NAME.toUpperCase()}`,
+                    ];
+                    
+                    let connected = false;
+                    let lastError = null;
+                    
+                    for (const spacePath of spaceVariations) {
+                        try {
+                            window.app = await tryConnect(spacePath);
+                            connected = true;
+                            if (statusDiv) {
+                                statusDiv.textContent = '✅ Connected to API';
+                                statusDiv.className = 'connection-status status-online';
+                            }
+                            console.log(`✅ Successfully connected to: ${spacePath}`);
+                            break;
+                        } catch (error) {
+                            lastError = error;
+                            console.log(`❌ Failed to connect to: ${spacePath}`);
+                        }
+                    }
+                    
+                    if (!connected) {
+                        console.error('❌ All connection attempts failed');
+                        if (statusDiv) {
+                            statusDiv.textContent = '❌ API Offline';
+                            statusDiv.className = 'connection-status status-offline';
+                        }
+                        throw lastError || new Error('Connection failed');
                     }
                 } catch (error) {
                     console.error("❌ Failed to connect:", error);
@@ -845,9 +895,10 @@
                         statusDiv.className = 'connection-status status-offline';
                     }
                     showStatus("Failed to connect to server", "error");
+                    throw error;
                 }
             }
-            return client;
+            return window.app;
         }
 
         // Preview functions
@@ -984,188 +1035,220 @@
             
             try {
                 // Initialize client
-                const gradioClient = await initClient();
+                await initClient();
                 
-                if (!gradioClient) {
-                    throw new Error("Failed to connect to Gradio API");
+                if (!window.app) {
+                    throw new Error("Failed to connect to Gradio API. Please refresh.");
                 }
                 
                 updateProgress(10);
                 showStatus("Processing image...", "loading");
                 
-                // Try different approaches to handle file uploads
-                let imageHandle, videoHandle;
+                // Pass files directly (same as makeittalk approach)
+                const imageHandle = imageFile;
+                const videoHandle = videoFile;
                 
-                // Check if upload_file method exists
-                if (typeof gradioClient.upload_file === 'function') {
-                    imageHandle = await gradioClient.upload_file(imageFile);
-                    updateProgress(20);
-                    showStatus("Processing video...", "loading");
-                    videoHandle = await gradioClient.upload_file(videoFile);
-                } else {
-                    // If upload_file doesn't exist, pass files directly
-                    // The client should handle the conversion
-                    imageHandle = imageFile;
-                    videoHandle = videoFile;
-                    updateProgress(20);
-                    showStatus("Processing video...", "loading");
-                }
+                updateProgress(20);
+                showStatus("Processing video...", "loading");
                 
                 updateProgress(30);
                 showStatus("Generating animation... This may take 1-3 minutes", "loading");
                 
-                // Log available methods and inspect client structure for debugging
-                console.log("Gradio client methods:", Object.keys(gradioClient));
-                console.log("Gradio client type:", typeof gradioClient);
-                console.log("Gradio client:", gradioClient);
+                console.log('📤 Sending files to Gradio API...');
+                console.log('Image file:', imageFile.name, imageFile.type, imageFile.size);
+                console.log('Video file:', videoFile.name, videoFile.type, videoFile.size);
                 
-                // Try to inspect available endpoints/functions
-                if (gradioClient.config) {
-                    console.log("Client config:", gradioClient.config);
-                    if (gradioClient.config.dependencies) {
-                        console.log("Available functions:", gradioClient.config.dependencies.length);
-                        gradioClient.config.dependencies.forEach((dep, idx) => {
-                            console.log(`Function ${idx}:`, {
-                                inputs: dep.inputs?.length || 0,
-                                outputs: dep.outputs?.length || 0,
-                                fn: dep.fn?.name || 'unnamed'
-                            });
-                        });
-                    }
-                }
-                
-                // Try different API call methods
+                // Try function index 0 first (most common), fallback to "/predict"
                 let result;
-                let lastError = null;
-                
-                // Method 1: Try submit with function index 0 (most common)
                 try {
-                    console.log("Attempt 1: Using submit(0, [image, video])");
-                    result = await gradioClient.submit(0, [imageHandle, videoHandle]);
-                    console.log("✅ Submit with index 0 succeeded");
-                } catch (e1) {
-                    lastError = e1;
-                    console.log("Attempt 1 failed:", e1.message);
-                    
-                    // Method 2: Try predict with function index 0
+                    console.log("Attempt 1: Using app.predict(0, [image, video])");
+                    result = await window.app.predict(0, [
+                        imageHandle,
+                        videoHandle
+                    ]);
+                    console.log("✅ Predict with index 0 succeeded");
+                } catch (e) {
+                    console.log("Attempt 1 failed, trying /predict endpoint...", e);
                     try {
-                        console.log("Attempt 2: Using predict(0, [image, video])");
-                        result = await gradioClient.predict(0, [imageHandle, videoHandle]);
-                        console.log("✅ Predict with index 0 succeeded");
+                        console.log("Attempt 2: Using app.predict('/predict', [image, video])");
+                        result = await window.app.predict("/predict", [
+                            imageHandle,
+                            videoHandle
+                        ]);
+                        console.log("✅ Predict with /predict succeeded");
                     } catch (e2) {
-                        lastError = e2;
-                        console.log("Attempt 2 failed:", e2.message);
-                        
-                        // Method 3: Try submit with endpoint name
+                        console.log("Attempt 2 failed, trying submit...", e2);
                         try {
-                            console.log("Attempt 3: Using submit('/predict', [image, video])");
-                            result = await gradioClient.submit("/predict", [imageHandle, videoHandle]);
-                            console.log("✅ Submit with /predict succeeded");
+                            console.log("Attempt 3: Using app.submit(0, [image, video])");
+                            result = await window.app.submit(0, [
+                                imageHandle,
+                                videoHandle
+                            ]);
+                            console.log("✅ Submit with index 0 succeeded");
                         } catch (e3) {
-                            lastError = e3;
-                            console.log("Attempt 3 failed:", e3.message);
-                            
-                            // Method 4: Try predict with endpoint name
-                            try {
-                                console.log("Attempt 4: Using predict('/predict', [image, video])");
-                                result = await gradioClient.predict("/predict", [imageHandle, videoHandle]);
-                                console.log("✅ Predict with /predict succeeded");
-                            } catch (e4) {
-                                lastError = e4;
-                                console.log("Attempt 4 failed:", e4.message);
-                                
-                                // Method 5: Try with named parameters if supported
-                                try {
-                                    console.log("Attempt 5: Using submit with named params");
-                                    if (typeof gradioClient.submit === 'function') {
-                                        result = await gradioClient.submit(0, {
-                                            source_image: imageHandle,
-                                            driving_video: videoHandle
-                                        });
-                                    } else {
-                                        throw new Error("submit method not available");
-                                    }
-                                } catch (e5) {
-                                    lastError = e5;
-                                    console.error("All methods failed. Last error:", lastError);
-                                    throw new Error(
-                                        `Failed to call Gradio API. Tried multiple methods but all failed.\n` +
-                                        `Last error: ${lastError.message}\n\n` +
-                                        `Please check:\n` +
-                                        `1. The space is running: https://huggingface.co/spaces/${SPACE_URL}\n` +
-                                        `2. The space has the correct input/output format\n` +
-                                        `3. Check browser console for detailed error messages`
-                                    );
-                                }
-                            }
+                            console.error("All attempts failed:", e3);
+                            throw new Error(
+                                `Failed to call Gradio API.\n` +
+                                `Error: ${e3.message}\n\n` +
+                                `Please check:\n` +
+                                `1. The space is running: https://huggingface.co/spaces/${SPACE_URL}\n` +
+                                `2. Check browser console for detailed error messages`
+                            );
                         }
                     }
                 }
                 
-                // Handle async generator result if needed
+                // Handle async generator result if needed (same as makeittalk)
                 let finalResult = result;
                 if (result && typeof result.next === 'function') {
                     console.log('📦 Result is an async generator, iterating...');
                     let lastValue = null;
-                    while (true) {
-                        const { value, done } = await result.next();
-                        if (done) {
-                            finalResult = value || lastValue;
-                            break;
+                    let lastDataValue = null;
+                    let iterationCount = 0;
+                    const maxIterations = 1000;
+                    const timeoutMs = 5 * 60 * 1000;
+                    const startTime = Date.now();
+                    
+                    while (iterationCount < maxIterations) {
+                        if (Date.now() - startTime > timeoutMs) {
+                            console.error('Generator iteration timeout after 5 minutes');
+                            throw new Error('Processing timeout - the operation took too long. Please try again.');
                         }
-                        if (value) {
-                            lastValue = value;
-                            // Update progress if available
-                            if (value.progress !== undefined && progressFill) {
-                                const progress = Math.round(value.progress * 100);
-                                progressFill.style.width = progress + '%';
-                                progressFill.textContent = progress + '%';
-                                if (progressPercent) progressPercent.textContent = progress + '%';
+                        
+                        const nextPromise = result.next();
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Generator step timeout')), 60000)
+                        );
+                        
+                        let generatorResult;
+                        try {
+                            generatorResult = await Promise.race([nextPromise, timeoutPromise]);
+                        } catch (stepError) {
+                            console.error(`Error at generator step ${iterationCount + 1}:`, stepError);
+                            if (lastDataValue || lastValue) {
+                                console.warn('Using last available data due to error');
+                                finalResult = lastDataValue || lastValue;
+                                break;
+                            }
+                            throw stepError;
+                        }
+                        
+                        iterationCount++;
+                        
+                        if (generatorResult.done) {
+                            console.log('✅ Generator completed');
+                            finalResult = generatorResult.value || lastDataValue || lastValue;
+                            break;
+                        } else {
+                            const value = generatorResult.value;
+                            
+                            if (value && typeof value === 'object') {
+                                if (value.progress !== undefined) {
+                                    const progress = value.progress;
+                                    if (progressFill && progressText) {
+                                        progressFill.style.width = (progress * 100) + '%';
+                                        progressFill.textContent = Math.round(progress * 100) + '%';
+                                        if (progressPercent) progressPercent.textContent = Math.round(progress * 100) + '%';
+                                        progressText.textContent = `Processing... ${Math.round(progress * 100)}%`;
+                                    }
+                                }
+                                
+                                if (value.type === 'status') {
+                                    if (value.stage && progressText) {
+                                        progressText.textContent = value.stage || 'Processing...';
+                                    }
+                                    continue;
+                                }
+                                
+                                if (value.data !== undefined) {
+                                    lastDataValue = value;
+                                }
+                                
+                                if (Array.isArray(value) && value.length > 0) {
+                                    lastDataValue = value;
+                                }
+                                
+                                if (value.url || value.file || (value.path && !value.type)) {
+                                    lastDataValue = value;
+                                }
+                            } else if (value !== null && value !== undefined) {
+                                lastValue = value;
                             }
                         }
+                    }
+                    
+                    if (iterationCount >= maxIterations) {
+                        console.warn('⚠️ Reached max iterations, using last value');
+                        finalResult = lastDataValue || lastValue;
+                    }
+                    
+                    if (!finalResult && lastDataValue) {
+                        finalResult = lastDataValue;
+                    }
+                    if (!finalResult && lastValue) {
+                        finalResult = lastValue;
                     }
                 }
                 
                 updateProgress(90);
                 showStatus("Almost done...", "loading");
                 
-                // Get the result video URL
-                let videoUrl;
+                console.log('✅ Result received:', finalResult);
+                console.log('Result structure:', JSON.stringify(finalResult, null, 2));
                 
-                // Try different result structures
-                if (finalResult.data && Array.isArray(finalResult.data) && finalResult.data.length > 0) {
-                    const dataItem = finalResult.data[0];
-                    if (typeof dataItem === 'string') {
-                        videoUrl = dataItem;
-                    } else if (dataItem.url) {
-                        videoUrl = dataItem.url;
-                    } else if (dataItem.video) {
-                        videoUrl = dataItem.video;
-                    } else if (dataItem.path) {
-                        videoUrl = dataItem.path;
+                // Get video URL from result - handle different result structures (same as makeittalk)
+                let videoUrl = null;
+                
+                // Handle result structure: {video: {...}, subtitles: null}
+                if (finalResult.video) {
+                    const videoObj = finalResult.video;
+                    if (typeof videoObj === 'string') {
+                        videoUrl = videoObj;
+                    } else if (videoObj.url) {
+                        videoUrl = videoObj.url;
+                    } else if (videoObj.file) {
+                        videoUrl = videoObj.file;
+                    } else if (videoObj[0]) {
+                        videoUrl = videoObj[0];
+                    } else if (typeof videoObj === 'object' && Object.keys(videoObj).length > 0) {
+                        const firstKey = Object.keys(videoObj)[0];
+                        videoUrl = videoObj[firstKey];
                     }
-                } else if (finalResult.data && typeof finalResult.data === 'string') {
-                    videoUrl = finalResult.data;
-                } else if (Array.isArray(finalResult) && finalResult.length > 0) {
-                    const firstItem = finalResult[0];
-                    if (typeof firstItem === 'string') {
-                        videoUrl = firstItem;
-                    } else if (firstItem.url) {
-                        videoUrl = firstItem.url;
-                    } else if (firstItem.video) {
-                        videoUrl = firstItem.video;
-                    }
+                }
+                // Try different possible result structures
+                else if (finalResult.data && finalResult.data[0]) {
+                    videoUrl = finalResult.data[0];
+                } else if (finalResult[0]) {
+                    videoUrl = finalResult[0];
                 } else if (typeof finalResult === 'string') {
                     videoUrl = finalResult;
                 } else if (finalResult.url) {
                     videoUrl = finalResult.url;
-                } else if (finalResult.video) {
-                    videoUrl = finalResult.video;
+                } else if (finalResult.file) {
+                    videoUrl = finalResult.file;
                 }
                 
-                if (!videoUrl) {
-                    console.error('Result structure:', finalResult);
-                    throw new Error("No video URL in response. Result: " + JSON.stringify(finalResult));
+                // If videoUrl is still an object, try to extract URL from it
+                if (videoUrl && typeof videoUrl === 'object') {
+                    if (videoUrl.url) {
+                        videoUrl = videoUrl.url;
+                    } else if (videoUrl.file) {
+                        videoUrl = videoUrl.file;
+                    } else if (videoUrl[0]) {
+                        videoUrl = videoUrl[0];
+                    } else if (typeof videoUrl === 'object' && Object.keys(videoUrl).length > 0) {
+                        const firstKey = Object.keys(videoUrl)[0];
+                        videoUrl = videoUrl[firstKey];
+                        if (videoUrl && typeof videoUrl === 'object' && videoUrl.url) {
+                            videoUrl = videoUrl.url;
+                        }
+                    }
+                }
+                
+                if (!videoUrl || typeof videoUrl !== 'string') {
+                    console.error('Video URL is not a string:', videoUrl);
+                    console.error('Full result:', finalResult);
+                    throw new Error('No valid video URL found in result. Got: ' + typeof videoUrl);
                 }
                 
                 // Make URL absolute if needed
@@ -1252,3 +1335,4 @@
     </script>
 </body>
 </html>
+
