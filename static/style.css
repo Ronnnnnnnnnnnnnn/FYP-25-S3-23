@@ -216,50 +216,7 @@ body {
 }
 
 /* HERO SECTION */
-.hero {
-  min-height: 90vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 60px 20px;
-  position: relative;
-}
-
-.hero-content {
-  max-width: 900px;
-  animation: fadeInUp 1s ease-out;
-}
-
-.hero h1 {
-  font-size: 72px;
-  font-weight: 900;
-  color: white;
-  margin-bottom: 20px;
-  line-height: 1.2;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.hero p {
-  font-size: 22px;
-  color: rgba(255, 255, 255, 0.95);
-  margin-bottom: 40px;
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.hero .btn {
-  background: white;
-  color: #667eea;
-  padding: 16px 48px;
-  font-size: 18px;
-}
-
-.hero .btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-}
+/* Old hero styles removed - using new hero styles below */
 
 /* ABOUT SECTION */
 .about {
@@ -1163,11 +1120,18 @@ input:focus {
   max-width: 1000px;
   margin: 0 auto;
   animation: fadeInUp 1s ease;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .hero-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -1176,9 +1140,10 @@ input:focus {
   color: white;
   font-size: 0.9rem;
   font-weight: 600;
-  margin-bottom: 2rem;
+  margin: 0 auto 2rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
   animation: pulse 2s ease-in-out infinite;
+  text-align: center;
 }
 
 @keyframes pulse {
@@ -1195,7 +1160,7 @@ input:focus {
 .hero h1 {
   font-size: 5rem;
   font-weight: 900;
-  margin-bottom: 1.5rem;
+  margin: 0 auto 1.5rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, #fff 0%, #a855f7 50%, #06b6d4 100%);
@@ -1204,6 +1169,9 @@ input:focus {
   background-clip: text;
   animation: gradientText 5s ease infinite;
   background-size: 200% 200%;
+  text-align: center;
+  width: 100%;
+  max-width: 100%;
 }
 
 @keyframes gradientText {
@@ -1217,13 +1185,20 @@ input:focus {
   max-width: 700px;
   margin: 0 auto 3rem;
   line-height: 1.6;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cta-buttons {
   display: flex;
   gap: 1.5rem;
   justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-primary {
