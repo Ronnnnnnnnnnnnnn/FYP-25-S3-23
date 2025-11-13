@@ -67,54 +67,59 @@
       </div>
     </div>
 
-    <!-- Tools Section -->
-    <div class="container" id="tools">
-      <div class="section-header">
-        <h2 class="section-title">Choose Your Tool</h2>
-        <p class="section-subtitle">Professional AI-powered video animation at your fingertips</p>
-      </div>
-
-      <div class="tools-grid">
-        <div class="tool-card">
-          <div class="tool-icon">🎬</div>
-          <h3>MakeItTalk</h3>
-          <p>
-            Transform any portrait photo into a lifelike talking animation. 
-            Perfect for creating engaging video content, avatars, and presentations.
-          </p>
-          <ul class="tool-features">
-            <li>Audio-driven lip synchronization</li>
-            <li>Natural facial expressions</li>
-            <li>High-resolution output up to 1024×1024</li>
-            <li>2-5 minute processing time</li>
-          </ul>
-          <a href="{{ url_for('makeittalk_page') }}" class="btn btn-primary">
-            <span>🎭</span>
-            <span>Launch MakeItTalk</span>
-          </a>
+    <!-- Main Container -->
+    <div class="container">
+      <!-- Tools Section -->
+      <div id="tools">
+        <div class="section-header">
+          <h2 class="section-title">Choose Your Tool</h2>
+          <p class="section-subtitle">Professional AI-powered video animation at your fingertips</p>
         </div>
 
-        <div class="tool-card">
-          <div class="tool-icon">🎥</div>
-          <h3>First Order Motion</h3>
-          <p>
-            Transfer motion and expressions from any video to your images. 
-            Create dynamic animations with incredible realism and control.
-          </p>
-          <ul class="tool-features">
-            <li>Full motion transfer capability</li>
-            <li>Precise keypoint tracking</li>
-            <li>Smooth, natural animations</li>
-            <li>1-3 minute processing time</li>
-          </ul>
-          <a href="{{ url_for('fomd_page') }}" class="btn btn-primary">
-            <span>🎬</span>
-            <span>Launch FOMD</span>
-          </a>
+        <div class="tools-grid">
+          <!-- MakeItTalk Card -->
+          <div class="tool-card">
+            <div class="tool-icon">🎬</div>
+            <h3>MakeItTalk</h3>
+            <p>
+              Transform any portrait photo into a lifelike talking animation. 
+              Perfect for creating engaging video content, avatars, and presentations.
+            </p>
+            <ul class="tool-features">
+              <li>Audio-driven lip synchronization</li>
+              <li>Natural facial expressions</li>
+              <li>High-resolution output up to 1024×1024</li>
+              <li>2-5 minute processing time</li>
+            </ul>
+            <a href="{{ url_for('makeittalk_page') }}" class="btn btn-primary">
+              <span>🎭</span>
+              <span>Launch MakeItTalk</span>
+            </a>
+          </div>
+
+          <!-- FOMD Card -->
+          <div class="tool-card">
+            <div class="tool-icon">🎥</div>
+            <h3>First Order Motion</h3>
+            <p>
+              Transfer motion and expressions from any video to your images. 
+              Create dynamic animations with incredible realism and control.
+            </p>
+            <ul class="tool-features">
+              <li>Full motion transfer capability</li>
+              <li>Precise keypoint tracking</li>
+              <li>Smooth, natural animations</li>
+              <li>1-3 minute processing time</li>
+            </ul>
+            <a href="{{ url_for('fomd_page') }}" class="btn btn-primary">
+              <span>🎬</span>
+              <span>Launch FOMD</span>
+            </a>
+          </div>
         </div>
       </div>
 
-      <!-- Featured Animations Section (Keep from original) -->
+      <!-- Featured Animations Section -->
       <div class="sample-animations" id="animations">
         <h3>Featured Animations</h3>
         <p class="section-subtitle">Explore sample animations created by our community. Sign up to create your own!</p>
@@ -126,7 +131,6 @@
             </video>
             <p>Expressive Portrait</p>
           </div>
-
           <div class="animation-item">
             <video controls>
               <source src="{{ url_for('static', filename='videos/sample2.mp4') }}" type="video/mp4">
@@ -181,11 +185,14 @@
         </div>
       </div>
 
-      <!-- Signup Prompt (Keep from original) -->
+      <!-- Signup Prompt -->
       <div class="signup-prompt">
         <h3>Ready to Create?</h3>
         <p>Join thousands of creators transforming their photos into stunning animations. Start for free today!</p>
-        <a href="{{ url_for('signup_page') }}" class="btn btn-primary">Create Free Account</a>
+        <a href="{{ url_for('signup_page') }}" class="btn btn-primary">
+          <span>✨</span>
+          <span>Create Free Account</span>
+        </a>
       </div>
     </div>
 
@@ -199,7 +206,7 @@
           <a href="#" class="footer-link">Privacy Policy</a>
           <a href="#" class="footer-link">Support</a>
         </div>
-        <p style="margin-top: 2rem; font-size: 0.9rem;">&copy; 2025 FirstMod-AI. Empowering creators worldwide.</p>
+        <p style="margin-top: 2rem; font-size: 0.9rem; opacity: 0.8;">&copy; 2025 FirstMod-AI. Empowering creators worldwide.</p>
       </div>
     </div>
   </div>
@@ -208,6 +215,8 @@
     // Create floating particles
     function createParticles() {
       const particlesContainer = document.getElementById('particles');
+      if (!particlesContainer) return;
+      
       const particleCount = 50;
 
       for (let i = 0; i < particleCount; i++) {
@@ -229,13 +238,21 @@
       }
     }
 
-    createParticles();
+    // Initialize particles when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', createParticles);
+    } else {
+      createParticles();
+    }
 
-    // Smooth scroll
+    // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
+        const targetId = this.getAttribute('href');
+        if (targetId === '#') return;
+        
+        const target = document.querySelector(targetId);
         if (target) {
           target.scrollIntoView({
             behavior: 'smooth',

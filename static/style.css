@@ -536,53 +536,7 @@ body {
 }
 
 /* SAMPLE ANIMATIONS */
-.sample-animations {
-  margin-bottom: 80px;
-}
-
-.sample-animations h3 {
-  font-size: 36px;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 40px;
-  color: #333;
-}
-
-.animation-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.animation-item {
-  background: white;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.animation-item:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-}
-
-.animation-item video {
-  width: 100%;
-  height: 240px;
-  object-fit: cover;
-  display: block;
-}
-
-.animation-item p {
-  padding: 20px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  text-align: center;
-}
+/* Old sample-animations styles removed - using new dark theme styles below */
 
 /* ANIMATION GENERATOR */
 .animation-generator,
@@ -850,38 +804,7 @@ body {
 }
 
 /* SIGNUP PROMPT */
-.signup-prompt {
-  background: white;
-  padding: 60px 40px;
-  border-radius: 20px;
-  text-align: center;
-  max-width: 600px;
-  margin: 0 auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  animation: fadeInUp 0.8s ease-out;
-}
-
-.signup-prompt h3 {
-  font-size: 36px;
-  font-weight: 800;
-  margin-bottom: 15px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.signup-prompt p {
-  font-size: 18px;
-  color: #666;
-  margin-bottom: 30px;
-  line-height: 1.6;
-}
-
-.signup-prompt .btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
+/* Old signup-prompt styles removed - using new dark theme styles below */
 
 /* LOGIN / SIGNUP FORMS */
 .container {
@@ -1327,8 +1250,8 @@ input:focus {
   transform: translateY(-3px);
 }
 
-/* Container */
-.container {
+/* Container for index page content */
+.content .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 2rem 4rem;
