@@ -953,14 +953,92 @@
                 updateProgress(50, 'Swapping faces...');
                 showStatus('🔄 Processing face swap... This may take 10-30 seconds', 'loading');
                 
-                // Call the API
+                // Discover available endpoints
+                let availableFunctions = [];
+                let targetFunctionIndex = 0;
+                
+                if (window.app && window.app.config) {
+                    if (window.app.config.dependencies) {
+                        console.log('Total dependencies:', window.app.config.dependencies.length);
+                        availableFunctions = window.app.config.dependencies.map((dep, idx) => {
+                            const info = {
+                                index: idx,
+                                inputs: dep.inputs?.length || 0,
+                                outputs: dep.outputs?.length || 0,
+                                fn: dep.fn?.name || 'unnamed',
+                                api_name: dep.api_name || null
+                            };
+                            console.log(`Function ${idx}:`, info);
+                            return info;
+                        });
+                        
+                        // Find function with 2 inputs (source image + target image)
+                        const twoInputFunction = availableFunctions.find(f => f.inputs === 2);
+                        if (twoInputFunction) {
+                            targetFunctionIndex = twoInputFunction.index;
+                            console.log(`✅ Found function with 2 inputs at index ${targetFunctionIndex}`);
+                        } else {
+                            const multiInputFunction = availableFunctions.find(f => f.inputs >= 2);
+                            if (multiInputFunction) {
+                                targetFunctionIndex = multiInputFunction.index;
+                                console.log(`⚠️ Using function with ${multiInputFunction.inputs} inputs at index ${targetFunctionIndex}`);
+                            }
+                        }
+                    }
+                }
+                
+                // Call the API with discovered function index
                 let result;
+                let lastError = null;
+                let success = false;
+                
+                // Method 1: Try submit with discovered function index (more reliable)
                 try {
-                    // Try function index 0 first
-                    result = await window.app.predict(0, [sourceHandle, targetHandle]);
-                } catch (e) {
-                    // Try submit if predict fails
-                    result = await window.app.submit(0, [sourceHandle, targetHandle]);
+                    console.log(`Attempt 1: Using app.submit(${targetFunctionIndex}, [source, target])`);
+                    result = await window.app.submit(targetFunctionIndex, [sourceHandle, targetHandle]);
+                    console.log("✅ Submit with discovered function index succeeded");
+                    success = true;
+                } catch (e1) {
+                    lastError = e1;
+                    console.log("Attempt 1 (submit) failed:", e1.message);
+                    
+                    // Method 2: Try predict with discovered function index
+                    try {
+                        console.log(`Attempt 2: Using app.predict(${targetFunctionIndex}, [source, target])`);
+                        result = await window.app.predict(targetFunctionIndex, [sourceHandle, targetHandle]);
+                        console.log("✅ Predict with discovered function index succeeded");
+                        success = true;
+                    } catch (e2) {
+                        lastError = e2;
+                        console.log("Attempt 2 (predict) failed:", e2.message);
+                        
+                        // Method 3: Try all available function indices
+                        if (availableFunctions.length > 0) {
+                            for (let i = 0; i < availableFunctions.length; i++) {
+                                try {
+                                    console.log(`Attempt 3.${i}: Trying app.submit(${i}, [source, target])`);
+                                    result = await window.app.submit(i, [sourceHandle, targetHandle]);
+                                    console.log(`✅ Submit with index ${i} succeeded`);
+                                    success = true;
+                                    break;
+                                } catch (e) {
+                                    console.log(`Submit index ${i} failed:`, e.message);
+                                    lastError = e;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (!success) {
+                    throw new Error(
+                        `Failed to call Gradio API. "function has no backend method" error.\n\n` +
+                        `This usually means:\n` +
+                        `1. The button in your Gradio space is not connected to a function\n` +
+                        `2. The function doesn't have a proper backend handler\n\n` +
+                        `Available functions: ${availableFunctions.length > 0 ? JSON.stringify(availableFunctions, null, 2) : 'Could not discover'}\n\n` +
+                        `Please check your Hugging Face space code and ensure the button.click() is properly connected to a function.`
+                    );
                 }
                 
                 updateProgress(80, 'Finalizing...');
