@@ -1174,13 +1174,13 @@ textarea:focus {
   text-decoration: none;
   transition: all 0.3s ease;
   padding: 0.5rem 0;
-  cursor: pointer;
   position: relative;
   z-index: 10;
+  cursor: default;
 }
 
 .logo:hover {
-  transform: translateY(-2px);
+  /* No hover effect - logo is not clickable */
 }
 
 .logo-icon {
@@ -1190,6 +1190,9 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   animation: rotate3d 3s ease-in-out infinite;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  font-style: normal;
+  font-weight: normal;
 }
 
 .logo-text {
