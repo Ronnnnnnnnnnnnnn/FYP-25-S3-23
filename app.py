@@ -240,6 +240,19 @@ def fomd_page():
         return redirect(url_for('payment_page'))
     return render_template('fomd.html', user_role=session.get('role'))
 
+@app.route('/faceswap')
+def faceswap_page():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return redirect(url_for('login_page'))
+    # Check if user is a regular user or subscriber (not admin)
+    if session.get('role') not in ['user', 'subscriber']:
+        return redirect(url_for('login_page'))
+    return render_template('faceswap.html', user_role=session.get('role'))
+
 # ============================================
 # API ENDPOINTS
 # ============================================
