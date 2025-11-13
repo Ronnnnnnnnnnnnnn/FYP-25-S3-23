@@ -520,11 +520,22 @@
                     
                     // Log the input components to see what they expect
                     if (window.app.config.components && window.app.config.components.length > 0) {
-                        console.log('Input components:', window.app.config.components.map(c => ({
-                            type: c.type,
-                            label: c.label,
-                            props: c.props
-                        })));
+                        const inputComponents = window.app.config.components
+                            .filter(c => c.props && c.props.visible !== false)
+                            .map(c => ({
+                                type: c.type,
+                                label: c.label || c.props?.label,
+                                component: c.component,
+                                props: c.props
+                            }));
+                        console.log('Input components:', inputComponents);
+                        
+                        // Check if we need to upload files first
+                        const hasVideoComponent = inputComponents.some(c => 
+                            c.type === 'video' || c.component === 'Video' || 
+                            (c.props && (c.props.file_types || c.props.file_types === undefined))
+                        );
+                        console.log('Has video component:', hasVideoComponent);
                     }
                 }
                 
@@ -532,12 +543,46 @@
                 // Try different approaches to match the expected format
                 let predictResult;
                 
+                // Try uploading files first to get URLs, then pass URLs
+                // This might work better if the space expects VideoData format
+                let imageUrl = null;
+                let videoUrl = null;
+                
                 try {
-                    // Approach 1: Try using submit API (more reliable for async operations)
-                    console.log('Attempt 1: Using submit API');
+                    // Try uploading files first to get file data objects
+                    console.log('📤 Uploading files to Gradio...');
+                    
+                    // Upload image
+                    try {
+                        const imageUploadResult = await window.app.upload(imageFile);
+                        console.log('Image upload result:', imageUploadResult);
+                        imageUrl = imageUploadResult;
+                    } catch (imgErr) {
+                        console.warn('Image upload failed, using file directly:', imgErr);
+                        imageUrl = imageFile;
+                    }
+                    
+                    // Upload video
+                    try {
+                        const videoUploadResult = await window.app.upload(videoFile);
+                        console.log('Video upload result:', videoUploadResult);
+                        videoUrl = videoUploadResult;
+                    } catch (vidErr) {
+                        console.warn('Video upload failed, using file directly:', vidErr);
+                        videoUrl = videoFile;
+                    }
+                } catch (uploadErr) {
+                    console.warn('File upload not available, using files directly:', uploadErr);
+                    imageUrl = imageFile;
+                    videoUrl = videoFile;
+                }
+                
+                try {
+                    // Approach 1: Try using submit API with uploaded URLs or files
+                    console.log('Attempt 1: Using submit API with', imageUrl instanceof File ? 'files' : 'URLs');
                     predictResult = await window.app.submit(0, [
-                        imageFile,
-                        videoFile
+                        imageUrl,
+                        videoUrl
                     ]);
                 } catch (submitError) {
                     console.error('Attempt 1 (submit) failed:', submitError);
