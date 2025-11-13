@@ -545,8 +545,8 @@
                 
                 // Try uploading files first to get URLs, then pass URLs
                 // This might work better if the space expects VideoData format
-                let imageUrl = null;
-                let videoUrl = null;
+                let imageInput = null;
+                let videoInput = null;
                 
                 try {
                     // Try uploading files first to get file data objects
@@ -556,33 +556,33 @@
                     try {
                         const imageUploadResult = await window.app.upload(imageFile);
                         console.log('Image upload result:', imageUploadResult);
-                        imageUrl = imageUploadResult;
+                        imageInput = imageUploadResult;
                     } catch (imgErr) {
                         console.warn('Image upload failed, using file directly:', imgErr);
-                        imageUrl = imageFile;
+                        imageInput = imageFile;
                     }
                     
                     // Upload video
                     try {
                         const videoUploadResult = await window.app.upload(videoFile);
                         console.log('Video upload result:', videoUploadResult);
-                        videoUrl = videoUploadResult;
+                        videoInput = videoUploadResult;
                     } catch (vidErr) {
                         console.warn('Video upload failed, using file directly:', vidErr);
-                        videoUrl = videoFile;
+                        videoInput = videoFile;
                     }
                 } catch (uploadErr) {
                     console.warn('File upload not available, using files directly:', uploadErr);
-                    imageUrl = imageFile;
-                    videoUrl = videoFile;
+                    imageInput = imageFile;
+                    videoInput = videoFile;
                 }
                 
                 try {
                     // Approach 1: Try using submit API with uploaded URLs or files
-                    console.log('Attempt 1: Using submit API with', imageUrl instanceof File ? 'files' : 'URLs');
+                    console.log('Attempt 1: Using submit API with', imageInput instanceof File ? 'files' : 'uploaded data');
                     predictResult = await window.app.submit(0, [
-                        imageUrl,
-                        videoUrl
+                        imageInput,
+                        videoInput
                     ]);
                 } catch (submitError) {
                     console.error('Attempt 1 (submit) failed:', submitError);
@@ -591,8 +591,8 @@
                     try {
                         console.log('Attempt 2: Using predict API');
                         predictResult = await window.app.predict(0, [
-                            imageFile,
-                            videoFile
+                            imageInput,
+                            videoInput
                         ]);
                     } catch (predictError) {
                         console.error('Attempt 2 (predict) failed:', predictError);
@@ -601,8 +601,8 @@
                         try {
                             console.log('Attempt 3: Swapping input order (video first)');
                             predictResult = await window.app.submit(0, [
-                                videoFile,
-                                imageFile
+                                videoInput,
+                                imageInput
                             ]);
                         } catch (swapError) {
                             console.error('Attempt 3 failed:', swapError);
