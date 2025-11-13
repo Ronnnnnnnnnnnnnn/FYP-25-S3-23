@@ -532,10 +532,12 @@
                 // Try different approaches to match the expected format
                 let result;
                 
+                let predictResult;
+                
                 try {
                     // Approach 1: Pass files directly (standard Gradio approach)
                     console.log('Attempt 1: Passing File objects directly');
-                    result = await window.app.predict(0, [
+                    predictResult = await window.app.predict(0, [
                         imageFile,
                         videoFile
                     ]);
@@ -546,7 +548,7 @@
                     if (predictError.message && predictError.message.includes('video')) {
                         try {
                             console.log('Attempt 2: Swapping input order (video first)');
-                            result = await window.app.predict(0, [
+                            predictResult = await window.app.predict(0, [
                                 videoFile,
                                 imageFile
                             ]);
@@ -556,7 +558,7 @@
                             // Approach 3: Try using submit API instead of predict
                             try {
                                 console.log('Attempt 3: Using submit API');
-                                result = await window.app.submit(0, [
+                                predictResult = await window.app.submit(0, [
                                     imageFile,
                                     videoFile
                                 ]);
@@ -577,6 +579,54 @@
                     } else {
                         throw predictError;
                     }
+                }
+                
+                // Handle async generator/iterator result
+                // Gradio client returns an async generator that needs to be iterated
+                let result = null;
+                
+                if (predictResult && typeof predictResult.next === 'function') {
+                    // It's an async generator/iterator - iterate through it
+                    console.log('📦 Result is an async generator, iterating...');
+                    try {
+                        // Get the final result from the generator
+                        let generatorResult;
+                        let lastValue = null;
+                        
+                        while (true) {
+                            generatorResult = await predictResult.next();
+                            console.log('Generator step:', generatorResult);
+                            
+                            if (generatorResult.done) {
+                                // Generator is done, use the last value or the value from done
+                                result = generatorResult.value || lastValue;
+                                break;
+                            } else {
+                                // Store intermediate values
+                                lastValue = generatorResult.value;
+                                // Update progress if available
+                                if (generatorResult.value && typeof generatorResult.value === 'object') {
+                                    if (generatorResult.value.progress !== undefined) {
+                                        const progress = generatorResult.value.progress;
+                                        if (progressFill && progressText) {
+                                            progressFill.style.width = (progress * 100) + '%';
+                                            progressFill.textContent = Math.round(progress * 100) + '%';
+                                        }
+                                    }
+                                    // If we get data directly, use it
+                                    if (generatorResult.value.data) {
+                                        result = generatorResult.value;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (genError) {
+                        console.error('Error iterating generator:', genError);
+                        throw new Error(`Error processing API response: ${genError.message}`);
+                    }
+                } else {
+                    // Not a generator, use directly
+                    result = predictResult;
                 }
                 
                 clearInterval(progressInterval);
