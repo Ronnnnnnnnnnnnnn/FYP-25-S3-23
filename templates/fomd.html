@@ -664,19 +664,52 @@
                         let lastDataValue = null;
                         let iterationCount = 0;
                         const maxIterations = 1000; // Safety limit
+                        const timeoutMs = 5 * 60 * 1000; // 5 minutes timeout
+                        const startTime = Date.now();
                         
                         // Clear the simulated progress interval since we'll use real progress
                         clearInterval(progressInterval);
                         
                         while (iterationCount < maxIterations) {
-                            generatorResult = await predictResult.next();
+                            // Check for timeout
+                            if (Date.now() - startTime > timeoutMs) {
+                                console.error('Generator iteration timeout after 5 minutes');
+                                throw new Error('Processing timeout - the operation took too long. Please try again.');
+                            }
+                            
+                            // Add timeout to each next() call to prevent infinite waiting
+                            const nextPromise = predictResult.next();
+                            const timeoutPromise = new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('Generator step timeout')), 60000) // 60s per step
+                            );
+                            
+                            try {
+                                generatorResult = await Promise.race([nextPromise, timeoutPromise]);
+                            } catch (stepError) {
+                                console.error(`Error at generator step ${iterationCount + 1}:`, stepError);
+                                // If we have data so far, try to use it
+                                if (lastDataValue || lastValue) {
+                                    console.warn('Using last available data due to error');
+                                    result = lastDataValue || lastValue;
+                                    break;
+                                }
+                                throw stepError;
+                            }
+                            
                             iterationCount++;
                             
-                            console.log(`Generator step ${iterationCount}:`, generatorResult);
+                            console.log(`Generator step ${iterationCount}:`, {
+                                done: generatorResult.done,
+                                hasValue: !!generatorResult.value,
+                                valueType: typeof generatorResult.value,
+                                valueKeys: generatorResult.value && typeof generatorResult.value === 'object' 
+                                    ? Object.keys(generatorResult.value) 
+                                    : 'N/A'
+                            });
                             
                             if (generatorResult.done) {
                                 // Generator is done
-                                console.log('Generator completed');
+                                console.log('✅ Generator completed');
                                 // Use the value from done, or last data value, or last value
                                 result = generatorResult.value || lastDataValue || lastValue;
                                 break;
@@ -688,7 +721,7 @@
                                     // Check for progress updates
                                     if (value.progress !== undefined) {
                                         const progress = value.progress;
-                                        console.log('Progress update:', progress);
+                                        console.log('📊 Progress update:', progress);
                                         if (progressFill && progressText) {
                                             progressFill.style.width = (progress * 100) + '%';
                                             progressFill.textContent = Math.round(progress * 100) + '%';
@@ -698,47 +731,59 @@
                                     
                                     // Check for status messages
                                     if (value.type === 'status') {
-                                        console.log('Status update:', value);
+                                        console.log('📋 Status update:', value);
                                         if (value.stage && progressText) {
                                             progressText.textContent = value.stage || 'Processing...';
                                         }
+                                        // Continue - don't store status as result
+                                        continue;
                                     }
                                     
                                     // Check if this contains actual data
                                     if (value.data !== undefined) {
-                                        console.log('Found data in generator value:', value);
+                                        console.log('✅ Found data in generator value:', value);
                                         lastDataValue = value;
-                                        // Don't break, continue to get final result
+                                        // Continue to get final result
                                     }
                                     
-                                    // Check for final result structure
-                                    if (value.url || value.file || (Array.isArray(value) && value.length > 0)) {
-                                        console.log('Found result data:', value);
+                                    // Check for final result structure (array with video data)
+                                    if (Array.isArray(value) && value.length > 0) {
+                                        console.log('✅ Found array result:', value);
+                                        lastDataValue = value;
+                                        // This might be the final result, but continue to be sure
+                                    }
+                                    
+                                    // Check for file/url in object
+                                    if (value.url || value.file || (value.path && !value.type)) {
+                                        console.log('✅ Found file/url result:', value);
                                         lastDataValue = value;
                                     }
                                 } else if (value !== null && value !== undefined) {
                                     // Store any non-null value
+                                    console.log('📦 Storing value:', typeof value, value);
                                     lastValue = value;
                                 }
                             }
                         }
                         
                         if (iterationCount >= maxIterations) {
-                            console.warn('Reached max iterations, using last value');
+                            console.warn('⚠️ Reached max iterations, using last value');
                             result = lastDataValue || lastValue;
                         }
                         
                         if (!result && lastDataValue) {
+                            console.log('Using lastDataValue as result');
                             result = lastDataValue;
                         }
                         
                         if (!result && lastValue) {
+                            console.log('Using lastValue as result');
                             result = lastValue;
                         }
                         
-                        console.log('Final result after iteration:', result);
+                        console.log('🎯 Final result after iteration:', result);
                     } catch (genError) {
-                        console.error('Error iterating generator:', genError);
+                        console.error('❌ Error iterating generator:', genError);
                         throw new Error(`Error processing API response: ${genError.message}`);
                     }
                 } else {
