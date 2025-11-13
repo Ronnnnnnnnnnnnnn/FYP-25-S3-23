@@ -928,8 +928,12 @@ def handle_exception(e):
     # If it's an API request, return JSON
     if request.path.startswith('/api/'):
         return jsonify({'success': False, 'message': f'Server error: {str(e)}'}), 500
-    # Otherwise return the default error page
-    return jsonify({'success': False, 'message': 'An error occurred'}), 500
+    # Otherwise render an error page (not JSON)
+    try:
+        return render_template('error.html', error=str(e)), 500
+    except:
+        # Fallback if error.html doesn't exist
+        return f'<h1>An error occurred</h1><p>{str(e)}</p>', 500
 
 # Database connection will be tested on first request
 
