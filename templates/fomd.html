@@ -1049,8 +1049,16 @@
                 let videoHandle = videoFile;
                 
                 try {
-                    // Try to upload files using Gradio client's upload method
-                    if (window.app && typeof window.app.upload_file === 'function') {
+                    // Try different upload methods
+                    if (window.app && typeof window.app.upload === 'function') {
+                        console.log('📤 Uploading files via app.upload()...');
+                        const uploadedFiles = await window.app.upload([imageFile, videoFile]);
+                        if (uploadedFiles && uploadedFiles.length >= 2) {
+                            imageHandle = uploadedFiles[0];
+                            videoHandle = uploadedFiles[1];
+                            console.log('✅ Files uploaded via app.upload()');
+                        }
+                    } else if (window.app && typeof window.app.upload_file === 'function') {
                         console.log('📤 Uploading image file...');
                         imageHandle = await window.app.upload_file(imageFile);
                         console.log('✅ Image uploaded:', imageHandle);
@@ -1059,16 +1067,27 @@
                         console.log('📤 Uploading video file...');
                         videoHandle = await window.app.upload_file(videoFile);
                         console.log('✅ Video uploaded:', videoHandle);
+                    } else if (window.gradioClient && typeof window.gradioClient.upload === 'function') {
+                        console.log('📤 Uploading files via gradioClient.upload()...');
+                        const uploadedFiles = await window.gradioClient.upload([imageFile, videoFile]);
+                        if (uploadedFiles && uploadedFiles.length >= 2) {
+                            imageHandle = uploadedFiles[0];
+                            videoHandle = uploadedFiles[1];
+                            console.log('✅ Files uploaded via gradioClient.upload()');
+                        }
                     } else if (window.gradioClient && typeof window.gradioClient.upload_file === 'function') {
-                        console.log('📤 Uploading files via gradioClient...');
+                        console.log('📤 Uploading files via gradioClient.upload_file()...');
                         imageHandle = await window.gradioClient.upload_file(imageFile);
                         videoHandle = await window.gradioClient.upload_file(videoFile);
-                        console.log('✅ Files uploaded via gradioClient');
+                        console.log('✅ Files uploaded via gradioClient.upload_file()');
                     } else {
-                        console.log('⚠️ No upload_file method found, using files directly');
+                        console.log('⚠️ No upload method found, using files directly');
+                        console.log('Available methods on app:', Object.keys(window.app || {}));
+                        console.log('Available methods on gradioClient:', Object.keys(window.gradioClient || {}));
                     }
                 } catch (uploadError) {
                     console.log('⚠️ File upload failed, using files directly:', uploadError.message);
+                    console.error('Upload error details:', uploadError);
                     // Continue with direct file objects
                 }
                 
