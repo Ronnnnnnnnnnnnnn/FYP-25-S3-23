@@ -352,74 +352,126 @@
   </div>
 
   <script>
-    let selectedPlan = 'yearly';
-    let selectedPaymentMethod = 'card';
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      let selectedPlan = 'yearly';
+      let selectedPaymentMethod = 'card';
 
-    function selectPlan(plan) {
-      selectedPlan = plan;
-      document.querySelectorAll('.plan-card').forEach(card => {
-        card.classList.remove('selected');
-      });
-      document.querySelector(`[data-plan="${plan}"]`).classList.add('selected');
-    }
-
-    function selectPaymentMethod(method) {
-      selectedPaymentMethod = method;
-      document.querySelectorAll('.payment-method').forEach(m => {
-        m.classList.remove('selected');
-      });
-      document.querySelector(`[data-method="${method}"]`).classList.add('selected');
-      
-      if (method === 'card') {
-        document.getElementById('cardForm').style.display = 'block';
-        document.getElementById('paypalForm').style.display = 'none';
-      } else {
-        document.getElementById('cardForm').style.display = 'none';
-        document.getElementById('paypalForm').style.display = 'block';
+      function selectPlan(plan) {
+        selectedPlan = plan;
+        document.querySelectorAll('.plan-card').forEach(card => {
+          card.classList.remove('selected');
+        });
+        const planCard = document.querySelector(`[data-plan="${plan}"]`);
+        if (planCard) {
+          planCard.classList.add('selected');
+        }
       }
-    }
 
-    // Format card number
-    document.getElementById('cardNumber').addEventListener('input', function(e) {
-      let value = e.target.value.replace(/\s/g, '');
-      let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-      e.target.value = formattedValue;
-    });
-
-    // Format expiry date
-    document.getElementById('expiryDate').addEventListener('input', function(e) {
-      let value = e.target.value.replace(/\D/g, '');
-      if (value.length >= 2) {
-        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+      function selectPaymentMethod(method) {
+        selectedPaymentMethod = method;
+        document.querySelectorAll('.payment-method').forEach(m => {
+          m.classList.remove('selected');
+        });
+        const methodEl = document.querySelector(`[data-method="${method}"]`);
+        if (methodEl) {
+          methodEl.classList.add('selected');
+        }
+        
+        const cardForm = document.getElementById('cardForm');
+        const paypalForm = document.getElementById('paypalForm');
+        
+        if (method === 'card') {
+          if (cardForm) cardForm.style.display = 'block';
+          if (paypalForm) paypalForm.style.display = 'none';
+        } else {
+          if (cardForm) cardForm.style.display = 'none';
+          if (paypalForm) paypalForm.style.display = 'block';
+        }
       }
-      e.target.value = value;
-    });
 
-    // Only allow numbers for CVV
-    document.getElementById('cvv').addEventListener('input', function(e) {
-      e.target.value = e.target.value.replace(/\D/g, '');
-    });
+      // Make functions globally available
+      window.selectPlan = selectPlan;
+      window.selectPaymentMethod = selectPaymentMethod;
 
-    // Handle form submission
-    document.getElementById('paymentForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const btn = document.getElementById('subscribeBtn');
-      const alertDiv = document.getElementById('alertMessage');
-      
-      // Validate form fields
-      if (selectedPaymentMethod === 'card') {
-        const cardNumber = document.getElementById('cardNumber').value.trim();
-        const expiryDate = document.getElementById('expiryDate').value.trim();
-        const cvv = document.getElementById('cvv').value.trim();
-        const cardName = document.getElementById('cardName').value.trim();
+      // Format card number
+      const cardNumberInput = document.getElementById('cardNumber');
+      if (cardNumberInput) {
+        cardNumberInput.addEventListener('input', function(e) {
+          let value = e.target.value.replace(/\s/g, '');
+          let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+          e.target.value = formattedValue;
+        });
+      }
+
+      // Format expiry date
+      const expiryDateInput = document.getElementById('expiryDate');
+      if (expiryDateInput) {
+        expiryDateInput.addEventListener('input', function(e) {
+          let value = e.target.value.replace(/\D/g, '');
+          if (value.length >= 2) {
+            value = value.substring(0, 2) + '/' + value.substring(2, 4);
+          }
+          e.target.value = value;
+        });
+      }
+
+      // Only allow numbers for CVV
+      const cvvInput = document.getElementById('cvv');
+      if (cvvInput) {
+        cvvInput.addEventListener('input', function(e) {
+          e.target.value = e.target.value.replace(/\D/g, '');
+        });
+      }
+
+      // Handle form submission
+      const paymentForm = document.getElementById('paymentForm');
+      if (!paymentForm) {
+        console.error('Payment form not found!');
+        return;
+      }
+
+      paymentForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        console.log('Form submission triggered');
+        
+        const btn = document.getElementById('subscribeBtn');
+        const alertDiv = document.getElementById('alertMessage');
+        
+        if (!btn) {
+          console.error('Subscribe button not found!');
+          return;
+        }
+        
+        if (!alertDiv) {
+          console.error('Alert message div not found!');
+          return;
+        }
+        
+        console.log('Selected payment method:', selectedPaymentMethod);
+        console.log('Selected plan:', selectedPlan);
+        
+        // Validate form fields
+        if (selectedPaymentMethod === 'card') {
+          const cardNumber = document.getElementById('cardNumber').value.trim();
+          const expiryDate = document.getElementById('expiryDate').value.trim();
+          const cvv = document.getElementById('cvv').value.trim();
+          const cardName = document.getElementById('cardName').value.trim();
         
         if (!cardNumber || !expiryDate || !cvv || !cardName) {
+          console.log('Validation failed: Missing card details');
           alertDiv.className = 'alert error';
           alertDiv.textContent = '❌ Please fill in all card details';
           alertDiv.style.display = 'block';
           return;
         }
+        
+        console.log('Card details validated:', {
+          cardNumber: cardNumber.substring(0, 4) + '****',
+          expiryDate: expiryDate,
+          cvv: '***',
+          cardName: cardName
+        });
       } else {
         // PayPal validation
         const paypalEmail = document.getElementById('paypalEmail').value.trim();
@@ -457,6 +509,14 @@
           return;
         }
 
+        console.log('Sending request to API:', {
+          plan: requestData.plan,
+          hasCardNumber: !!requestData.card_number,
+          hasExpiryDate: !!requestData.expiry_date,
+          hasCVV: !!requestData.cvv,
+          hasCardName: !!requestData.card_name
+        });
+
         const response = await fetch('/api/subscription/update', {
           method: 'POST',
           headers: {
@@ -465,7 +525,9 @@
           body: JSON.stringify(requestData)
         });
 
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
 
         if (data.success) {
           alertDiv.className = 'alert success';
@@ -491,7 +553,8 @@
         btn.disabled = false;
         btn.textContent = 'Subscribe Now';
       }
-    });
+      });
+    }); // End of DOMContentLoaded
   </script>
 </body>
 </html>
