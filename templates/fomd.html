@@ -697,6 +697,9 @@
                 {% endif %}
                 <li><a href="/fomd" class="active">FOMD</a></li>
                 <li><a href="/makeittalk">MakeItTalk</a></li>
+                {% if user_role == 'user' or user_role == 'subscriber' %}
+                <li><a href="/faceswap">Face Swap</a></li>
+                {% endif %}
                 <li><a href="#" onclick="logout()">Logout</a></li>
             {% else %}
                 <li><a href="/">Home</a></li>
