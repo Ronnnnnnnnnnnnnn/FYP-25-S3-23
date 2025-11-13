@@ -543,43 +543,37 @@
                 // Try different approaches to match the expected format
                 let predictResult;
                 
-                // Try uploading files first to get URLs, then pass URLs
-                // This might work better if the space expects VideoData format
-                let imageInput = null;
-                let videoInput = null;
+                // The error from Hugging Face shows the space expects VideoData format
+                // but receives FileData. This is likely a space configuration issue.
+                // We'll try passing files directly - the Gradio client should handle conversion
+                let imageInput = imageFile;
+                let videoInput = videoFile;
                 
-                try {
-                    // Try uploading files first to get file data objects
-                    console.log('📤 Uploading files to Gradio...');
+                // Check component types to understand expected format
+                let imageComponentType = null;
+                let videoComponentType = null;
+                
+                if (window.app && window.app.config && window.app.config.components) {
+                    const components = window.app.config.components;
+                    // Find input components (usually first few components)
+                    const inputComponents = components.slice(0, 2);
+                    console.log('First 2 components (likely inputs):', inputComponents.map(c => ({
+                        type: c.type,
+                        component: c.component,
+                        props: c.props
+                    })));
                     
-                    // Upload image
-                    try {
-                        const imageUploadResult = await window.app.upload(imageFile);
-                        console.log('Image upload result:', imageUploadResult);
-                        imageInput = imageUploadResult;
-                    } catch (imgErr) {
-                        console.warn('Image upload failed, using file directly:', imgErr);
-                        imageInput = imageFile;
+                    if (inputComponents.length >= 2) {
+                        imageComponentType = inputComponents[0].type || inputComponents[0].component;
+                        videoComponentType = inputComponents[1].type || inputComponents[1].component;
+                        console.log('Image component type:', imageComponentType);
+                        console.log('Video component type:', videoComponentType);
                     }
-                    
-                    // Upload video
-                    try {
-                        const videoUploadResult = await window.app.upload(videoFile);
-                        console.log('Video upload result:', videoUploadResult);
-                        videoInput = videoUploadResult;
-                    } catch (vidErr) {
-                        console.warn('Video upload failed, using file directly:', vidErr);
-                        videoInput = videoFile;
-                    }
-                } catch (uploadErr) {
-                    console.warn('File upload not available, using files directly:', uploadErr);
-                    imageInput = imageFile;
-                    videoInput = videoFile;
                 }
                 
                 try {
-                    // Approach 1: Try using submit API with uploaded URLs or files
-                    console.log('Attempt 1: Using submit API with', imageInput instanceof File ? 'files' : 'uploaded data');
+                    // Approach 1: Try using submit API with files directly
+                    console.log('Attempt 1: Using submit API with File objects');
                     predictResult = await window.app.submit(0, [
                         imageInput,
                         videoInput
