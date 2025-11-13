@@ -555,21 +555,57 @@
                 
                 if (window.app && window.app.config && window.app.config.components) {
                     const components = window.app.config.components;
-                    // Find input components (usually first few components)
-                    const inputComponents = components.slice(0, 2);
-                    console.log('First 2 components (likely inputs):', inputComponents.map(c => ({
+                    console.log('Total components:', components.length);
+                    
+                    // Find input components - check all components to find inputs
+                    const inputComponents = components.filter(c => 
+                        c.props && 
+                        (c.props.visible !== false) && 
+                        (c.type === 'image' || c.type === 'video' || c.component === 'Image' || c.component === 'Video')
+                    );
+                    
+                    console.log('Input components found:', inputComponents.map(c => ({
+                        id: c.id,
                         type: c.type,
                         component: c.component,
-                        props: c.props
+                        label: c.props?.label,
+                        props: Object.keys(c.props || {})
                     })));
+                    
+                    // Also check the API endpoint structure
+                    if (window.app.config.dependencies) {
+                        console.log('API dependencies:', window.app.config.dependencies.slice(0, 1).map(d => ({
+                            inputs: d.inputs,
+                            outputs: d.outputs,
+                            fn: d.fn?.name
+                        })));
+                    }
                     
                     if (inputComponents.length >= 2) {
                         imageComponentType = inputComponents[0].type || inputComponents[0].component;
                         videoComponentType = inputComponents[1].type || inputComponents[1].component;
                         console.log('Image component type:', imageComponentType);
                         console.log('Video component type:', videoComponentType);
+                        console.log('Video component props:', inputComponents[1].props);
                     }
                 }
+                
+                // The error suggests the space expects VideoData format
+                // This is likely a bug/mismatch in the Gradio space configuration
+                // We'll log what we're sending to help debug
+                console.log('📤 Preparing to send:');
+                console.log('  Image:', {
+                    name: imageFile.name,
+                    type: imageFile.type,
+                    size: imageFile.size,
+                    isFile: imageFile instanceof File
+                });
+                console.log('  Video:', {
+                    name: videoFile.name,
+                    type: videoFile.type,
+                    size: videoFile.size,
+                    isFile: videoFile instanceof File
+                });
                 
                 try {
                     // Approach 1: Try using submit API with files directly
