@@ -986,45 +986,118 @@
                 // Initialize client
                 const gradioClient = await initClient();
                 
+                if (!gradioClient) {
+                    throw new Error("Failed to connect to Gradio API");
+                }
+                
                 updateProgress(10);
                 showStatus("Processing image...", "loading");
                 
-                // Create file handles - THIS IS THE KEY FIX
-                // We need to send files in a way that bypasses the VideoData validation
-                const imageHandle = await gradioClient.upload_file(imageFile);
-                updateProgress(20);
+                // Try different approaches to handle file uploads
+                let imageHandle, videoHandle;
                 
-                showStatus("Processing video...", "loading");
-                const videoHandle = await gradioClient.upload_file(videoFile);
+                // Check if upload_file method exists
+                if (typeof gradioClient.upload_file === 'function') {
+                    imageHandle = await gradioClient.upload_file(imageFile);
+                    updateProgress(20);
+                    showStatus("Processing video...", "loading");
+                    videoHandle = await gradioClient.upload_file(videoFile);
+                } else {
+                    // If upload_file doesn't exist, pass files directly
+                    // The client should handle the conversion
+                    imageHandle = imageFile;
+                    videoHandle = videoFile;
+                    updateProgress(20);
+                    showStatus("Processing video...", "loading");
+                }
+                
                 updateProgress(30);
-                
                 showStatus("Generating animation... This may take 1-3 minutes", "loading");
                 
-                // Call the predict function with file handles
-                // The key is to pass the file URL/path as a string
-                const result = await gradioClient.predict("/animate", {
-                    source_image: imageHandle,
-                    driving_video: videoHandle
-                });
+                // Try different predict method signatures
+                let result;
+                try {
+                    // Try with named parameters (object)
+                    result = await gradioClient.predict("/animate", {
+                        source_image: imageHandle,
+                        driving_video: videoHandle
+                    });
+                } catch (e1) {
+                    console.log("Named params failed, trying array format:", e1);
+                    try {
+                        // Try with array format (positional)
+                        result = await gradioClient.predict("/animate", [imageHandle, videoHandle]);
+                    } catch (e2) {
+                        console.log("Array format failed, trying index 0:", e2);
+                        // Try with function index 0
+                        result = await gradioClient.predict(0, [imageHandle, videoHandle]);
+                    }
+                }
+                
+                // Handle async generator result if needed
+                let finalResult = result;
+                if (result && typeof result.next === 'function') {
+                    console.log('📦 Result is an async generator, iterating...');
+                    let lastValue = null;
+                    while (true) {
+                        const { value, done } = await result.next();
+                        if (done) {
+                            finalResult = value || lastValue;
+                            break;
+                        }
+                        if (value) {
+                            lastValue = value;
+                            // Update progress if available
+                            if (value.progress !== undefined && progressFill) {
+                                const progress = Math.round(value.progress * 100);
+                                progressFill.style.width = progress + '%';
+                                progressFill.textContent = progress + '%';
+                                if (progressPercent) progressPercent.textContent = progress + '%';
+                            }
+                        }
+                    }
+                }
                 
                 updateProgress(90);
                 showStatus("Almost done...", "loading");
                 
                 // Get the result video URL
                 let videoUrl;
-                if (result.data && result.data[0]) {
-                    // Handle different response formats
-                    if (typeof result.data[0] === 'string') {
-                        videoUrl = result.data[0];
-                    } else if (result.data[0].url) {
-                        videoUrl = result.data[0].url;
-                    } else if (result.data[0].video) {
-                        videoUrl = result.data[0].video;
+                
+                // Try different result structures
+                if (finalResult.data && Array.isArray(finalResult.data) && finalResult.data.length > 0) {
+                    const dataItem = finalResult.data[0];
+                    if (typeof dataItem === 'string') {
+                        videoUrl = dataItem;
+                    } else if (dataItem.url) {
+                        videoUrl = dataItem.url;
+                    } else if (dataItem.video) {
+                        videoUrl = dataItem.video;
+                    } else if (dataItem.path) {
+                        videoUrl = dataItem.path;
                     }
+                } else if (finalResult.data && typeof finalResult.data === 'string') {
+                    videoUrl = finalResult.data;
+                } else if (Array.isArray(finalResult) && finalResult.length > 0) {
+                    const firstItem = finalResult[0];
+                    if (typeof firstItem === 'string') {
+                        videoUrl = firstItem;
+                    } else if (firstItem.url) {
+                        videoUrl = firstItem.url;
+                    } else if (firstItem.video) {
+                        videoUrl = firstItem.video;
+                    }
+                } else if (typeof finalResult === 'string') {
+                    videoUrl = finalResult;
+                } else if (finalResult.url) {
+                    videoUrl = finalResult.url;
+                } else if (finalResult.video) {
+                    videoUrl = finalResult.video;
                 }
                 
                 if (!videoUrl) {
-                    throw new Error("No video URL in response");
+                    console.error('Result structure:', finalResult);
+                    throw new Error("No video URL in response. Result: " + JSON.stringify(finalResult));
                 }
                 
                 // Make URL absolute if needed
