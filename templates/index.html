@@ -28,15 +28,17 @@
     <!-- Navbar -->
     <nav class="navbar">
       <div class="nav-container">
-        <a href="/" class="logo">
-          <span class="logo-icon">🎭</span>
-          <span>FirstMod-AI</span>
-        </a>
-        <div class="nav-links">
+        <div class="nav-brand">
+          <a href="/" class="logo">
+            <span class="logo-icon">🎭</span>
+            <span class="logo-text">FirstMod-AI</span>
+          </a>
+        </div>
+        <div class="nav-menu">
           <a href="#tools" class="nav-link">Tools</a>
           <a href="#features" class="nav-link">Features</a>
           <a href="#animations" class="nav-link">Animations</a>
-          <a href="{{ url_for('login_page') }}" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem;">Login</a>
+          <a href="{{ url_for('login_page') }}" class="nav-btn btn btn-primary">Login</a>
         </div>
       </div>
     </nav>
