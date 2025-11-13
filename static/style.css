@@ -1334,7 +1334,7 @@ textarea:focus {
   margin: 0 auto 1.5rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #06b6d4 100%);
+  background: linear-gradient(135deg, #F8F8F9 0%, #111439 50%, #1a1d4a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
