@@ -1060,9 +1060,19 @@
                         let chunkCount = 0;
                         let gotResult = false;
                         
-                        for await (const chunk of result) {
+                        // Manually iterate generator for better control
+                        console.log('🔄 Starting manual generator iteration...');
+                        while (true) {
+                            const { value, done } = await result.next();
+                            
+                            if (done) {
+                                console.log('✅ Generator completed (done=true)');
+                                break;
+                            }
+                            
                             chunkCount++;
-                            lastChunk = chunk;
+                            lastChunk = value;
+                            const chunk = value;
                             console.log(`📦 Generator chunk ${chunkCount}:`, chunk);
                             
                             if (chunk && chunk.data) {
@@ -1084,20 +1094,20 @@
                                 updateProgress(Math.min(progress, 95), 'Processing...');
                             }
                             
-                            // If we got a result, we can break early
+                            // If we got a result, we can exit early
                             if (gotResult && finalResult && finalResult !== result && Array.isArray(finalResult) && finalResult.length > 0) {
-                                console.log('✅ Got final result, breaking from generator');
-                                clearTimeout(generatorTimeout); // Clear timeout when we break early
+                                console.log('✅ Got final result, exiting generator iteration');
+                                clearTimeout(generatorTimeout);
                                 updateProgress(90, 'Result received, extracting...');
-                                console.log('🔄 Breaking from loop, finalResult:', finalResult);
-                                console.log('🔄 About to break, chunkCount:', chunkCount);
-                                break;
+                                console.log('🔄 Exiting loop, finalResult:', finalResult);
+                                console.log('🔄 Exiting at chunkCount:', chunkCount);
+                                break; // Exit the while loop
                             }
                         }
                         
-                        clearTimeout(generatorTimeout); // Clear timeout when loop completes
-                        console.log(`✅ Generator loop exited after ${chunkCount} chunks`);
-                        console.log('🔄 Continuing after generator loop...');
+                        clearTimeout(generatorTimeout);
+                        console.log(`✅ Generator iteration completed after ${chunkCount} chunks`);
+                        console.log('🔄 Code continuing after generator...');
                         updateProgress(90, 'Processing result...');
                         
                         // If we didn't get a result from chunks, use the last chunk
@@ -1117,11 +1127,13 @@
                             throw new Error(`Generator iteration failed: ${genError.message}`);
                         }
                     }
+                    console.log('🔄 Exited generator try-catch block');
                 } else {
                     console.log('📦 Result is not a generator, using directly');
                 }
                 
                 console.log('🔄 Reached extraction point, finalResult:', finalResult);
+                console.log('🔄 Final result is array?', Array.isArray(finalResult));
                 console.log('🔄 About to start image URL extraction...');
                 updateProgress(92, 'Extracting image URL...');
                 
