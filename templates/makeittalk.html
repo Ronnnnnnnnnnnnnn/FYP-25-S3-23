@@ -142,11 +142,15 @@
             font-weight: 900;
             color: white;
             text-decoration: none;
+            cursor: default;
         }
 
         .logo-icon {
             font-size: 2.5rem;
             animation: rotate3d 3s ease-in-out infinite;
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+            font-style: normal;
+            font-weight: normal;
         }
 
         @keyframes rotate3d {
@@ -741,10 +745,10 @@
         <!-- Navbar -->
         <nav class="navbar">
             <div class="nav-container">
-                <a href="/" class="logo">
+                <div class="logo">
                     <span class="logo-icon">🎭</span>
                     <span>FirstMod-AI</span>
-                </a>
+                </div>
                 <ul class="nav-links">
                     {% if user_role %}
                         {% if user_role == 'user' %}
