@@ -666,10 +666,10 @@
                         {% elif user_role == 'admin' %}
                             <li><a href="/admin">Dashboard</a></li>
                         {% endif %}
+                        <li><a href="/faceswap" class="active">Face Swap</a></li>
                         <li><a href="/fomd">FOMD</a></li>
                         <li><a href="/makeittalk">MakeItTalk</a></li>
-                        <li><a href="/faceswap" class="active">Face Swap</a></li>
-                        <li><a href="#" onclick="logout()">Logout</a></li>
+                        <li><a href="#" onclick="logout()" class="nav-btn btn btn-primary">Logout</a></li>
                     {% else %}
                         <li><a href="/">Home</a></li>
                         <li><a href="/login">Login</a></li>
@@ -1262,11 +1262,20 @@
         };
         
         // Logout function
-        function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                window.location.href = '/login';
+        window.logout = async function() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/';
             }
-        }
+        };
         
         // Initialize
         checkReadyToSwap();
