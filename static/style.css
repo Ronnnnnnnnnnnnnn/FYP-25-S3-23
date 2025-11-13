@@ -1257,18 +1257,31 @@ input:focus {
   padding: 4rem 2rem;
   width: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
-.section-header {
-  text-align: center;
-  margin-bottom: 4rem;
-  margin-top: 6rem;
-  animation: fadeInUp 1s ease 0.3s both;
+.content .container > section {
   width: 100%;
   box-sizing: border-box;
 }
 
-.section-header:first-of-type {
+.section-header {
+  text-align: center;
+  margin: 0 auto 4rem;
+  padding: 0;
+  animation: fadeInUp 1s ease 0.3s both;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.content .container > section:not(:first-child) .section-header {
+  margin-top: 6rem;
+}
+
+.content .container > section:first-child .section-header {
   margin-top: 0;
 }
 
@@ -1292,9 +1305,11 @@ input:focus {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
   gap: 2.5rem;
-  margin-bottom: 6rem;
+  margin: 0 auto 6rem;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+  justify-items: stretch;
 }
 
 .tool-card {
@@ -1438,10 +1453,11 @@ input:focus {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
-  margin-top: 3rem;
-  margin-bottom: 4rem;
+  margin: 3rem auto 4rem;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+  justify-items: stretch;
 }
 
 .feature-card {
@@ -1548,28 +1564,32 @@ input:focus {
   text-align: center;
   width: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .sample-animations h3 {
   font-size: 2.5rem;
   font-weight: 800;
-  margin-bottom: 2rem;
+  margin: 0 auto 2rem;
   background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  width: 100%;
+  text-align: center;
 }
 
 .animation-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
-  margin-top: 3rem;
+  margin: 3rem auto 0;
   max-width: 1000px;
-  margin-left: auto;
-  margin-right: auto;
   width: 100%;
   box-sizing: border-box;
+  justify-items: center;
 }
 
 .animation-item {
@@ -1580,9 +1600,11 @@ input:focus {
   padding: 1.5rem;
   transition: all 0.3s ease;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .animation-item:hover {
