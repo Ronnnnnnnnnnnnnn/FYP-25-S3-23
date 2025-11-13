@@ -1082,13 +1082,14 @@
                             }
                             
                             // If we got a result, we can break early
-                            if (finalResult && finalResult !== result) {
+                            if (finalResult && finalResult !== result && Array.isArray(finalResult) && finalResult.length > 0) {
                                 console.log('✅ Got final result, breaking from generator');
+                                clearTimeout(generatorTimeout); // Clear timeout when we break early
                                 break;
                             }
                         }
                         
-                        clearTimeout(generatorTimeout);
+                        clearTimeout(generatorTimeout); // Clear timeout when loop completes
                         console.log(`✅ Generator completed after ${chunkCount} chunks`);
                         
                         // If we didn't get a result from chunks, use the last chunk
@@ -1130,8 +1131,13 @@
                         imageUrl = imageResult;
                         console.log('✅ Image URL (string):', imageUrl);
                     } else if (imageResult && imageResult.url) {
+                        // Prioritize url over path (url is full HTTP URL)
                         imageUrl = imageResult.url;
                         console.log('✅ Image URL (object.url):', imageUrl);
+                    } else if (imageResult && imageResult.path) {
+                        // Fallback to path if url is not available
+                        imageUrl = imageResult.path;
+                        console.log('✅ Image URL (object.path):', imageUrl);
                     } else if (imageResult && imageResult.data) {
                         imageUrl = imageResult.data;
                         console.log('✅ Image URL (object.data):', imageUrl);
