@@ -17,25 +17,16 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Expressions table
-CREATE TABLE IF NOT EXISTS expressions (
-    expression_id INT PRIMARY KEY AUTO_INCREMENT,
-    expression_name VARCHAR(100) NOT NULL,
-    expression_description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Animations table
 CREATE TABLE IF NOT EXISTS animations (
     animation_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    expression_id INT,
+    tool_type ENUM('faceswap', 'fomd', 'makeittalk') DEFAULT 'makeittalk',
     driving_video_path VARCHAR(500),
     animation_path VARCHAR(500) NOT NULL,
     status ENUM('processing', 'completed', 'failed') DEFAULT 'processing',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (expression_id) REFERENCES expressions(expression_id) ON DELETE SET NULL
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 -- Subscriptions table
@@ -50,13 +41,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
-
--- Insert default expressions
-INSERT INTO expressions (expression_name, expression_description) VALUES
-('smile', 'Happy smiling expression'),
-('angry', 'Angry expression'),
-('surprised', 'Surprised expression'),
-('sad', 'Sad expression');
 
 -- Insert default admin user (password: admin123)
 -- Password hash generated with werkzeug.security.generate_password_hash('admin123')
@@ -82,3 +66,4 @@ INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
 CREATE INDEX idx_user_email ON users(email);
 CREATE INDEX idx_animation_user ON animations(user_id);
 CREATE INDEX idx_animation_status ON animations(status);
+CREATE INDEX idx_animation_tool_type ON animations(tool_type);

@@ -1,5 +1,7 @@
 -- Railway-compatible database schema
--- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements 
+DROP DATABASE IF EXISTS railway;
+CREATE DATABASE IF NOT EXISTS railway;
+USE railway;
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -14,26 +16,16 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Expressions table
-CREATE TABLE IF NOT EXISTS expressions (
-    expression_id INT PRIMARY KEY AUTO_INCREMENT,
-    expression_name VARCHAR(100) NOT NULL,
-    expression_description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Animations table
 CREATE TABLE IF NOT EXISTS animations (
     animation_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     tool_type ENUM('faceswap', 'fomd', 'makeittalk') DEFAULT 'makeittalk',
-    expression_id INT,
     driving_video_path VARCHAR(500),
     animation_path VARCHAR(500) NOT NULL,
     status ENUM('processing', 'completed', 'failed') DEFAULT 'processing',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (expression_id) REFERENCES expressions(expression_id) ON DELETE SET NULL
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 -- Subscriptions table
@@ -48,14 +40,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
-
--- Insert default expressions
-INSERT INTO expressions (expression_name, expression_description) VALUES
-('smile', 'Happy smiling expression'),
-('angry', 'Angry expression'),
-('surprised', 'Surprised expression'),
-('sad', 'Sad expression');
-
 
 -- Insert 2 basic users (password: password123 for all test users)
 INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
