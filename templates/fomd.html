@@ -1058,44 +1058,145 @@
                 console.log('Image file:', imageFile.name, imageFile.type, imageFile.size);
                 console.log('Video file:', videoFile.name, videoFile.type, videoFile.size);
                 
-                // Try function index 0 first (most common), fallback to "/predict"
+                // Inspect app structure to find available endpoints
+                let availableFunctions = [];
+                if (window.app && window.app.config) {
+                    console.log('App config:', window.app.config);
+                    if (window.app.config.dependencies) {
+                        console.log('Total dependencies:', window.app.config.dependencies.length);
+                        availableFunctions = window.app.config.dependencies.map((dep, idx) => {
+                            const info = {
+                                index: idx,
+                                inputs: dep.inputs?.length || 0,
+                                outputs: dep.outputs?.length || 0,
+                                fn: dep.fn?.name || 'unnamed',
+                                api_name: dep.api_name || null
+                            };
+                            console.log(`Function ${idx}:`, info);
+                            return info;
+                        });
+                    }
+                }
+                
+                // Find function with 2 inputs (image + video) - this should be the animate_image function
+                let targetFunctionIndex = null;
+                if (availableFunctions.length > 0) {
+                    // Look for function with exactly 2 inputs (image + video)
+                    const twoInputFunction = availableFunctions.find(f => f.inputs === 2);
+                    if (twoInputFunction) {
+                        targetFunctionIndex = twoInputFunction.index;
+                        console.log(`✅ Found function with 2 inputs at index ${targetFunctionIndex}`);
+                    } else {
+                        // Try to find any function with 2+ inputs
+                        const multiInputFunction = availableFunctions.find(f => f.inputs >= 2);
+                        if (multiInputFunction) {
+                            targetFunctionIndex = multiInputFunction.index;
+                            console.log(`⚠️ Using function with ${multiInputFunction.inputs} inputs at index ${targetFunctionIndex}`);
+                        }
+                    }
+                }
+                
+                // Try different API call methods
                 let result;
-                try {
-                    console.log("Attempt 1: Using app.predict(0, [image, video])");
-                    result = await window.app.predict(0, [
-                        imageHandle,
-                        videoHandle
-                    ]);
-                    console.log("✅ Predict with index 0 succeeded");
-                } catch (e) {
-                    console.log("Attempt 1 failed, trying /predict endpoint...", e);
+                let lastError = null;
+                let success = false;
+                
+                // Method 1: Try with discovered function index
+                if (targetFunctionIndex !== null) {
                     try {
-                        console.log("Attempt 2: Using app.predict('/predict', [image, video])");
+                        console.log(`Attempt 1: Using app.predict(${targetFunctionIndex}, [image, video])`);
+                        result = await window.app.predict(targetFunctionIndex, [
+                            imageHandle,
+                            videoHandle
+                        ]);
+                        console.log("✅ Predict with discovered function index succeeded");
+                        success = true;
+                    } catch (e1) {
+                        lastError = e1;
+                        console.log("Attempt 1 failed:", e1.message);
+                    }
+                }
+                
+                // Method 2: Try all available function indices if Method 1 failed
+                if (!success && availableFunctions.length > 0) {
+                    for (let i = 0; i < availableFunctions.length; i++) {
+                        try {
+                            console.log(`Attempt 2.${i}: Trying app.predict(${i}, [image, video])`);
+                            result = await window.app.predict(i, [
+                                imageHandle,
+                                videoHandle
+                            ]);
+                            console.log(`✅ Predict with index ${i} succeeded`);
+                            success = true;
+                            break;
+                        } catch (e) {
+                            console.log(`Index ${i} failed:`, e.message);
+                            lastError = e;
+                        }
+                    }
+                }
+                
+                // Method 3: Try submit with all function indices
+                if (!success && availableFunctions.length > 0) {
+                    for (let i = 0; i < availableFunctions.length; i++) {
+                        try {
+                            console.log(`Attempt 3.${i}: Trying app.submit(${i}, [image, video])`);
+                            result = await window.app.submit(i, [
+                                imageHandle,
+                                videoHandle
+                            ]);
+                            console.log(`✅ Submit with index ${i} succeeded`);
+                            success = true;
+                            break;
+                        } catch (e) {
+                            console.log(`Submit index ${i} failed:`, e.message);
+                            lastError = e;
+                        }
+                    }
+                }
+                
+                // Method 4: Try common patterns if no functions discovered
+                if (!success) {
+                    try {
+                        console.log("Attempt 4: Trying app.predict('/predict', [image, video])");
                         result = await window.app.predict("/predict", [
                             imageHandle,
                             videoHandle
                         ]);
                         console.log("✅ Predict with /predict succeeded");
-                    } catch (e2) {
-                        console.log("Attempt 2 failed, trying submit...", e2);
-                        try {
-                            console.log("Attempt 3: Using app.submit(0, [image, video])");
-                            result = await window.app.submit(0, [
-                                imageHandle,
-                                videoHandle
-                            ]);
-                            console.log("✅ Submit with index 0 succeeded");
-                        } catch (e3) {
-                            console.error("All attempts failed:", e3);
-                            throw new Error(
-                                `Failed to call Gradio API.\n` +
-                                `Error: ${e3.message}\n\n` +
-                                `Please check:\n` +
-                                `1. The space is running: https://huggingface.co/spaces/${SPACE_URL}\n` +
-                                `2. Check browser console for detailed error messages`
-                            );
-                        }
+                        success = true;
+                    } catch (e) {
+                        lastError = e;
+                        console.log("Attempt 4 failed:", e.message);
                     }
+                }
+                
+                // Method 5: Try index 0 as last resort
+                if (!success) {
+                    try {
+                        console.log("Attempt 5: Trying app.predict(0, [image, video])");
+                        result = await window.app.predict(0, [
+                            imageHandle,
+                            videoHandle
+                        ]);
+                        console.log("✅ Predict with index 0 succeeded");
+                        success = true;
+                    } catch (e) {
+                        lastError = e;
+                        console.log("Attempt 5 failed:", e.message);
+                    }
+                }
+                
+                if (!success) {
+                    throw new Error(
+                        `Failed to call Gradio API. Tried all available methods.\n` +
+                        `Last error: ${lastError ? lastError.message : 'Unknown error'}\n\n` +
+                        `Available functions: ${availableFunctions.length > 0 ? JSON.stringify(availableFunctions, null, 2) : 'Could not discover'}\n\n` +
+                        `Please check:\n` +
+                        `1. The space is running: https://huggingface.co/spaces/${SPACE_URL}\n` +
+                        `2. The space has a function with image and video inputs\n` +
+                        `3. Check browser console for detailed error messages`
+                    );
                 }
                 
                 // Handle async generator result if needed (same as makeittalk)
