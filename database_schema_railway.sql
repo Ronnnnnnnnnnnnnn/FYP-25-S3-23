@@ -1,4 +1,11 @@
 -- Railway-compatible database schema
+-- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements
+DROP DATABASE IF EXISTS railway;
+CREATE DATABASE IF NOT EXISTS railway;
+USE railway; 
+-- Railway-compatible database schema
+-- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements 
+-- Railway-compatible database schema
 -- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements 
 
 -- Users table
@@ -26,6 +33,7 @@ CREATE TABLE IF NOT EXISTS expressions (
 CREATE TABLE IF NOT EXISTS animations (
     animation_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
+    tool_type ENUM('faceswap', 'fomd', 'makeittalk') DEFAULT 'makeittalk',
     expression_id INT,
     driving_video_path VARCHAR(500),
     animation_path VARCHAR(500) NOT NULL,
@@ -75,4 +83,5 @@ INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
 CREATE INDEX idx_user_email ON users(email);
 CREATE INDEX idx_animation_user ON animations(user_id);
 CREATE INDEX idx_animation_status ON animations(status);
+CREATE INDEX idx_animation_tool_type ON animations(tool_type);
 
