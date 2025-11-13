@@ -178,14 +178,20 @@
 
         /* Logout button styling - override link styles */
         .navbar a.nav-btn.btn.btn-primary {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white !important;
             padding: 0.75rem 1.5rem !important;
+            font-size: 1rem !important;
             font-weight: 700;
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
             border-radius: 50px;
             position: relative;
             overflow: hidden;
+            white-space: nowrap;
+            text-decoration: none;
         }
 
         .navbar a.nav-btn.btn.btn-primary:hover {
