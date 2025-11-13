@@ -1014,23 +1014,91 @@
                 updateProgress(30);
                 showStatus("Generating animation... This may take 1-3 minutes", "loading");
                 
-                // Try different predict method signatures
+                // Log available methods and inspect client structure for debugging
+                console.log("Gradio client methods:", Object.keys(gradioClient));
+                console.log("Gradio client type:", typeof gradioClient);
+                console.log("Gradio client:", gradioClient);
+                
+                // Try to inspect available endpoints/functions
+                if (gradioClient.config) {
+                    console.log("Client config:", gradioClient.config);
+                    if (gradioClient.config.dependencies) {
+                        console.log("Available functions:", gradioClient.config.dependencies.length);
+                        gradioClient.config.dependencies.forEach((dep, idx) => {
+                            console.log(`Function ${idx}:`, {
+                                inputs: dep.inputs?.length || 0,
+                                outputs: dep.outputs?.length || 0,
+                                fn: dep.fn?.name || 'unnamed'
+                            });
+                        });
+                    }
+                }
+                
+                // Try different API call methods
                 let result;
+                let lastError = null;
+                
+                // Method 1: Try submit with function index 0 (most common)
                 try {
-                    // Try with named parameters (object)
-                    result = await gradioClient.predict("/animate", {
-                        source_image: imageHandle,
-                        driving_video: videoHandle
-                    });
+                    console.log("Attempt 1: Using submit(0, [image, video])");
+                    result = await gradioClient.submit(0, [imageHandle, videoHandle]);
+                    console.log("✅ Submit with index 0 succeeded");
                 } catch (e1) {
-                    console.log("Named params failed, trying array format:", e1);
+                    lastError = e1;
+                    console.log("Attempt 1 failed:", e1.message);
+                    
+                    // Method 2: Try predict with function index 0
                     try {
-                        // Try with array format (positional)
-                        result = await gradioClient.predict("/animate", [imageHandle, videoHandle]);
-                    } catch (e2) {
-                        console.log("Array format failed, trying index 0:", e2);
-                        // Try with function index 0
+                        console.log("Attempt 2: Using predict(0, [image, video])");
                         result = await gradioClient.predict(0, [imageHandle, videoHandle]);
+                        console.log("✅ Predict with index 0 succeeded");
+                    } catch (e2) {
+                        lastError = e2;
+                        console.log("Attempt 2 failed:", e2.message);
+                        
+                        // Method 3: Try submit with endpoint name
+                        try {
+                            console.log("Attempt 3: Using submit('/predict', [image, video])");
+                            result = await gradioClient.submit("/predict", [imageHandle, videoHandle]);
+                            console.log("✅ Submit with /predict succeeded");
+                        } catch (e3) {
+                            lastError = e3;
+                            console.log("Attempt 3 failed:", e3.message);
+                            
+                            // Method 4: Try predict with endpoint name
+                            try {
+                                console.log("Attempt 4: Using predict('/predict', [image, video])");
+                                result = await gradioClient.predict("/predict", [imageHandle, videoHandle]);
+                                console.log("✅ Predict with /predict succeeded");
+                            } catch (e4) {
+                                lastError = e4;
+                                console.log("Attempt 4 failed:", e4.message);
+                                
+                                // Method 5: Try with named parameters if supported
+                                try {
+                                    console.log("Attempt 5: Using submit with named params");
+                                    if (typeof gradioClient.submit === 'function') {
+                                        result = await gradioClient.submit(0, {
+                                            source_image: imageHandle,
+                                            driving_video: videoHandle
+                                        });
+                                    } else {
+                                        throw new Error("submit method not available");
+                                    }
+                                } catch (e5) {
+                                    lastError = e5;
+                                    console.error("All methods failed. Last error:", lastError);
+                                    throw new Error(
+                                        `Failed to call Gradio API. Tried multiple methods but all failed.\n` +
+                                        `Last error: ${lastError.message}\n\n` +
+                                        `Please check:\n` +
+                                        `1. The space is running: https://huggingface.co/spaces/${SPACE_URL}\n` +
+                                        `2. The space has the correct input/output format\n` +
+                                        `3. Check browser console for detailed error messages`
+                                    );
+                                }
+                            }
+                        }
                     }
                 }
                 
