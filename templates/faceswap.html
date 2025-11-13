@@ -766,8 +766,9 @@
         // 🔥 HUGGING FACE GRADIO API CONFIGURATION 🔥
         // ═══════════════════════════════════════════════════════════
         const YOUR_USERNAME = "Tc12345";  // ← Your Hugging Face username
-        const SPACE_NAME = "face-swap";  // Your face swap space name
+        const SPACE_NAME = "faceswap";  // Your face swap space name
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
+        console.log('📌 Face Swap Configuration:', { YOUR_USERNAME, SPACE_NAME, SPACE_URL });
         // ═══════════════════════════════════════════════════════════
         
         import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
@@ -865,24 +866,43 @@
             status.className = `status ${type} show`;
         }
         
-        // Connect to Gradio
-        async function tryConnect() {
+        // Function to try connecting with different space name formats
+        async function tryConnect(spacePath) {
             try {
-                const spacePath = `https://${SPACE_URL.replace('/', '-')}.hf.space`;
-                console.log('🔍 Checking connection to:', SPACE_URL);
                 console.log('Attempting to connect to:', spacePath);
-                
-                window.app = await window.gradioClient(spacePath);
+                const app = await window.gradioClient(spacePath);
                 console.log('✅ Connected successfully!');
-                return true;
+                return app;
             } catch (error) {
-                console.error('❌ Connection failed:', error);
-                return false;
+                console.log('Failed to connect to:', spacePath, error.message);
+                throw error;
             }
         }
         
-        // Initialize connection
-        let connectionPromise = tryConnect();
+        // Initialize connection with multiple variations
+        let connectionPromise = (async () => {
+            console.log('🔍 Checking connection to:', SPACE_URL);
+            
+            // Try different space name variations
+            const spaceVariations = [
+                SPACE_URL,  // Original: "Tc12345/faceswap"
+                `${YOUR_USERNAME}/${SPACE_NAME.toLowerCase()}`,  // "Tc12345/faceswap"
+                `${YOUR_USERNAME}/${SPACE_NAME}`,  // "Tc12345/faceswap"
+            ];
+            
+            for (const spacePath of spaceVariations) {
+                try {
+                    window.app = await tryConnect(spacePath);
+                    console.log(`✅ Successfully connected to: ${spacePath}`);
+                    return true;
+                } catch (error) {
+                    console.log(`❌ Failed to connect to: ${spacePath}`);
+                }
+            }
+            
+            console.error('❌ All connection attempts failed');
+            return false;
+        })();
         
         // Main swap function
         window.swapFaces = async function() {
