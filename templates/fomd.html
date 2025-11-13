@@ -517,31 +517,66 @@
                 if (window.app && window.app.config) {
                     console.log('API config:', window.app.config);
                     console.log('API components:', window.app.config.components);
+                    
+                    // Log the input components to see what they expect
+                    if (window.app.config.components && window.app.config.components.length > 0) {
+                        console.log('Input components:', window.app.config.components.map(c => ({
+                            type: c.type,
+                            label: c.label,
+                            props: c.props
+                        })));
+                    }
                 }
                 
-                // Gradio client should handle File objects automatically
-                // The error might be due to API expecting different format
-                // Try with explicit null handling or check if API needs different structure
+                // The error suggests the API expects a 'video' field in the input
+                // Try different approaches to match the expected format
                 let result;
                 
                 try {
-                    // First try: Pass files directly (standard approach)
+                    // Approach 1: Pass files directly (standard Gradio approach)
+                    console.log('Attempt 1: Passing File objects directly');
                     result = await window.app.predict(0, [
                         imageFile,
                         videoFile
                     ]);
                 } catch (predictError) {
-                    console.error('Predict error:', predictError);
+                    console.error('Attempt 1 failed:', predictError);
                     
-                    // If error mentions video field, try alternative approaches
+                    // Approach 2: Try swapping the order (maybe video should be first)
                     if (predictError.message && predictError.message.includes('video')) {
-                        console.log('Trying alternative input format...');
-                        
-                        // Try: Check if API expects files in different structure
-                        // Some Gradio spaces might need files uploaded first
-                        throw new Error(`API Error: ${predictError.message}. The Gradio space might be expecting a different input format. Please check the space configuration.`);
+                        try {
+                            console.log('Attempt 2: Swapping input order (video first)');
+                            result = await window.app.predict(0, [
+                                videoFile,
+                                imageFile
+                            ]);
+                        } catch (swapError) {
+                            console.error('Attempt 2 failed:', swapError);
+                            
+                            // Approach 3: Try using submit API instead of predict
+                            try {
+                                console.log('Attempt 3: Using submit API');
+                                result = await window.app.submit(0, [
+                                    imageFile,
+                                    videoFile
+                                ]);
+                            } catch (submitError) {
+                                console.error('Attempt 3 failed:', submitError);
+                                
+                                // All attempts failed - show detailed error
+                                throw new Error(
+                                    `Gradio API Error: ${predictError.message}\n\n` +
+                                    `The space expects a different input format. ` +
+                                    `Please check:\n` +
+                                    `1. Visit https://huggingface.co/spaces/${SPACE_URL} to see the expected interface\n` +
+                                    `2. Check if the space expects inputs in a different order\n` +
+                                    `3. Verify the space is running and accessible`
+                                );
+                            }
+                        }
+                    } else {
+                        throw predictError;
                     }
-                    throw predictError;
                 }
                 
                 clearInterval(progressInterval);
