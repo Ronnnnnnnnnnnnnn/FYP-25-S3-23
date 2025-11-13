@@ -1058,6 +1058,7 @@
                     try {
                         let lastChunk = null;
                         let chunkCount = 0;
+                        let gotResult = false;
                         
                         for await (const chunk of result) {
                             chunkCount++;
@@ -1070,9 +1071,11 @@
                                 if (Array.isArray(chunk.data) && chunk.data.length > 0) {
                                     finalResult = chunk.data; // Keep the full array
                                     console.log('✅ Got result array:', finalResult);
+                                    gotResult = true;
                                 } else if (chunk.data) {
                                     finalResult = chunk.data;
                                     console.log('✅ Got result data:', finalResult);
+                                    gotResult = true;
                                 }
                             }
                             
@@ -1082,16 +1085,19 @@
                             }
                             
                             // If we got a result, we can break early
-                            if (finalResult && finalResult !== result && Array.isArray(finalResult) && finalResult.length > 0) {
+                            if (gotResult && finalResult && finalResult !== result && Array.isArray(finalResult) && finalResult.length > 0) {
                                 console.log('✅ Got final result, breaking from generator');
                                 clearTimeout(generatorTimeout); // Clear timeout when we break early
                                 updateProgress(90, 'Result received, extracting...');
+                                console.log('🔄 Breaking from loop, finalResult:', finalResult);
+                                console.log('🔄 About to break, chunkCount:', chunkCount);
                                 break;
                             }
                         }
                         
                         clearTimeout(generatorTimeout); // Clear timeout when loop completes
-                        console.log(`✅ Generator completed after ${chunkCount} chunks`);
+                        console.log(`✅ Generator loop exited after ${chunkCount} chunks`);
+                        console.log('🔄 Continuing after generator loop...');
                         updateProgress(90, 'Processing result...');
                         
                         // If we didn't get a result from chunks, use the last chunk
@@ -1114,6 +1120,10 @@
                 } else {
                     console.log('📦 Result is not a generator, using directly');
                 }
+                
+                console.log('🔄 Reached extraction point, finalResult:', finalResult);
+                console.log('🔄 About to start image URL extraction...');
+                updateProgress(92, 'Extracting image URL...');
                 
                 // Extract image URL
                 // Note: Backend returns [image, status_message], so we need the first element
