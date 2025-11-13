@@ -457,35 +457,35 @@
           const expiryDate = document.getElementById('expiryDate').value.trim();
           const cvv = document.getElementById('cvv').value.trim();
           const cardName = document.getElementById('cardName').value.trim();
-        
-        if (!cardNumber || !expiryDate || !cvv || !cardName) {
-          console.log('Validation failed: Missing card details');
-          alertDiv.className = 'alert error';
-          alertDiv.textContent = '❌ Please fill in all card details';
-          alertDiv.style.display = 'block';
-          return;
+          
+          if (!cardNumber || !expiryDate || !cvv || !cardName) {
+            console.log('Validation failed: Missing card details');
+            alertDiv.className = 'alert error';
+            alertDiv.textContent = '❌ Please fill in all card details';
+            alertDiv.style.display = 'block';
+            return;
+          }
+          
+          console.log('Card details validated:', {
+            cardNumber: cardNumber.substring(0, 4) + '****',
+            expiryDate: expiryDate,
+            cvv: '***',
+            cardName: cardName
+          });
+        } else {
+          // PayPal validation
+          const paypalEmail = document.getElementById('paypalEmail').value.trim();
+          if (!paypalEmail) {
+            alertDiv.className = 'alert error';
+            alertDiv.textContent = '❌ Please enter your PayPal email';
+            alertDiv.style.display = 'block';
+            return;
+          }
         }
         
-        console.log('Card details validated:', {
-          cardNumber: cardNumber.substring(0, 4) + '****',
-          expiryDate: expiryDate,
-          cvv: '***',
-          cardName: cardName
-        });
-      } else {
-        // PayPal validation
-        const paypalEmail = document.getElementById('paypalEmail').value.trim();
-        if (!paypalEmail) {
-          alertDiv.className = 'alert error';
-          alertDiv.textContent = '❌ Please enter your PayPal email';
-          alertDiv.style.display = 'block';
-          return;
-        }
-      }
-      
-      btn.disabled = true;
-      btn.textContent = 'Validating Card...';
-      alertDiv.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Validating Card...';
+        alertDiv.style.display = 'none';
 
       try {
         // Prepare request data
