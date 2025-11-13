@@ -1085,12 +1085,14 @@
                             if (finalResult && finalResult !== result && Array.isArray(finalResult) && finalResult.length > 0) {
                                 console.log('✅ Got final result, breaking from generator');
                                 clearTimeout(generatorTimeout); // Clear timeout when we break early
+                                updateProgress(90, 'Result received, extracting...');
                                 break;
                             }
                         }
                         
                         clearTimeout(generatorTimeout); // Clear timeout when loop completes
                         console.log(`✅ Generator completed after ${chunkCount} chunks`);
+                        updateProgress(90, 'Processing result...');
                         
                         // If we didn't get a result from chunks, use the last chunk
                         if (finalResult === result && lastChunk) {
@@ -1113,12 +1115,16 @@
                     console.log('📦 Result is not a generator, using directly');
                 }
                 
-                updateProgress(90, 'Extracting result...');
-                
                 // Extract image URL
                 // Note: Backend returns [image, status_message], so we need the first element
-                console.log('🔍 Extracting image URL from result:', finalResult);
+                console.log('🔍 Starting image URL extraction...');
+                console.log('🔍 Final result type:', typeof finalResult);
+                console.log('🔍 Final result:', finalResult);
+                console.log('🔍 Is array:', Array.isArray(finalResult));
+                
                 let imageUrl = null;
+                
+                try {
                 
                 // Handle array result (multiple outputs)
                 if (Array.isArray(finalResult)) {
@@ -1180,12 +1186,26 @@
                 
                 console.log('✅ Final image URL:', imageUrl);
                 
+                } catch (extractError) {
+                    console.error('❌ Error during image URL extraction:', extractError);
+                    throw extractError;
+                }
+                
+                updateProgress(95, 'Preparing display...');
+                
                 updateProgress(100, 'Complete! ✓');
                 showStatus('✅ Face swap successful! 🎉', 'success');
                 
                 // Display result
                 savedImageUrl = imageUrl;
-                document.getElementById('resultImage').src = imageUrl;
+                console.log('🖼️ Setting image source to:', imageUrl);
+                const resultImg = document.getElementById('resultImage');
+                if (resultImg) {
+                    resultImg.src = imageUrl;
+                    console.log('✅ Image source set successfully');
+                } else {
+                    console.error('❌ Result image element not found!');
+                }
                 
                 setTimeout(() => {
                     resultSection.classList.add('show');
