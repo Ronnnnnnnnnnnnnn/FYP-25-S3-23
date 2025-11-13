@@ -1585,6 +1585,9 @@
                 resultSection.classList.add('show');
                 resultSection.scrollIntoView({ behavior: 'smooth' });
                 
+                // Automatically save to server
+                saveFOMDToServer(resultBlob);
+                
                 // Hide status after 3 seconds
                 setTimeout(() => {
                     const status = document.getElementById('status');
@@ -1615,6 +1618,43 @@
             }
         }
 
+        // Save to server function
+        async function saveFOMDToServer(videoBlob) {
+            try {
+                const reader = new FileReader();
+                
+                reader.onloadend = async function() {
+                    const base64data = reader.result;
+                    
+                    try {
+                        const saveResponse = await fetch('/api/fomd/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                video_data: base64data
+                            })
+                        });
+                        
+                        const saveData = await saveResponse.json();
+                        if (saveData.success) {
+                            console.log('✅ FOMD animation saved to server:', saveData.video_url);
+                            showStatus('✅ Animation saved to your dashboard!', 'success');
+                        } else {
+                            console.error('Failed to save:', saveData.message);
+                        }
+                    } catch (error) {
+                        console.error('Error saving to server:', error);
+                    }
+                };
+                
+                reader.readAsDataURL(videoBlob);
+            } catch (error) {
+                console.error('Error converting video:', error);
+            }
+        }
+        
         window.downloadVideo = function() {
             if (!resultBlob) {
                 alert('❌ No video available to download!');

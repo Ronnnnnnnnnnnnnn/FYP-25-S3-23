@@ -98,6 +98,14 @@
           </div>
         </div>
 
+        <!-- Generated Items Preview Section -->
+        <div class="generated-items-section" style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; margin-top: 30px;">
+          <h3 style="color: white; margin-bottom: 20px;">🎨 My Generated Face Swaps</h3>
+          <div id="generatedItemsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+            <p style="color: rgba(255, 255, 255, 0.6); text-align: center; grid-column: 1 / -1;">Loading your generated items...</p>
+          </div>
+        </div>
+
         <!-- Subscription Section -->
         <div class="subscription-section" style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; margin-top: 30px;">
           <h3 style="color: white;">💳 Upgrade to Premium</h3>
@@ -145,5 +153,62 @@
     }
   </script>
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Load generated items
+    async function loadGeneratedItems() {
+      try {
+        const response = await fetch('/api/user/generated-items');
+        const data = await response.json();
+        
+        const container = document.getElementById('generatedItemsContainer');
+        if (!container) return;
+        
+        if (data.success && data.items && data.items.length > 0) {
+          container.innerHTML = '';
+          data.items.forEach(item => {
+            const itemCard = document.createElement('div');
+            itemCard.style.cssText = 'background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 15px; overflow: hidden; cursor: pointer; transition: transform 0.3s;';
+            itemCard.onmouseenter = () => itemCard.style.transform = 'scale(1.05)';
+            itemCard.onmouseleave = () => itemCard.style.transform = 'scale(1)';
+            
+            const toolType = item.tool_type || 'faceswap';
+            const toolName = toolType.charAt(0).toUpperCase() + toolType.slice(1);
+            
+            if (toolType === 'faceswap') {
+              itemCard.innerHTML = `
+                <img src="${item.file_url}" alt="${toolName}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;">
+                <p style="color: rgba(255, 255, 255, 0.9); font-size: 14px; margin: 0; text-align: center;">${toolName}</p>
+                <p style="color: rgba(255, 255, 255, 0.6); font-size: 12px; margin: 5px 0 0 0; text-align: center;">${new Date(item.created_at).toLocaleDateString()}</p>
+              `;
+            } else {
+              itemCard.innerHTML = `
+                <video src="${item.file_url}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;" muted loop></video>
+                <p style="color: rgba(255, 255, 255, 0.9); font-size: 14px; margin: 0; text-align: center;">${toolName}</p>
+                <p style="color: rgba(255, 255, 255, 0.6); font-size: 12px; margin: 5px 0 0 0; text-align: center;">${new Date(item.created_at).toLocaleDateString()}</p>
+              `;
+            }
+            
+            itemCard.onclick = () => window.open(item.file_url, '_blank');
+            container.appendChild(itemCard);
+          });
+        } else {
+          container.innerHTML = '<p style="color: rgba(255, 255, 255, 0.6); text-align: center; grid-column: 1 / -1;">No generated items yet. Start creating face swaps to see them here!</p>';
+        }
+      } catch (error) {
+        console.error('Error loading generated items:', error);
+        const container = document.getElementById('generatedItemsContainer');
+        if (container) {
+          container.innerHTML = '<p style="color: rgba(255, 255, 255, 0.6); text-align: center; grid-column: 1 / -1;">Error loading items. Please refresh the page.</p>';
+        }
+      }
+    }
+    
+    // Load items when page loads
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadGeneratedItems);
+    } else {
+      loadGeneratedItems();
+    }
+  </script>
 </body>
 </html>

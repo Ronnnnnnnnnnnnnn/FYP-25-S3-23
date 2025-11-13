@@ -1292,6 +1292,9 @@
                     progressContainer.classList.remove('show');
                 }, 500);
                 
+                // Automatically save to server
+                saveFaceSwapToServer(imageUrl);
+                
             } catch (error) {
                 console.error('Error:', error);
                 showStatus(`❌ Error: ${error.message}. Please try again.`, 'error');
@@ -1301,6 +1304,46 @@
                 btn.innerHTML = '<span>🔄</span><span>Swap Faces</span>';
             }
         };
+        
+        // Save to server function
+        async function saveFaceSwapToServer(imageUrl) {
+            try {
+                // Convert image URL to base64
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const reader = new FileReader();
+                
+                reader.onloadend = async function() {
+                    const base64data = reader.result;
+                    
+                    try {
+                        const saveResponse = await fetch('/api/faceswap/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                image_data: base64data
+                            })
+                        });
+                        
+                        const saveData = await saveResponse.json();
+                        if (saveData.success) {
+                            console.log('✅ Face swap saved to server:', saveData.image_url);
+                            showStatus('✅ Face swap saved to your dashboard!', 'success');
+                        } else {
+                            console.error('Failed to save:', saveData.message);
+                        }
+                    } catch (error) {
+                        console.error('Error saving to server:', error);
+                    }
+                };
+                
+                reader.readAsDataURL(blob);
+            } catch (error) {
+                console.error('Error converting image:', error);
+            }
+        }
         
         // Download function
         window.downloadImage = function() {

@@ -24,6 +24,11 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['ANIMATIONS_FOLDER'], exist_ok=True)
 os.makedirs(app.config['PROFILE_PICTURES_FOLDER'], exist_ok=True)
 
+# Create subdirectories for different tools
+os.makedirs(os.path.join(app.config['ANIMATIONS_FOLDER'], 'faceswap'), exist_ok=True)
+os.makedirs(os.path.join(app.config['ANIMATIONS_FOLDER'], 'fomd'), exist_ok=True)
+os.makedirs(os.path.join(app.config['ANIMATIONS_FOLDER'], 'makeittalk'), exist_ok=True)
+
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov'}
 ALLOWED_PROFILE_PICTURE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -865,7 +870,7 @@ def makeittalk_animate():
         
         # Generate output filename
         output_filename = f"makeittalk_{uuid.uuid4()}.mp4"
-        output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], output_filename)
+        output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], 'makeittalk', output_filename)
         
         # Get ngrok URL from environment variable or use default
         api_url = os.environ.get('MAKEITTALK_API_URL', None)
@@ -884,8 +889,8 @@ def makeittalk_animate():
             cursor = db.cursor()
             
             cursor.execute(
-                "INSERT INTO animations (user_id, animation_path, status) VALUES (%s, %s, %s)",
-                (session['user_id'], f'animations/{output_filename}', 'completed')
+                "INSERT INTO animations (user_id, tool_type, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], 'makeittalk', f'animations/makeittalk/{output_filename}', 'completed')
             )
             db.commit()
             
@@ -898,7 +903,7 @@ def makeittalk_animate():
                 'success': True,
                 'message': 'Animation created successfully',
                 'animation_id': animation_id,
-                'video_url': f'/static/animations/{output_filename}'
+                'video_url': f'/static/animations/makeittalk/{output_filename}'
             })
         else:
             return jsonify({
@@ -908,6 +913,287 @@ def makeittalk_animate():
     
     except Exception as e:
         print(f"MakeItTalk error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ============================================
+# FACESWAP API ENDPOINTS
+# ============================================
+@app.route('/api/faceswap/save', methods=['POST'])
+def faceswap_save():
+    """Save face swap result to database and server"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    # Check if user is a regular user or subscriber (not admin)
+    if session.get('role') not in ['user', 'subscriber']:
+        return jsonify({'success': False, 'message': 'Access denied. Only users and subscribers can use face swap.'}), 403
+    
+    try:
+        # Get image data from request
+        if 'image' not in request.files:
+            # Try to get base64 data from JSON
+            data = request.get_json()
+            if not data or 'image_data' not in data:
+                return jsonify({'success': False, 'message': 'No image provided'}), 400
+            
+            import base64
+            import io
+            
+            # Decode base64 image
+            image_data = data['image_data']
+            if image_data.startswith('data:image'):
+                image_data = image_data.split(',')[1]
+            
+            image_bytes = base64.b64decode(image_data)
+            
+            # Generate filename
+            output_filename = f"faceswap_{uuid.uuid4()}.png"
+            output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], 'faceswap', output_filename)
+            
+            # Save image directly (base64 decoded bytes)
+            with open(output_path, 'wb') as f:
+                f.write(image_bytes)
+            
+            # Save to database
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                "INSERT INTO animations (user_id, tool_type, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], 'faceswap', f'animations/faceswap/{output_filename}', 'completed')
+            )
+            db.commit()
+            
+            animation_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Face swap saved successfully',
+                'animation_id': animation_id,
+                'image_url': f'/static/animations/faceswap/{output_filename}'
+            })
+        else:
+            # Handle file upload
+            file = request.files['image']
+            if file.filename == '':
+                return jsonify({'success': False, 'message': 'No file selected'}), 400
+            
+            # Generate filename
+            output_filename = f"faceswap_{uuid.uuid4()}.{file.filename.rsplit('.', 1)[1].lower()}"
+            output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], 'faceswap', output_filename)
+            
+            # Save file
+            file.save(output_path)
+            
+            # Save to database
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                "INSERT INTO animations (user_id, tool_type, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], 'faceswap', f'animations/faceswap/{output_filename}', 'completed')
+            )
+            db.commit()
+            
+            animation_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Face swap saved successfully',
+                'animation_id': animation_id,
+                'image_url': f'/static/animations/faceswap/{output_filename}'
+            })
+    
+    except Exception as e:
+        print(f"Face swap save error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ============================================
+# FOMD API ENDPOINTS
+# ============================================
+@app.route('/api/fomd/save', methods=['POST'])
+def fomd_save():
+    """Save FOMD animation result to database and server"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    # Check if user is a subscriber or admin
+    if session.get('role') not in ['subscriber', 'admin']:
+        return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
+    
+    try:
+        # Get video data from request
+        if 'video' not in request.files:
+            # Try to get base64 data from JSON
+            data = request.get_json()
+            if not data or 'video_data' not in data:
+                return jsonify({'success': False, 'message': 'No video provided'}), 400
+            
+            import base64
+            import io
+            
+            # Decode base64 video
+            video_data = data['video_data']
+            if video_data.startswith('data:video'):
+                video_data = video_data.split(',')[1]
+            
+            video_bytes = base64.b64decode(video_data)
+            
+            # Generate filename
+            output_filename = f"fomd_{uuid.uuid4()}.mp4"
+            output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], 'fomd', output_filename)
+            
+            # Save video
+            with open(output_path, 'wb') as f:
+                f.write(video_bytes)
+            
+            # Save to database
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                "INSERT INTO animations (user_id, tool_type, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], 'fomd', f'animations/fomd/{output_filename}', 'completed')
+            )
+            db.commit()
+            
+            animation_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'FOMD animation saved successfully',
+                'animation_id': animation_id,
+                'video_url': f'/static/animations/fomd/{output_filename}'
+            })
+        else:
+            # Handle file upload
+            file = request.files['video']
+            if file.filename == '':
+                return jsonify({'success': False, 'message': 'No file selected'}), 400
+            
+            # Generate filename
+            output_filename = f"fomd_{uuid.uuid4()}.{file.filename.rsplit('.', 1)[1].lower()}"
+            output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], 'fomd', output_filename)
+            
+            # Save file
+            file.save(output_path)
+            
+            # Save to database
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                "INSERT INTO animations (user_id, tool_type, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], 'fomd', f'animations/fomd/{output_filename}', 'completed')
+            )
+            db.commit()
+            
+            animation_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'FOMD animation saved successfully',
+                'animation_id': animation_id,
+                'video_url': f'/static/animations/fomd/{output_filename}'
+            })
+    
+    except Exception as e:
+        print(f"FOMD save error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ============================================
+# GET USER GENERATED ITEMS
+# ============================================
+@app.route('/api/user/generated-items', methods=['GET'])
+def get_user_generated_items():
+    """Get all generated items (animations/photos) for the current user"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        # Get user role to filter by allowed tools
+        user_role = session.get('role', 'user')
+        
+        # Build query based on user role
+        if user_role == 'user':
+            # Users can only see faceswap
+            cursor.execute(
+                """SELECT animation_id, tool_type, animation_path, status, created_at 
+                   FROM animations 
+                   WHERE user_id = %s AND tool_type = 'faceswap'
+                   ORDER BY created_at DESC""",
+                (session['user_id'],)
+            )
+        else:
+            # Subscribers and admins can see all
+            cursor.execute(
+                """SELECT animation_id, tool_type, animation_path, status, created_at 
+                   FROM animations 
+                   WHERE user_id = %s
+                   ORDER BY created_at DESC""",
+                (session['user_id'],)
+            )
+        
+        items = cursor.fetchall()
+        
+        cursor.close()
+        db.close()
+        
+        # Format items for frontend
+        formatted_items = []
+        for item in items:
+            formatted_items.append({
+                'id': item['animation_id'],
+                'tool_type': item['tool_type'],
+                'file_path': item['animation_path'],
+                'file_url': f"/static/{item['animation_path']}",
+                'status': item['status'],
+                'created_at': item['created_at'].isoformat() if item['created_at'] else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'items': formatted_items
+        })
+    
+    except Exception as e:
+        print(f"Get generated items error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Error handlers
