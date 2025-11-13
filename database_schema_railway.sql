@@ -1,11 +1,4 @@
 -- Railway-compatible database schema
--- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements
-DROP DATABASE IF EXISTS railway;
-CREATE DATABASE IF NOT EXISTS railway;
-USE railway; 
--- Railway-compatible database schema
--- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements 
--- Railway-compatible database schema
 -- Note: Railway already created the database, so we skip CREATE DATABASE and USE statements 
 
 -- Users table
