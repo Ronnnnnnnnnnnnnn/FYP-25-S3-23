@@ -407,26 +407,69 @@
       const btn = document.getElementById('subscribeBtn');
       const alertDiv = document.getElementById('alertMessage');
       
+      // Validate form fields
+      if (selectedPaymentMethod === 'card') {
+        const cardNumber = document.getElementById('cardNumber').value.trim();
+        const expiryDate = document.getElementById('expiryDate').value.trim();
+        const cvv = document.getElementById('cvv').value.trim();
+        const cardName = document.getElementById('cardName').value.trim();
+        
+        if (!cardNumber || !expiryDate || !cvv || !cardName) {
+          alertDiv.className = 'alert error';
+          alertDiv.textContent = '❌ Please fill in all card details';
+          alertDiv.style.display = 'block';
+          return;
+        }
+      } else {
+        // PayPal validation
+        const paypalEmail = document.getElementById('paypalEmail').value.trim();
+        if (!paypalEmail) {
+          alertDiv.className = 'alert error';
+          alertDiv.textContent = '❌ Please enter your PayPal email';
+          alertDiv.style.display = 'block';
+          return;
+        }
+      }
+      
       btn.disabled = true;
-      btn.textContent = 'Processing...';
+      btn.textContent = 'Validating Card...';
       alertDiv.style.display = 'none';
 
       try {
+        // Prepare request data
+        const requestData = {
+          plan: selectedPlan
+        };
+        
+        // Add card details if card payment method is selected
+        if (selectedPaymentMethod === 'card') {
+          requestData.card_number = document.getElementById('cardNumber').value.trim();
+          requestData.expiry_date = document.getElementById('expiryDate').value.trim();
+          requestData.cvv = document.getElementById('cvv').value.trim();
+          requestData.card_name = document.getElementById('cardName').value.trim();
+        } else {
+          // For PayPal, we'll just validate email format (you can add PayPal validation later)
+          alertDiv.className = 'alert error';
+          alertDiv.textContent = '❌ Card payment is required for subscription. Please use a credit/debit card.';
+          alertDiv.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Subscribe Now';
+          return;
+        }
+
         const response = await fetch('/api/subscription/update', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            plan: selectedPlan
-          })
+          body: JSON.stringify(requestData)
         });
 
         const data = await response.json();
 
         if (data.success) {
           alertDiv.className = 'alert success';
-          alertDiv.textContent = '✅ Subscription successful! Redirecting to subscriber dashboard...';
+          alertDiv.textContent = '✅ ' + (data.message || 'Card validated successfully! Subscription upgraded to Premium. Redirecting...');
           alertDiv.style.display = 'block';
           
           // Redirect after 2 seconds
@@ -435,7 +478,7 @@
           }, 2000);
         } else {
           alertDiv.className = 'alert error';
-          alertDiv.textContent = '❌ ' + (data.message || 'Payment failed. Please try again.');
+          alertDiv.textContent = '❌ ' + (data.message || 'Card validation failed. Please check your card details and try again.');
           alertDiv.style.display = 'block';
           btn.disabled = false;
           btn.textContent = 'Subscribe Now';

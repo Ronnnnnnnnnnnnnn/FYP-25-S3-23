@@ -35,6 +35,74 @@ def get_db():
     return DatabaseConnection().get_connection()
 
 
+def validate_card(card_number, expiry_date, cvv, card_name):
+    """
+    Validate credit card details without processing payment.
+    Returns (is_valid, error_message)
+    """
+    # Remove spaces from card number
+    card_number = card_number.replace(' ', '').replace('-', '')
+    
+    # Validate card number format (must be 13-19 digits)
+    if not card_number.isdigit():
+        return False, 'Card number must contain only digits'
+    
+    if len(card_number) < 13 or len(card_number) > 19:
+        return False, 'Card number must be between 13 and 19 digits'
+    
+    # Luhn algorithm validation
+    def luhn_check(card_num):
+        def digits_of(n):
+            return [int(d) for d in str(n)]
+        digits = digits_of(card_num)
+        odd_digits = digits[-1::-2]
+        even_digits = digits[-2::-2]
+        checksum = sum(odd_digits)
+        for d in even_digits:
+            checksum += sum(digits_of(d * 2))
+        return checksum % 10 == 0
+    
+    if not luhn_check(card_number):
+        return False, 'Invalid card number (failed Luhn algorithm check)'
+    
+    # Validate expiry date format (MM/YY)
+    if not expiry_date or '/' not in expiry_date:
+        return False, 'Invalid expiry date format. Use MM/YY'
+    
+    try:
+        month, year = expiry_date.split('/')
+        month = int(month)
+        year = int(year)
+        
+        if month < 1 or month > 12:
+            return False, 'Invalid expiry month. Must be between 01 and 12'
+        
+        # Convert YY to full year (assuming 20YY)
+        current_year = datetime.now().year
+        current_month = datetime.now().month
+        full_year = 2000 + year
+        
+        # Check if card is expired
+        if full_year < current_year or (full_year == current_year and month < current_month):
+            return False, 'Card has expired'
+        
+    except ValueError:
+        return False, 'Invalid expiry date format. Use MM/YY'
+    
+    # Validate CVV (3-4 digits)
+    if not cvv or not cvv.isdigit():
+        return False, 'CVV must be 3-4 digits'
+    
+    if len(cvv) < 3 or len(cvv) > 4:
+        return False, 'CVV must be 3-4 digits'
+    
+    # Validate cardholder name
+    if not card_name or len(card_name.strip()) < 2:
+        return False, 'Cardholder name is required'
+    
+    return True, None
+
+
 def check_account_status():
     """Check if the logged-in user's account is suspended"""
     if 'user_id' not in session:
@@ -616,26 +684,53 @@ def update_subscription():
     data = request.get_json()
     plan = data.get('plan')
     
+    # Get card details for validation
+    card_number = data.get('card_number', '').strip()
+    expiry_date = data.get('expiry_date', '').strip()
+    cvv = data.get('cvv', '').strip()
+    card_name = data.get('card_name', '').strip()
+    
+    # Validate card details
+    if not all([card_number, expiry_date, cvv, card_name]):
+        return jsonify({'success': False, 'message': 'All card details are required'}), 400
+    
+    is_valid, error_message = validate_card(card_number, expiry_date, cvv, card_name)
+    
+    if not is_valid:
+        return jsonify({'success': False, 'message': error_message}), 400
+    
+    # Card is valid, proceed with subscription upgrade
     db = get_db()
     cursor = db.cursor()
     
     try:
+        # Update user role to subscriber and subscription status to active
         cursor.execute(
             "UPDATE users SET role = %s, subscription_status = %s WHERE user_id = %s",
             ('subscriber', 'active', session['user_id'])
         )
         db.commit()
         
+        # Update session
         session['role'] = 'subscriber'
         
-        return jsonify({'success': True, 'message': 'Subscription updated'})
+        return jsonify({
+            'success': True, 
+            'message': 'Card validated successfully. Subscription upgraded to Premium!'
+        })
     
     except Exception as e:
         print(f"Update subscription error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        if db:
+            db.rollback()
+        return jsonify({'success': False, 'message': f'Failed to update subscription: {str(e)}'}), 500
     finally:
-        cursor.close()
-        db.close()
+        if cursor:
+            cursor.close()
+        if db:
+            db.close()
 
 @app.route('/api/admin/users', methods=['GET'])
 def admin_get_users():
