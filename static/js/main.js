@@ -1333,8 +1333,9 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
     }
   };
   
-  // Edit user (fullname and email only)
-  window.editUser = (userId, currentFullname, currentEmail) => {
+  // Edit user (fullname and email only) - Make sure it's globally available
+  window.editUser = function(userId, currentFullname, currentEmail) {
+    console.log('Edit user called:', userId, currentFullname, currentEmail);
     const newFullname = prompt('Enter new full name:', currentFullname);
     if (newFullname === null) return;
     
