@@ -1123,6 +1123,65 @@ def makeittalk_save():
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/api/animation/delete/<int:animation_id>', methods=['DELETE'])
+def delete_animation(animation_id):
+    """Delete an animation/faceswap by ID"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        # Verify the animation belongs to the current user
+        cursor.execute(
+            "SELECT animation_id, tool_type, animation_path FROM animations WHERE animation_id = %s AND user_id = %s",
+            (animation_id, session['user_id'])
+        )
+        
+        animation = cursor.fetchone()
+        
+        if not animation:
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Animation not found or access denied'}), 404
+        
+        # Delete the file from server
+        # animation_path in DB is like 'animations/faceswap/filename.png'
+        # Full path is 'static/animations/faceswap/filename.png'
+        file_path = os.path.join('static', animation['animation_path'])
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"Deleted file: {file_path}")
+        except Exception as file_error:
+            print(f"Error deleting file {file_path}: {file_error}")
+            # Continue with database deletion even if file deletion fails
+        
+        # Delete from database
+        cursor.execute("DELETE FROM animations WHERE animation_id = %s AND user_id = %s", 
+                      (animation_id, session['user_id']))
+        db.commit()
+        
+        cursor.close()
+        db.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Animation deleted successfully'
+        })
+    
+    except Exception as e:
+        print(f"Delete animation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 # ============================================
 # FOMD API ENDPOINTS
 # ============================================

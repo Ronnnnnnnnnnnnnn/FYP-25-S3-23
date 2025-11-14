@@ -1299,9 +1299,6 @@
                     progressContainer.classList.remove('show');
                 }, 500);
                 
-                // Automatically save to server
-                saveFaceSwapToServer(imageUrl);
-                
             } catch (error) {
                 console.error('Error:', error);
                 showStatus(`❌ Error: ${error.message}. Please try again.`, 'error');

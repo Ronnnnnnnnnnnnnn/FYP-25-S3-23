@@ -167,7 +167,7 @@
           container.innerHTML = '';
           data.items.forEach(item => {
             const itemCard = document.createElement('div');
-            itemCard.style.cssText = 'background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 15px; overflow: hidden; cursor: pointer; transition: transform 0.3s;';
+            itemCard.style.cssText = 'background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 15px; overflow: hidden; cursor: pointer; transition: transform 0.3s; position: relative;';
             itemCard.onmouseenter = () => itemCard.style.transform = 'scale(1.05)';
             itemCard.onmouseleave = () => itemCard.style.transform = 'scale(1)';
             
@@ -176,12 +176,14 @@
             
             if (toolType === 'faceswap') {
               itemCard.innerHTML = `
+                <button onclick="event.stopPropagation(); deleteAnimation(${item.id})" style="position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">🗑️</button>
                 <img src="${item.file_url}" alt="${toolName}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;">
                 <p style="color: rgba(255, 255, 255, 0.9); font-size: 14px; margin: 0; text-align: center;">${toolName}</p>
                 <p style="color: rgba(255, 255, 255, 0.6); font-size: 12px; margin: 5px 0 0 0; text-align: center;">${new Date(item.created_at).toLocaleDateString()}</p>
               `;
             } else {
               itemCard.innerHTML = `
+                <button onclick="event.stopPropagation(); deleteAnimation(${item.id})" style="position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; z-index: 10; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">🗑️</button>
                 <video src="${item.file_url}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;" muted loop></video>
                 <p style="color: rgba(255, 255, 255, 0.9); font-size: 14px; margin: 0; text-align: center;">${toolName}</p>
                 <p style="color: rgba(255, 255, 255, 0.6); font-size: 12px; margin: 5px 0 0 0; text-align: center;">${new Date(item.created_at).toLocaleDateString()}</p>
@@ -202,6 +204,34 @@
         }
       }
     }
+    
+    // Delete animation function
+    async function deleteAnimation(animationId) {
+      if (!confirm('Are you sure you want to delete this animation? This action cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/animation/delete/${animationId}`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Reload items after deletion
+          loadGeneratedItems();
+        } else {
+          alert('Failed to delete: ' + (data.message || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error deleting animation:', error);
+        alert('Error deleting animation. Please try again.');
+      }
+    }
+    
+    // Make deleteAnimation available globally
+    window.deleteAnimation = deleteAnimation;
     
     // Load items when page loads
     if (document.readyState === 'loading') {
