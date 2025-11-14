@@ -1026,14 +1026,36 @@ def verify_session(session_id):
             db = get_db()
             cursor = db.cursor(dictionary=True)
             
+            # Check if user already has an active subscription (plan change scenario)
+            cursor.execute(
+                """SELECT subscription_end_date FROM users 
+                   WHERE user_id = %s AND subscription_status = 'active' AND subscription_end_date IS NOT NULL""",
+                (user_id,)
+            )
+            existing_user = cursor.fetchone()
+            
             # Calculate end date
             start_date = datetime.now().date()
-            if plan_type == 'monthly':
-                end_date = start_date + timedelta(days=30)
-                amount = 9.99
+            if existing_user and existing_user.get('subscription_end_date'):
+                # Extend from existing end date (plan change)
+                existing_end_date = existing_user['subscription_end_date']
+                if isinstance(existing_end_date, str):
+                    existing_end_date = datetime.strptime(existing_end_date, '%Y-%m-%d').date()
+                
+                if plan_type == 'monthly':
+                    end_date = existing_end_date + timedelta(days=30)
+                    amount = 9.99
+                else:
+                    end_date = existing_end_date + timedelta(days=365)
+                    amount = 99.99
             else:
-                end_date = start_date + timedelta(days=365)
-                amount = 99.99
+                # New subscription - start from today
+                if plan_type == 'monthly':
+                    end_date = start_date + timedelta(days=30)
+                    amount = 9.99
+                else:
+                    end_date = start_date + timedelta(days=365)
+                    amount = 99.99
             
             # Update user to subscriber
             cursor.execute(
@@ -1178,14 +1200,36 @@ def stripe_webhook():
             db = get_db()
             cursor = db.cursor(dictionary=True)
             
+            # Check if user already has an active subscription (plan change scenario)
+            cursor.execute(
+                """SELECT subscription_end_date FROM users 
+                   WHERE user_id = %s AND subscription_status = 'active' AND subscription_end_date IS NOT NULL""",
+                (user_id,)
+            )
+            existing_user = cursor.fetchone()
+            
             # Calculate end date
             start_date = datetime.now().date()
-            if plan_type == 'monthly':
-                end_date = start_date + timedelta(days=30)
-                amount = 9.99
+            if existing_user and existing_user.get('subscription_end_date'):
+                # Extend from existing end date (plan change)
+                existing_end_date = existing_user['subscription_end_date']
+                if isinstance(existing_end_date, str):
+                    existing_end_date = datetime.strptime(existing_end_date, '%Y-%m-%d').date()
+                
+                if plan_type == 'monthly':
+                    end_date = existing_end_date + timedelta(days=30)
+                    amount = 9.99
+                else:
+                    end_date = existing_end_date + timedelta(days=365)
+                    amount = 99.99
             else:
-                end_date = start_date + timedelta(days=365)
-                amount = 99.99
+                # New subscription - start from today
+                if plan_type == 'monthly':
+                    end_date = start_date + timedelta(days=30)
+                    amount = 9.99
+                else:
+                    end_date = start_date + timedelta(days=365)
+                    amount = 99.99
             
             # Update user
             cursor.execute(
@@ -1199,12 +1243,23 @@ def stripe_webhook():
                 (session['subscription'], plan_type, end_date, user_id)
             )
             
+            # Get the start_date based on whether this is a new subscription or plan change
+            if existing_user and existing_user.get('subscription_end_date'):
+                # Plan change - use existing end_date as the new start_date
+                if isinstance(existing_user['subscription_end_date'], str):
+                    subscription_start_date = datetime.strptime(existing_user['subscription_end_date'], '%Y-%m-%d').date()
+                else:
+                    subscription_start_date = existing_user['subscription_end_date']
+            else:
+                # New subscription - use today
+                subscription_start_date = datetime.now().date()
+            
             # Create subscription record
             cursor.execute(
                 """INSERT INTO subscriptions 
                    (user_id, plan_type, start_date, end_date, payment_status, amount, stripe_subscription_id)
                    VALUES (%s, %s, %s, %s, 'completed', %s, %s)""",
-                (user_id, plan_type, start_date, end_date, amount, session['subscription'])
+                (user_id, plan_type, subscription_start_date, end_date, amount, session['subscription'])
             )
             
             db.commit()
