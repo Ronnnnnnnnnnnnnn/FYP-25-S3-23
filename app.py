@@ -253,25 +253,20 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
             if not os.path.exists(abs_video_path):
                 raise Exception(f"Video file not found: {abs_video_path}")
             
-            # The Gradio client may need file objects or file handles
-            # Try opening files and using file handles
-            # For newer versions of gradio_client, we might need to use file objects
-            try:
-                from gradio_client.utils import handle_file
-                # Use handle_file if available
-                image_file_data = handle_file(abs_image_path)
-                video_file_data = handle_file(abs_video_path)
-                print("Using handle_file utility for file processing")
-            except ImportError:
-                # handle_file not available, use file paths directly
-                image_file_data = abs_image_path
-                video_file_data = abs_video_path
-                print("Using file paths directly (handle_file not available)")
-            except Exception as handle_err:
-                # If handle_file fails, fall back to paths
-                print(f"handle_file failed: {handle_err}, using file paths")
-                image_file_data = abs_image_path
-                video_file_data = abs_video_path
+            # The Gradio client expects FileData objects in format: {'path': '...', 'type': 'gradio.FileData'}
+            # However, based on the error, it seems the client should handle file paths automatically
+            # But it's not working. Let's try multiple approaches.
+            
+            print("Preparing files for Gradio client...")
+            
+            # Method 1: Try using file paths directly (client should handle upload)
+            # This is what should work according to Gradio docs
+            image_file_data = abs_image_path
+            video_file_data = abs_video_path
+            print(f"Using file paths: Image={abs_image_path}, Video={abs_video_path}")
+            
+            # Note: The Gradio client should automatically upload files when given paths
+            # If that doesn't work, we'll try constructing FileData dicts in the prediction methods
             
             # View API to understand the endpoint structure
             api_endpoint = None
@@ -312,26 +307,39 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
             # Add common variations
             endpoint_names_to_try.extend(["/predict", "predict", 0])  # 0 means first endpoint
             
-            # Method 1: Try with the discovered endpoint or common names
-            # Use file_data (either from handle_file or file paths)
+            # Method 1: Try with file paths (client should auto-upload)
             for endpoint_name in endpoint_names_to_try:
                 try:
-                    print(f"Trying endpoint: {endpoint_name} with file_data")
+                    print(f"Trying endpoint: {endpoint_name} with file paths")
                     if endpoint_name == 0:
-                        # Use endpoint index
                         result = client.predict(image_file_data, video_file_data)
                     else:
-                        # Use api_name
                         result = client.predict(
-                            image_file_data,  # First input: source_image
-                            video_file_data,  # Second input: driving_video
+                            image_file_data,
+                            video_file_data,
                             api_name=endpoint_name
                         )
                     print(f"✅ Success with endpoint: {endpoint_name}")
                     break
                 except Exception as e1:
                     last_error = e1
-                    print(f"Failed with endpoint {endpoint_name}: {str(e1)[:200]}")
+                    error_str = str(e1)
+                    print(f"Failed with endpoint {endpoint_name}: {error_str[:200]}")
+                    
+                    # If error mentions ImageData/FileData, try constructing dict format
+                    if "ImageData" in error_str or "FileData" in error_str:
+                        print("Error suggests FileData format needed, trying dict format...")
+                        try:
+                            image_dict = {"path": abs_image_path, "type": "gradio.FileData"}
+                            video_dict = {"path": abs_video_path, "type": "gradio.FileData"}
+                            if endpoint_name == 0:
+                                result = client.predict(image_dict, video_dict)
+                            else:
+                                result = client.predict(image_dict, video_dict, api_name=endpoint_name)
+                            print(f"✅ Success with FileData dict format for endpoint: {endpoint_name}")
+                            break
+                        except Exception as dict_err:
+                            print(f"FileData dict format also failed: {str(dict_err)[:200]}")
                     continue
             
             # Method 2: Try without api_name (uses default/first endpoint)
