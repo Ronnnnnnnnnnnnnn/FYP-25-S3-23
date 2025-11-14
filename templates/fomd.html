@@ -4,7 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FOMD - First Order Motion Model</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js"></script>
     <style>
+        :root {
+            --primary: #111439;
+            --secondary: #F8F8F9;
+            --accent: #1a1d4a;
+            --success: #10b981;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,65 +23,1343 @@
         }
         
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            background: #0a0a0a;
+            color: white;
             min-height: 100vh;
         }
-        
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px 20px;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        h1 {
-            font-size: 2.5em;
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            font-size: 1.1em;
-            color: #666;
-        }
-        
-        .iframe-container {
-            width: 100%;
-            height: calc(100vh - 140px);
-            padding: 20px;
-        }
-        
-        iframe {
+
+        /* Animated Background */
+        .animated-background {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            border: none;
+            z-index: 0;
+            background: linear-gradient(45deg, #F8F8F9, #111439, #1a1d4a, #0d0f2e);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: floatParticle linear infinite;
+        }
+
+        @keyframes floatParticle {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.3;
+            animation: floatShape 20s ease-in-out infinite;
+        }
+
+        @keyframes floatShape {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(100px, -100px) scale(1.2); }
+            66% { transform: translate(-50px, 50px) scale(0.8); }
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 1.25rem 0;
+            animation: slideDown 0.8s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+            cursor: default;
+        }
+
+        .logo-icon {
+            font-size: 2.5rem;
+            animation: rotate3d 3s ease-in-out infinite;
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
+            font-style: normal;
+            font-weight: normal;
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1;
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .logo-text {
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: white;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: inline-block;
+            line-height: 1;
+            vertical-align: middle;
+        }
+
+        @keyframes rotate3d {
+            0%, 100% { transform: rotateY(0deg); }
+            50% { transform: rotateY(180deg); }
+        }
+
+        .navbar ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .navbar ul li {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+        }
+
+        .navbar a:hover,
+        .navbar a.active {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Logout button styling - override link styles */
+        .navbar a.nav-btn.btn.btn-primary {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: linear-gradient(135deg, #111439 0%, #1a1d4a 100%);
+            color: white !important;
+            padding: 0.75rem 1.5rem !important;
+            font-size: 1rem !important;
+            font-weight: 700 !important;
+            box-shadow: 0 10px 30px rgba(17, 20, 57, 0.4);
+            border-radius: 50px;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            text-decoration: none;
+            margin: 0;
+            vertical-align: middle;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .navbar a.nav-btn.btn.btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(17, 20, 57, 0.6);
+        }
+
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem 3rem;
+            max-width: 800px;
+            margin: 0 auto;
+            animation: fadeInUp 1s ease;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientText 5s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes gradientText {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 1s ease 0.3s both;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            background-size: 200% 100%;
+            animation: gradientSlide 3s ease infinite;
+        }
+
+        @keyframes gradientSlide {
+            0%, 100% { background-position: 0% 0%; }
+            50% { background-position: 100% 0%; }
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            box-shadow: 0 10px 30px rgba(17, 20, 57, 0.4);
+            animation: floatIcon 3s ease-in-out infinite;
+        }
+
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .card-title h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientText 5s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        .card-title p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1rem;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .upload-box {
+            border: 3px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-box::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(17, 20, 57, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .upload-box:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary);
+            background: rgba(17, 20, 57, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(17, 20, 57, 0.3);
+        }
+
+        .upload-box.active {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: bounce 2s ease-in-out infinite;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .upload-text {
+            color: white;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-subtext {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .file-name {
+            margin-top: 1rem;
+            color: var(--success);
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
         }
         
+        input[type="file"] {
+            display: none;
+        }
+        
+        .preview-container {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .preview-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-top: 10px;
+        }
+        
+        .video-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 1.25rem 2.5rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            margin-top: 2rem;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 400px;
+            height: 400px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 10px 30px rgba(17, 20, 57, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(17, 20, 57, 0.6);
+        }
+
+        .btn-primary:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 1001;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-online { 
+            background: rgba(16, 185, 129, 0.9); 
+            color: white; 
+        }
+        .status-offline { 
+            background: rgba(239, 68, 68, 0.9); 
+            color: white; 
+        }
+        
+        .progress-container {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            background-size: 200% 100%;
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 100px;
+            position: relative;
+            animation: gradientSlide 3s ease infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        #status {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            border-radius: 15px;
+            display: none;
+            font-weight: 600;
+        }
+
+        #status.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .success { 
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: white;
+        }
+        .error { 
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: white;
+        }
+        .info { 
+            background: rgba(249, 115, 22, 0.2);
+            border: 1px solid rgba(249, 115, 22, 0.4);
+            color: white;
+        }
+        
+        .result-section {
+            margin-top: 3rem;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+            animation: fadeInUp 1s ease;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .result-header h3 {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .video-container {
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .video-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary), var(--accent));
+            border-radius: 22px;
+            z-index: -1;
+            animation: rotate 3s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        video {
+            width: 100%;
+            display: block;
+            border-radius: 20px;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            padding: 1.25rem 2.5rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.15rem;
+            font-weight: 700;
+            width: 100%;
+            margin-top: 2rem;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 40px;
+            position: relative;
+            z-index: 10;
+        }
+
         @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8em;
-            }
-            .subtitle {
-                font-size: 1em;
-            }
-            .header {
-                padding: 20px 10px;
-            }
+            .hero h1 { font-size: 2.5rem; }
+            .card { padding: 2rem 1.5rem; }
+            .upload-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🎬 FOMD Animation Studio</h1>
-        <p class="subtitle">Transform static images into animated videos using AI</p>
+    <div class="animated-background"></div>
+    <div class="particles" id="particles"></div>
+    <div class="shapes">
+        <div class="shape" style="width: 300px; height: 300px; background: rgba(17, 20, 57, 0.2); top: 10%; left: 5%;"></div>
+        <div class="shape" style="width: 200px; height: 200px; background: rgba(248, 248, 249, 0.3); top: 50%; right: 10%;"></div>
     </div>
-    
-    <div class="iframe-container">
-        <iframe src="https://Tc12345-fomd.hf.space" allow="camera; microphone; clipboard-write"></iframe>
+
+    <div class="content">
+        <!-- Navbar -->
+    <nav class="navbar">
+            <div class="nav-container">
+                <div class="logo">
+                    <span class="logo-text">FirstMod-AI</span>
+                </div>
+                <ul class="nav-links">
+            {% if user_role %}
+                {% if user_role == 'user' %}
+                    <li><a href="/user">Dashboard</a></li>
+                {% elif user_role == 'subscriber' %}
+                    <li><a href="/subscriber">Dashboard</a></li>
+                {% elif user_role == 'admin' %}
+                    <li><a href="/admin">Dashboard</a></li>
+                {% endif %}
+                {% if user_role == 'user' or user_role == 'subscriber' %}
+                <li><a href="/faceswap">Face Swap</a></li>
+                {% endif %}
+                <li><a href="/fomd" class="active">FOMD</a></li>
+                <li><a href="/makeittalk">MakeItTalk</a></li>
+                <li><a href="#" onclick="logout()" class="nav-btn btn btn-primary">Logout</a></li>
+            {% else %}
+                <li><a href="/">Home</a></li>
+                <li><a href="/fomd" class="active">FOMD</a></li>
+                <li><a href="/makeittalk">MakeItTalk</a></li>
+                <li><a href="/login">Login</a></li>
+            {% endif %}
+        </ul>
+            </div>
+    </nav>
+
+    <div id="connectionStatus" class="connection-status status-offline">
+        ⏳ Connecting...
     </div>
+
+        <div class="hero">
+            <h1>First Order Motion Model</h1>
+            <p>Animate faces from photos using driving videos with AI-powered motion transfer</p>
+    </div>
+
+    <div class="container">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎬</div>
+                    <div class="card-title">
+                        <h2>Create Face Animation</h2>
+                        <p>Upload your source image and driving video to get started</p>
+                    </div>
+                </div>
+
+                <div class="upload-grid">
+                    <div class="upload-box" id="imageBox" onclick="document.getElementById('imageInput').click()">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Source Image</div>
+                        <div class="upload-subtext">JPG, PNG • Portrait to animate</div>
+                        <div class="file-name" id="imageName"></div>
+            <input type="file" id="imageInput" accept="image/*" onchange="previewImage(this)">
+            <div class="preview-container" id="imagePreviewContainer">
+                <img id="imagePreview" class="image-preview" alt="Image preview">
+            </div>
+        </div>
+        
+                    <div class="upload-box" id="videoBox" onclick="document.getElementById('videoInput').click()">
+                        <div class="upload-icon">🎥</div>
+                        <div class="upload-text">Driving Video</div>
+                        <div class="upload-subtext">MP4, MOV • Movements to apply</div>
+                        <div class="file-name" id="videoName"></div>
+            <input type="file" id="videoInput" accept="video/*" onchange="previewVideo(this)">
+            <div class="preview-container" id="videoPreviewContainer">
+                <video id="videoPreview" class="video-preview" controls></video>
+                        </div>
+            </div>
+        </div>
+        
+                <button class="btn btn-primary" onclick="createAnimation()" id="submitBtn">
+                    <span>🚀</span>
+                    <span>Create Animation</span>
+        </button>
+        
+        <div class="progress-container" id="progressContainer">
+                    <div class="progress-label">
+                        <span id="progressText">Processing...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div class="result-section" id="resultSection">
+                    <div class="result-header">
+                        <span style="font-size: 2.5rem;">🎉</span>
+                        <h3>Your Animated Result</h3>
+                    </div>
+                    <div class="video-container">
+                        <video id="resultVideo" controls autoplay loop></video>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
+                        <button onclick="saveToDashboard()" class="btn btn-primary" id="saveBtn" style="flex: 1; min-width: 200px;">
+                            <span>💾</span>
+                            <span>Save to Dashboard</span>
+                        </button>
+                        <button onclick="downloadVideo()" class="download-btn" style="flex: 1; min-width: 200px;">
+                            <span>📥</span>
+                            <span>Download Video</span>
+            </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>&copy; 2025 FirstMod-AI. All Rights Reserved.</p>
+        </div>
+    </div>
+
+    <script type="module">
+        // ═══════════════════════════════════════════════════════════
+        // REPLACE WITH YOUR HUGGING FACE USERNAME!
+        // ═══════════════════════════════════════════════════════════
+        const YOUR_USERNAME = "Tc12345";  // ← Your HF username
+        const SPACE_NAME = "fomd";  // ← Your FOMD space name
+        const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
+        // ═══════════════════════════════════════════════════════════
+
+        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+
+        window.gradioClient = client;
+        window.app = null;
+        
+        let imageFile = null;
+        let videoFile = null;
+        let resultBlob = null;
+        let savedVideoUrl = null;
+        let videoFilename = 'fomd_animation.mp4';
+        
+        // Create particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            if (!container) return;
+            for (let i = 0; i < 40; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 4 + 2;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * window.innerWidth + 'px';
+                particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                particle.style.animationDelay = Math.random() * 5 + 's';
+                container.appendChild(particle);
+            }
+        }
+        createParticles();
+        
+        // Function to try connecting with different space name formats
+        async function tryConnect(spacePath) {
+            try {
+                console.log('Attempting to connect to:', spacePath);
+                const app = await window.gradioClient(spacePath);
+                console.log('✅ Connected successfully!');
+                return app;
+            } catch (error) {
+                console.log('Failed to connect to:', spacePath, error.message);
+                throw error;
+            }
+        }
+        
+        // Initialize client (using same pattern as makeittalk)
+        async function initClient() {
+            if (!window.app) {
+                try {
+                    console.log('🔍 Checking connection to:', SPACE_URL);
+                    
+                    const statusDiv = document.getElementById('connectionStatus');
+                    if (statusDiv) {
+                        statusDiv.textContent = '⏳ Connecting...';
+                        statusDiv.className = 'connection-status status-offline';
+                    }
+                    
+                    // Try different space name variations
+                    const spaceVariations = [
+                        SPACE_URL,
+                        `${YOUR_USERNAME}/${SPACE_NAME.toLowerCase()}`,
+                        `${YOUR_USERNAME}/${SPACE_NAME.toUpperCase()}`,
+                    ];
+                    
+                    let connected = false;
+                    let lastError = null;
+                    
+                    for (const spacePath of spaceVariations) {
+                        try {
+                            window.app = await tryConnect(spacePath);
+                            connected = true;
+                            if (statusDiv) {
+                                statusDiv.textContent = '✅ Connected to API';
+                                statusDiv.className = 'connection-status status-online';
+                            }
+                            console.log(`✅ Successfully connected to: ${spacePath}`);
+                            break;
+                        } catch (error) {
+                            lastError = error;
+                            console.log(`❌ Failed to connect to: ${spacePath}`);
+                        }
+                    }
+                    
+                    if (!connected) {
+                        console.error('❌ All connection attempts failed');
+                        if (statusDiv) {
+                            statusDiv.textContent = '❌ API Offline';
+                            statusDiv.className = 'connection-status status-offline';
+                        }
+                        throw lastError || new Error('Connection failed');
+                    }
+                } catch (error) {
+                    console.error("❌ Failed to connect:", error);
+                    const statusDiv = document.getElementById('connectionStatus');
+                    if (statusDiv) {
+                        statusDiv.textContent = '❌ API Offline';
+                        statusDiv.className = 'connection-status status-offline';
+                    }
+                    showStatus("Failed to connect to server", "error");
+                    throw error;
+                }
+            }
+            return window.app;
+        }
+        
+        // Preview functions
+        window.previewImage = function(input) {
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const preview = document.getElementById('imagePreview');
+            const imageBox = document.getElementById('imageBox');
+            const imageName = document.getElementById('imageName');
+            
+            if (input.files && input.files[0]) {
+                imageFile = input.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.add('show');
+                    previewContainer.classList.add('active');
+                    imageName.textContent = '✓ ' + imageFile.name;
+                    imageBox.classList.add('active');
+                    checkReadyToAnimate();
+                };
+                
+                reader.readAsDataURL(imageFile);
+            } else {
+                imageFile = null;
+                previewContainer.classList.remove('active');
+                preview.classList.remove('show');
+                imageName.textContent = '';
+                imageBox.classList.remove('active');
+                checkReadyToAnimate();
+            }
+        };
+        
+        window.previewVideo = function(input) {
+            const previewContainer = document.getElementById('videoPreviewContainer');
+            const videoPreview = document.getElementById('videoPreview');
+            const videoBox = document.getElementById('videoBox');
+            const videoName = document.getElementById('videoName');
+            
+            if (input.files && input.files[0]) {
+                videoFile = input.files[0];
+                const url = URL.createObjectURL(videoFile);
+                videoPreview.src = url;
+                videoPreview.classList.add('show');
+                previewContainer.classList.add('active');
+                videoName.textContent = '✓ ' + videoFile.name;
+                videoBox.classList.add('active');
+                checkReadyToAnimate();
+            } else {
+                videoFile = null;
+                previewContainer.classList.remove('active');
+                videoPreview.classList.remove('show');
+                if (videoPreview.src) {
+                    URL.revokeObjectURL(videoPreview.src);
+                }
+                videoPreview.src = '';
+                videoName.textContent = '';
+                videoBox.classList.remove('active');
+                checkReadyToAnimate();
+            }
+        };
+
+        function checkReadyToAnimate() {
+            const btn = document.getElementById('submitBtn');
+            if (btn) {
+                btn.disabled = !(imageFile && videoFile);
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.innerHTML = message;
+            status.className = `${type} show`;
+        }
+
+        window.showStatus = showStatus;
+
+        // Logout function
+        window.logout = async function() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/';
+            }
+        };
+
+        // Check connection on load
+        window.addEventListener('load', async () => {
+            console.log("🚀 Client ready");
+            console.log('🔍 Checking connection to:', SPACE_URL);
+            
+            const statusDiv = document.getElementById('connectionStatus');
+            if (statusDiv) {
+            statusDiv.textContent = '⏳ Connecting...';
+            statusDiv.className = 'connection-status status-offline';
+            }
+            
+            // Initialize client
+            await initClient();
+        });
+
+        window.createAnimation = async function() {
+            if (!imageFile || !videoFile) {
+                showStatus('❌ Please upload both image and video files', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const progressPercent = document.getElementById('progressPercent');
+            const resultSection = document.getElementById('resultSection');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span><span>Processing...</span>';
+            
+            // Reset UI
+            resultSection.classList.remove('show');
+            progressContainer.classList.add('show');
+            progressFill.style.width = '0%';
+            progressFill.textContent = '0%';
+            if (progressPercent) progressPercent.textContent = '0%';
+            progressText.textContent = 'Initializing...';
+            showStatus("Initializing...", "loading");
+            
+            try {
+                // Step 1: Connect to Gradio
+                console.log('Step 1: Connecting to Gradio');
+                await initClient();
+                
+                if (!window.app) {
+                    throw new Error("Failed to connect to Gradio API. Please refresh.");
+                }
+                
+                updateProgress(10);
+                
+                // Step 2: Upload image file
+                console.log('Step 2: Uploading image file');
+                showStatus("📤 Uploading image...", "loading");
+                
+                let imageHandle;
+                try {
+                    console.log('Image file details:', {
+                        name: imageFile.name,
+                        type: imageFile.type,
+                        size: imageFile.size
+                    });
+                    
+                    imageHandle = await window.app.upload_file(imageFile);
+                    console.log('✅ Image uploaded successfully:', imageHandle);
+                } catch (error) {
+                    console.log('❌ Image upload failed:', error.message);
+                    throw new Error('Failed to upload image: ' + error.message);
+                }
+                
+                updateProgress(30);
+                
+                // Step 3: Upload video file
+                console.log('Step 3: Uploading video file');
+                showStatus("📤 Uploading video...", "loading");
+                
+                let videoHandle;
+                try {
+                    console.log('Video file details:', {
+                        name: videoFile.name,
+                        type: videoFile.type,
+                        size: videoFile.size
+                    });
+                    
+                    videoHandle = await window.app.upload_file(videoFile);
+                    console.log('✅ Video uploaded successfully:', videoHandle);
+                } catch (error) {
+                    console.log('❌ Video upload failed:', error.message);
+                    throw new Error('Failed to upload video: ' + error.message);
+                }
+                
+                updateProgress(50);
+                
+                // Step 4: Call the animation function
+                console.log('Step 4: Calling Gradio predict function');
+                console.log('Sending parameters:', {
+                    source_image: imageHandle,
+                    driving_video: videoHandle
+                });
+                showStatus("🎬 Creating animation... This may take 1-3 minutes", "loading");
+                
+                // THE KEY FIX: Use named parameters as an object
+                const result = await window.app.predict("/predict", {
+                    source_image: imageHandle,
+                    driving_video: videoHandle
+                });
+                
+                console.log('✅ Predict completed:', result);
+                updateProgress(90);
+                
+                // Step 5: Extract video URL from result
+                showStatus("📥 Downloading result...", "loading");
+                
+                let videoUrl = null;
+                if (result && result.data && result.data[0]) {
+                    videoUrl = result.data[0];
+                } else if (result && result.data && result.data.video) {
+                    videoUrl = result.data.video;
+                } else if (typeof result === 'object' && result.url) {
+                    videoUrl = result.url;
+                } else if (result && result[0]) {
+                    videoUrl = result[0];
+                } else if (typeof result === 'string') {
+                    videoUrl = result;
+                }
+                
+                if (!videoUrl) {
+                    console.log('❌ No video URL found in result');
+                    throw new Error('No video URL found in result');
+                }
+                
+                console.log('✅ Video URL extracted:', videoUrl);
+                
+                // Make URL absolute if needed
+                if (!videoUrl.startsWith('http')) {
+                    videoUrl = new URL(videoUrl, `https://huggingface.co/spaces/${SPACE_URL}`).href;
+                    console.log('Converted to absolute URL:', videoUrl);
+                }
+                
+                // Step 6: Fetch and display result
+                const response = await fetch(videoUrl);
+                resultBlob = await response.blob();
+                
+                const resultUrl = URL.createObjectURL(resultBlob);
+                const video = document.getElementById('resultVideo');
+                video.src = resultUrl;
+                video.load();
+                
+                updateProgress(100);
+                showStatus("✅ Animation complete!", "success");
+                
+                resultSection.classList.add('show');
+                resultSection.scrollIntoView({ behavior: 'smooth' });
+                
+                // Automatically save to server
+                saveFOMDToServer(resultBlob);
+                
+                // Hide status after 3 seconds
+                setTimeout(() => {
+                    const status = document.getElementById('status');
+                    if (status) status.classList.remove('show');
+                }, 3000);
+                
+                console.log('✅ All steps completed successfully!');
+                
+            } catch (error) {
+                console.log('❌ Error occurred:', error.message);
+                console.error("Full error:", error);
+                showStatus("❌ Error: " + error.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🚀</span><span>Create Animation</span>';
+                setTimeout(() => {
+                    progressContainer.classList.remove('show');
+                }, 2000);
+            }
+        };
+
+        function updateProgress(percent) {
+            const progressFill = document.getElementById('progressFill');
+            const progressPercent = document.getElementById('progressPercent');
+            if (progressFill) {
+                progressFill.style.width = percent + '%';
+                progressFill.textContent = percent + '%';
+            }
+            if (progressPercent) {
+                progressPercent.textContent = percent + '%';
+            }
+        }
+
+        // Save to server function
+        async function saveFOMDToServer(videoBlob) {
+            try {
+                const reader = new FileReader();
+                
+                reader.onloadend = async function() {
+                    const base64data = reader.result;
+                    
+                    try {
+                        const saveResponse = await fetch('/api/fomd/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                video_data: base64data
+                            })
+                        });
+                        
+                        const saveData = await saveResponse.json();
+                        if (saveData.success) {
+                            console.log('✅ FOMD animation saved to server:', saveData.video_url);
+                            showStatus('✅ Animation saved to your dashboard!', 'success');
+                        } else {
+                            console.error('Failed to save:', saveData.message);
+                        }
+                    } catch (error) {
+                        console.error('Error saving to server:', error);
+                    }
+                };
+                
+                reader.readAsDataURL(videoBlob);
+            } catch (error) {
+                console.error('Error converting video:', error);
+            }
+        }
+        
+        // Save to Dashboard function
+        window.saveToDashboard = async function() {
+            if (!resultBlob) {
+                showStatus('❌ No video to save!', 'error');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span>⏳</span><span>Saving...</span>';
+            
+            try {
+                const reader = new FileReader();
+                
+                reader.onloadend = async function() {
+                    const base64data = reader.result;
+                    
+                    try {
+                        const saveResponse = await fetch('/api/fomd/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                video_data: base64data
+                            })
+                        });
+                        
+                        const saveData = await saveResponse.json();
+                        if (saveData.success) {
+                            showStatus('✅ Animation saved to your dashboard!', 'success');
+                            saveBtn.innerHTML = '<span>✅</span><span>Saved!</span>';
+                            setTimeout(() => {
+                                saveBtn.innerHTML = originalText;
+                                saveBtn.disabled = false;
+                            }, 2000);
+                        } else {
+                            showStatus('❌ Failed to save: ' + saveData.message, 'error');
+                            saveBtn.innerHTML = originalText;
+                            saveBtn.disabled = false;
+                        }
+                    } catch (error) {
+                        console.error('Error saving to server:', error);
+                        showStatus('❌ Error saving to server. Please try again.', 'error');
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.disabled = false;
+                    }
+                };
+                
+                reader.readAsDataURL(resultBlob);
+            } catch (error) {
+                console.error('Error converting video:', error);
+                showStatus('❌ Error processing video. Please try again.', 'error');
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
+        };
+        
+        window.downloadVideo = function() {
+            if (!resultBlob) {
+                alert('❌ No video available to download!');
+                return;
+            }
+            
+            const url = URL.createObjectURL(resultBlob);
+                const a = document.createElement('a');
+            a.href = url;
+            a.download = 'animated_face_' + Date.now() + '.mp4';
+                document.body.appendChild(a);
+                a.click();
+                    document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+    </script>
 </body>
 </html>
