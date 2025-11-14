@@ -216,6 +216,64 @@
         </div>
       </section>
 
+      <!-- Pricing Modal -->
+      <div id="pricingModal" class="pricing-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; overflow-y: auto; backdrop-filter: blur(10px);">
+        <div class="pricing-modal-content" style="max-width: 1000px; margin: 40px auto; padding: 40px; background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(20px); border-radius: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); position: relative;">
+          <button onclick="closePricingModal()" style="position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.1); border: none; color: white; font-size: 2rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">&times;</button>
+          
+          <div class="pricing-header" style="text-align: center; margin-bottom: 40px;">
+            <h1 style="color: white; font-size: 2.5em; margin-bottom: 10px; background: linear-gradient(135deg, #fff 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">💳 Upgrade to Premium</h1>
+            <p style="color: rgba(255, 255, 255, 0.8); font-size: 1.1em;">Unlock exclusive features: FOMD and MakeItTalk animations</p>
+          </div>
+
+          <div class="info-box" style="background: rgba(17, 20, 57, 0.1); border-left: 4px solid #667eea; padding: 20px; margin-bottom: 30px; border-radius: 8px;">
+            <h4 style="color: white; margin-bottom: 10px;">✨ Premium Features</h4>
+            <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6;">
+              By subscribing, you'll get access to advanced face animation features including 
+              First Order Motion Model (FOMD) and MakeItTalk. Create stunning talking portraits 
+              and animated faces with professional quality.
+            </p>
+          </div>
+
+          <!-- Subscription Plans -->
+          <div class="plans-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 40px;">
+            <div class="plan-card" data-plan="monthly" onclick="selectPricingPlan('monthly')" style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 3px solid rgba(255, 255, 255, 0.2); border-radius: 15px; padding: 30px; text-align: center; transition: all 0.3s ease; cursor: pointer; position: relative; color: white;">
+              <h3 style="color: white; font-size: 1.8em; margin-bottom: 10px;">Monthly Plan</h3>
+              <div class="plan-price" style="font-size: 2.5em; font-weight: bold; color: white; margin: 20px 0;">$9.99<span style="font-size: 0.5em; color: rgba(255, 255, 255, 0.7);">/month</span></div>
+              <ul class="plan-features" style="list-style: none; padding: 0; margin: 20px 0; text-align: left;">
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ Access to FOMD animations</li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ Access to MakeItTalk</li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ Unlimited animations</li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ High-quality rendering</li>
+                <li style="padding: 10px 0;">✓ Priority support</li>
+              </ul>
+            </div>
+
+            <div class="plan-card selected" data-plan="yearly" onclick="selectPricingPlan('yearly')" style="background: rgba(17, 20, 57, 0.1); backdrop-filter: blur(10px); border: 3px solid #111439; border-radius: 15px; padding: 30px; text-align: center; transition: all 0.3s ease; cursor: pointer; position: relative; color: white; box-shadow: 0 10px 30px rgba(17, 20, 57, 0.4);">
+              <div style="position: absolute; top: -10px; right: 20px; background: #111439; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold;">BEST VALUE</div>
+              <h3 style="color: white; font-size: 1.8em; margin-bottom: 10px;">Yearly Plan</h3>
+              <div class="plan-price" style="font-size: 2.5em; font-weight: bold; color: white; margin: 20px 0;">$99.99<span style="font-size: 0.5em; color: rgba(255, 255, 255, 0.7);">/year</span></div>
+              <div style="color: #10b981; font-weight: bold; margin-bottom: 10px;">Save $19.89 (16% off)</div>
+              <ul class="plan-features" style="list-style: none; padding: 0; margin: 20px 0; text-align: left;">
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ Access to FOMD animations</li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ Access to MakeItTalk</li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ Unlimited animations</li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ High-quality rendering</li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">✓ Priority support</li>
+                <li style="padding: 10px 0;">✓ Early access to new features</li>
+              </ul>
+            </div>
+          </div>
+
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="{{ url_for('login_page') }}" class="btn btn-primary" style="padding: 18px 40px; font-size: 1.2rem; text-decoration: none; display: inline-block;">
+              Get Started
+            </a>
+            <p style="color: rgba(255, 255, 255, 0.7); margin-top: 20px; font-size: 14px;">🔒 Secured by Stripe - Your payment information is encrypted and secure</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Why Choose FirstMod AI Section -->
       <section id="features">
         <div class="section-header">
