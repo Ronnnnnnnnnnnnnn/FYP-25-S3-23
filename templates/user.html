@@ -65,7 +65,13 @@
           <div style="text-align: center; margin-bottom: 20px;">
             <p><strong>Username:</strong> <span id="username">John Doe</span></p>
             <p><strong>Email:</strong> <span id="email">johndoe@email.com</span></p>
-            <p><strong>Subscription:</strong> <span class="free-badge">Not Active</span></p>
+            <p><strong>Subscription:</strong> 
+              {% if subscription_status == 'active' %}
+                <span class="premium-badge">Premium Active</span>
+              {% else %}
+                <span class="free-badge">Not Active</span>
+              {% endif %}
+            </p>
             <p><strong>Member Since:</strong> <span>November 2025</span></p>
             <p class="profile-bio" style="margin-top: 15px; color: rgba(255, 255, 255, 0.8);">Passionate about building delightful AI experiences. Loves design, coffee, and clean code.</p>
           </div>
@@ -154,6 +160,43 @@
   </script>
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   <script>
+    // Refresh session on page load (in case subscription was just activated)
+    // This ensures the page shows correct subscription status
+    window.addEventListener('load', function() {
+      fetch('/api/user/refresh-session', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            console.log('Session refreshed on page load:', data);
+            // If role changed to subscriber, redirect
+            if (data.role === 'subscriber' || data.role === 'admin') {
+              // Check if subscription status changed
+              const subscriptionElement = document.querySelector('.free-badge, .premium-badge');
+              if (data.subscription_status === 'active' && subscriptionElement) {
+                // Update the subscription badge
+                if (subscriptionElement.classList.contains('free-badge')) {
+                  subscriptionElement.className = 'premium-badge';
+                  subscriptionElement.textContent = 'Premium Active';
+                }
+                
+                // Redirect after a moment to show updated status
+                setTimeout(() => {
+                  window.location.href = '/subscriber';
+                }, 1000);
+              } else if (data.subscription_status === 'active') {
+                // Redirect immediately if subscription is active
+                setTimeout(() => {
+                  window.location.href = '/subscriber';
+                }, 500);
+              }
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Session refresh error on page load:', err);
+        });
+    });
+    
     // Load generated items
     async function loadGeneratedItems() {
       try {

@@ -117,7 +117,7 @@
       statusMessage.style.display = 'none';
       loadingMessage.style.display = 'block';
 
-      // Verify session
+      // Verify session and refresh user session
       fetch(`/api/stripe/verify-session/${sessionId}`)
         .then(res => res.json())
         .then(data => {
@@ -128,15 +128,57 @@
             statusMessage.style.display = 'block';
             continueBtn.style.display = 'inline-block';
             
-            // Update session if needed
-            setTimeout(() => {
-              window.location.href = '/subscriber';
-            }, 3000);
+            console.log('Payment verified. Role:', data.role, 'Status:', data.subscription_status);
+            
+            // Refresh session one more time to ensure it's up to date
+            fetch('/api/user/refresh-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            })
+            .then(res => res.json())
+            .then(refreshData => {
+              console.log('Session refreshed:', refreshData);
+              
+              // Redirect based on role
+              const redirectUrl = (refreshData.role === 'subscriber' || refreshData.role === 'admin') 
+                ? '/subscriber' 
+                : '/user';
+              
+              setTimeout(() => {
+                window.location.href = redirectUrl;
+              }, 2000);
+            })
+            .catch(err => {
+              console.error('Session refresh error:', err);
+              // Still redirect even if refresh fails
+              const redirectUrl = (data.role === 'subscriber' || data.role === 'admin') 
+                ? '/subscriber' 
+                : '/user';
+              
+              setTimeout(() => {
+                window.location.href = redirectUrl;
+              }, 2000);
+            });
           } else {
             statusMessage.textContent = 'Payment verification pending. Please wait a moment or contact support if this persists.';
             statusMessage.style.display = 'block';
             continueBtn.style.display = 'inline-block';
             continueBtn.textContent = 'Go to Dashboard';
+            
+            // Still try to refresh session and redirect
+            fetch('/api/user/refresh-session', { method: 'POST' })
+              .then(() => {
+                setTimeout(() => {
+                  window.location.href = '/user';
+                }, 3000);
+              })
+              .catch(() => {
+                setTimeout(() => {
+                  window.location.href = '/user';
+                }, 3000);
+              });
           }
         })
         .catch(err => {
@@ -146,15 +188,36 @@
           statusMessage.style.display = 'block';
           continueBtn.style.display = 'inline-block';
           
-          setTimeout(() => {
-            window.location.href = '/subscriber';
-          }, 2000);
+          // Try to refresh session before redirecting
+          fetch('/api/user/refresh-session', { method: 'POST' })
+            .then(() => {
+              setTimeout(() => {
+                window.location.href = '/user';
+              }, 2000);
+            })
+            .catch(() => {
+              setTimeout(() => {
+                window.location.href = '/user';
+              }, 2000);
+            });
         });
     } else {
-      // No session ID, just show success and redirect
-      setTimeout(() => {
-        window.location.href = '/subscriber';
-      }, 3000);
+      // No session ID, try to refresh and redirect
+      fetch('/api/user/refresh-session', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          const redirectUrl = (data.role === 'subscriber' || data.role === 'admin') 
+            ? '/subscriber' 
+            : '/user';
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 2000);
+        })
+        .catch(() => {
+          setTimeout(() => {
+            window.location.href = '/user';
+          }, 2000);
+        });
     }
   </script>
 </body>

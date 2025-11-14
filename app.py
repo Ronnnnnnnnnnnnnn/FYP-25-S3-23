@@ -192,27 +192,46 @@ def verify_account_page():
 def user_dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login_page'))
-    if session.get('role') not in ['user', 'subscriber', 'admin']:
-        return redirect(url_for('login_page'))
+    
     # Check if account is suspended
     status = check_account_status()
     if status == 'suspended':
         return redirect(url_for('login_page'))
     
-    # Fetch user's fullname from database
+    # Fetch user's current role and info from database (to handle role changes)
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT fullname FROM users WHERE user_id = %s", (session['user_id'],))
+        cursor.execute("SELECT fullname, role, subscription_status FROM users WHERE user_id = %s", (session['user_id'],))
         user = cursor.fetchone()
         cursor.close()
         db.close()
-        fullname = user.get('fullname', 'User') if user else 'User'
+        
+        if not user:
+            return redirect(url_for('login_page'))
+        
+        # Update session with current role from database
+        current_role = user.get('role', 'user')
+        if current_role != session.get('role'):
+            session['role'] = current_role
+        
+        # If user is now a subscriber or admin, redirect to subscriber dashboard
+        if current_role in ['subscriber', 'admin']:
+            return redirect(url_for('subscriber_dashboard'))
+        
+        # Only show user dashboard for users with role 'user'
+        if current_role != 'user':
+            return redirect(url_for('login_page'))
+        
+        fullname = user.get('fullname', 'User')
+        subscription_status = user.get('subscription_status', 'inactive')
+        
     except Exception as e:
-        print(f"Error fetching user fullname: {e}")
+        print(f"Error fetching user info: {e}")
         fullname = 'User'
+        subscription_status = 'inactive'
     
-    return render_template('user.html', user_fullname=fullname)
+    return render_template('user.html', user_fullname=fullname, subscription_status=subscription_status)
 
 @app.route('/subscriber')
 def subscriber_dashboard():
@@ -849,7 +868,7 @@ def create_checkout_session():
 
 @app.route('/api/stripe/verify-session/<session_id>', methods=['GET'])
 def verify_session(session_id):
-    """Verify payment session"""
+    """Verify payment session and refresh user session"""
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
     
@@ -857,11 +876,26 @@ def verify_session(session_id):
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         
         if checkout_session.payment_status == 'paid':
+            # Refresh user session from database (role might have changed)
+            db = get_db()
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT role, subscription_status, subscription_plan FROM users WHERE user_id = %s", (session['user_id'],))
+            user = cursor.fetchone()
+            cursor.close()
+            db.close()
+            
+            if user:
+                # Update session with current role and subscription status
+                session['role'] = user.get('role', 'user')
+                session['subscription_status'] = user.get('subscription_status', 'inactive')
+            
             return jsonify({
                 'success': True,
                 'status': checkout_session.payment_status,
                 'subscription_id': checkout_session.subscription,
-                'customer_id': checkout_session.customer
+                'customer_id': checkout_session.customer,
+                'role': user.get('role', 'user') if user else session.get('role', 'user'),
+                'subscription_status': user.get('subscription_status', 'inactive') if user else 'inactive'
             })
         else:
             return jsonify({
@@ -869,6 +903,51 @@ def verify_session(session_id):
                 'status': checkout_session.payment_status
             })
     except stripe.error.StripeError as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    except Exception as e:
+        print(f"Error refreshing session: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/user/refresh-session', methods=['POST'])
+def refresh_user_session():
+    """Refresh user session from database (useful after subscription changes)"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT role, subscription_status, subscription_plan, fullname, email FROM users WHERE user_id = %s",
+            (session['user_id'],)
+        )
+        user = cursor.fetchone()
+        cursor.close()
+        db.close()
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        # Update session with current database values
+        session['role'] = user.get('role', 'user')
+        session['subscription_status'] = user.get('subscription_status', 'inactive')
+        session['fullname'] = user.get('fullname', 'User')
+        session['email'] = user.get('email', '')
+        
+        return jsonify({
+            'success': True,
+            'role': user.get('role', 'user'),
+            'subscription_status': user.get('subscription_status', 'inactive'),
+            'subscription_plan': user.get('subscription_plan'),
+            'message': 'Session refreshed successfully'
+        })
+    except Exception as e:
+        print(f"Error refreshing session: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
