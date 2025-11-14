@@ -239,73 +239,28 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
         
         print(f"Base URL: {base_url}")
         
-        # Step 1: Upload files to Gradio
-        print("Step 1: Uploading files to Gradio...")
-        image_file_ref = None
-        video_file_ref = None
+        # Gradio spaces accept files directly in the predict API call
+        # We don't need to upload separately - send files as multipart/form-data
+        print("Calling predict API with files directly...")
+        predict_url = f"{base_url}/api/predict"
         
-        # Try uploading files
-        upload_endpoints = [
-            f"{base_url}/upload",
-            f"{base_url}/api/upload", 
-            f"{base_url}/file/upload"
-        ]
+        # Prepare files for multipart/form-data upload
+        # Gradio expects files in the 'data' field as a list
+        print(f"Preparing files: Image={image_path}, Video={video_path}")
         
-        for upload_url in upload_endpoints:
-            try:
-                print(f"Trying upload endpoint: {upload_url}")
-                # Upload image
-                with open(image_path, 'rb') as img_file:
-                    files = {'file': (os.path.basename(image_path), img_file, 'image/jpeg')}
-                    response = requests.post(upload_url, files=files, timeout=60)
-                    if response.status_code == 200:
-                        result = response.json() if 'application/json' in response.headers.get('content-type', '') else response.text
-                        if isinstance(result, dict):
-                            image_file_ref = result.get('path') or result.get('file') or str(result)
-                        else:
-                            image_file_ref = str(result)
-                        print(f"Image uploaded: {image_file_ref}")
-                        break
-            except Exception as e:
-                print(f"Upload endpoint {upload_url} failed: {e}")
-                continue
-        
-        # Upload video if image succeeded
-        if image_file_ref:
-            for upload_url in upload_endpoints:
-                try:
-                    with open(video_path, 'rb') as vid_file:
-                        files = {'file': (os.path.basename(video_path), vid_file, 'video/mp4')}
-                        response = requests.post(upload_url, files=files, timeout=60)
-                        if response.status_code == 200:
-                            result = response.json() if 'application/json' in response.headers.get('content-type', '') else response.text
-                            if isinstance(result, dict):
-                                video_file_ref = result.get('path') or result.get('file') or str(result)
-                            else:
-                                video_file_ref = str(result)
-                            print(f"Video uploaded: {video_file_ref}")
-                            break
-                except Exception as e:
-                    continue
-        
-        # Step 2: Call the predict API with uploaded file references
-        if image_file_ref and video_file_ref:
-            print("Step 2: Calling predict API with uploaded files...")
-            predict_url = f"{base_url}/api/predict"
-            
-            # Prepare the request data
-            # Gradio API expects data in a specific format
-            data = {
-                "data": [
-                    image_file_ref,  # source_image
-                    video_file_ref   # driving_video
-                ]
+        # Open files and prepare for upload
+        with open(image_path, 'rb') as img_file, open(video_path, 'rb') as vid_file:
+            # Gradio API expects files in a specific format
+            # Try sending as multipart/form-data with files
+            files = {
+                'data[0]': (os.path.basename(image_path), img_file, 'image/jpeg'),
+                'data[1]': (os.path.basename(video_path), vid_file, 'video/mp4')
             }
             
             print(f"Calling predict API: {predict_url}")
-            print(f"Data: {data}")
             
-            response = requests.post(predict_url, json=data, timeout=300)
+            # Send request with files
+            response = requests.post(predict_url, files=files, timeout=300)
             
             if response.status_code == 200:
                 result = response.json()
@@ -329,9 +284,16 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
                             'message': 'Animation created successfully'
                         }
                     else:
+                        # If it's a relative path, make it absolute
+                        video_url = f"{base_url}{video_url}" if video_url.startswith('/') else f"{base_url}/{video_url}"
+                        print(f"Converted to absolute URL: {video_url}")
+                        video_response = requests.get(video_url, timeout=300)
+                        video_response.raise_for_status()
+                        with open(output_path, 'wb') as f:
+                            f.write(video_response.content)
                         return {
-                            'status': 'error',
-                            'message': f'Invalid video URL returned: {video_url}'
+                            'status': 'success',
+                            'message': 'Animation created successfully'
                         }
                 else:
                     return {
@@ -339,15 +301,12 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
                         'message': 'No video data in API response'
                     }
             else:
+                error_text = response.text[:500] if response.text else 'No error message'
+                print(f"Predict API failed: Status {response.status_code}, Response: {error_text}")
                 return {
                     'status': 'error',
-                    'message': f'Predict API failed with status {response.status_code}: {response.text[:500]}'
+                    'message': f'Predict API failed with status {response.status_code}: {error_text}'
                 }
-        else:
-            return {
-                'status': 'error',
-                'message': 'Failed to upload files to Gradio space. Please check server logs for details.'
-            }
             
     except Exception as e:
         print(f"FOMD animation creation error: {e}")
