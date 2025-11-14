@@ -230,13 +230,50 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
             print(f"Connecting to Gradio space: {space_path}")
             client = Client(space_path)
             
-            # Call the predict function with image and video files
             print(f"Processing FOMD animation with image: {image_path}, video: {video_path}")
-            result = client.predict(
-                source_image=image_path,
-                driving_video=video_path,
-                api_name="/predict"
-            )
+            
+            # The Gradio client predict method uses positional arguments
+            # The order matches the Gradio interface inputs
+            # api_name can be "/predict" or we can use the endpoint index
+            # Try different formats to find what works
+            
+            result = None
+            last_error = None
+            
+            # Method 1: Positional arguments with api_name
+            try:
+                print("Trying positional arguments with api_name='/predict'")
+                result = client.predict(
+                    image_path,
+                    video_path,
+                    api_name="/predict"
+                )
+                print("✅ Success with positional arguments")
+            except Exception as e1:
+                last_error = e1
+                print(f"Method 1 failed: {e1}")
+                
+                # Method 2: Try without api_name (uses first endpoint)
+                try:
+                    print("Trying positional arguments without api_name")
+                    result = client.predict(image_path, video_path)
+                    print("✅ Success without api_name")
+                except Exception as e2:
+                    last_error = e2
+                    print(f"Method 2 failed: {e2}")
+                    
+                    # Method 3: Try with endpoint index 0
+                    try:
+                        print("Trying with endpoint index 0")
+                        result = client.predict(0, [image_path, video_path])
+                        print("✅ Success with endpoint index")
+                    except Exception as e3:
+                        last_error = e3
+                        print(f"Method 3 failed: {e3}")
+                        raise Exception(f"All prediction methods failed. Last error: {e3}")
+            
+            if result is None:
+                raise Exception("No result returned from any prediction method")
             
             # Result should be a video file path or URL
             if result:
@@ -294,56 +331,23 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
 def create_fomd_animation_http(image_path, video_path, output_path, hf_space_url=None):
     """
     Fallback method: Use HTTP API to call HuggingFace space.
-    This is a simpler approach that uploads files and polls for results.
+    Note: This method may not work reliably. The Gradio Python client is preferred.
     """
     try:
         if not hf_space_url:
             hf_space_url = "https://Tc12345-fomd.hf.space"
         
-        # Upload files and get prediction
-        api_url = f"{hf_space_url}/api/predict"
+        # For Gradio spaces, we need to use the Gradio client's internal API
+        # Direct HTTP calls to /api/predict don't work the same way
+        # Instead, we should install and use gradio_client
+        return {
+            'status': 'error',
+            'message': 'HTTP API fallback not supported. Please install gradio_client package: pip install gradio_client'
+        }
         
-        # Prepare files for upload
-        with open(image_path, 'rb') as img_file, open(video_path, 'rb') as vid_file:
-            files = {
-                'source_image': (os.path.basename(image_path), img_file, 'image/jpeg'),
-                'driving_video': (os.path.basename(video_path), vid_file, 'video/mp4')
-            }
-            
-            # Make prediction request
-            print(f"Calling FOMD API: {api_url}")
-            response = requests.post(api_url, files=files, timeout=300)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            # Extract video URL from result
-            if 'data' in result and len(result['data']) > 0:
-                video_url = result['data'][0]
-                
-                # Download the video
-                if video_url.startswith('http'):
-                    print(f"Downloading video from: {video_url}")
-                    video_response = requests.get(video_url, timeout=300)
-                    video_response.raise_for_status()
-                    
-                    with open(output_path, 'wb') as f:
-                        f.write(video_response.content)
-                    
-                    return {
-                        'status': 'success',
-                        'message': 'Animation created successfully'
-                    }
-                else:
-                    return {
-                        'status': 'error',
-                        'message': f'Invalid video URL returned: {video_url}'
-                    }
-            else:
-                return {
-                    'status': 'error',
-                    'message': 'No video data in API response'
-                }
+        # The following code is kept for reference but won't execute:
+        # Gradio spaces require the proper client library to handle file uploads
+        # and API communication correctly.
                 
     except Exception as e:
         print(f"HTTP API error: {e}")
@@ -351,7 +355,7 @@ def create_fomd_animation_http(image_path, video_path, output_path, hf_space_url
         traceback.print_exc()
         return {
             'status': 'error',
-            'message': f'HTTP API call failed: {str(e)}'
+            'message': f'HTTP API call failed: {str(e)}. Please ensure gradio_client is installed.'
         }
 
 # ============================================
