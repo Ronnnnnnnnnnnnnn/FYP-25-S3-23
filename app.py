@@ -253,34 +253,72 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
             if not os.path.exists(abs_video_path):
                 raise Exception(f"Video file not found: {abs_video_path}")
             
-            # The Gradio client expects FileData objects, not file paths
-            # Based on errors, we need to construct FileData dictionaries
-            # Format: {'path': '...', 'type': 'gradio.FileData'} or {'path': '...', 'orig_name': '...', 'type': 'gradio.FileData'}
+            # The Gradio client needs files to be uploaded to the Gradio space first
+            # We need to upload files via HTTP and get file references back
+            print("Uploading files to Gradio space...")
             
-            print("Preparing files for Gradio client...")
+            # Get the base URL for the Gradio space
+            base_url = f"https://huggingface.co/spaces/{space_path}"
+            if 'hf.space' in str(hf_space_url):
+                # Extract base URL from hf_space_url
+                base_url = hf_space_url.rstrip('/')
             
-            # Try to upload files first using client's upload functionality
+            # Upload files to Gradio's file upload endpoint
             image_file_data = None
             video_file_data = None
             
-            # Method 1: Try using client's upload_file method if available
             try:
-                if hasattr(client, 'upload_file'):
-                    print("Using client.upload_file() method")
-                    image_file_data = client.upload_file(abs_image_path)
-                    video_file_data = client.upload_file(abs_video_path)
-                    print(f"Files uploaded successfully")
+                # Upload image file
+                print(f"Uploading image file: {abs_image_path}")
+                with open(abs_image_path, 'rb') as img_file:
+                    files = {'file': (os.path.basename(abs_image_path), img_file, 'image/jpeg')}
+                    upload_url = f"{base_url}/upload"
+                    print(f"Upload URL: {upload_url}")
+                    upload_response = requests.post(upload_url, files=files, timeout=60)
+                    if upload_response.status_code == 200:
+                        upload_result = upload_response.json()
+                        # The response should contain file info
+                        if isinstance(upload_result, dict) and 'path' in upload_result:
+                            image_file_data = upload_result
+                        elif isinstance(upload_result, str):
+                            image_file_data = {"path": upload_result, "type": "gradio.FileData"}
+                        else:
+                            image_file_data = upload_result
+                        print(f"Image uploaded: {image_file_data}")
+                    else:
+                        print(f"Image upload failed with status {upload_response.status_code}: {upload_response.text}")
+                
+                # Upload video file
+                print(f"Uploading video file: {abs_video_path}")
+                with open(abs_video_path, 'rb') as vid_file:
+                    files = {'file': (os.path.basename(abs_video_path), vid_file, 'video/mp4')}
+                    upload_response = requests.post(upload_url, files=files, timeout=60)
+                    if upload_response.status_code == 200:
+                        upload_result = upload_response.json()
+                        if isinstance(upload_result, dict) and 'path' in upload_result:
+                            video_file_data = upload_result
+                        elif isinstance(upload_result, str):
+                            video_file_data = {"path": upload_result, "type": "gradio.FileData"}
+                        else:
+                            video_file_data = upload_result
+                        print(f"Video uploaded: {video_file_data}")
+                    else:
+                        print(f"Video upload failed with status {upload_response.status_code}: {upload_response.text}")
+                        
             except Exception as upload_err:
-                print(f"upload_file method failed or not available: {upload_err}")
-            
-            # Method 2: If upload didn't work, try constructing FileData dicts
-            # The path might need to be a URL or the client might handle local paths
-            if image_file_data is None or video_file_data is None:
-                print("Constructing FileData dictionaries manually")
-                # Try with just path and type
+                print(f"HTTP file upload failed: {upload_err}")
+                import traceback
+                traceback.print_exc()
+                # Fallback: try constructing FileData dicts with local paths
+                print("Falling back to FileData dict format with local paths")
                 image_file_data = {"path": abs_image_path, "type": "gradio.FileData"}
                 video_file_data = {"path": abs_video_path, "type": "gradio.FileData"}
-                print(f"FileData format - Image: {image_file_data}, Video: {video_file_data}")
+            
+            # If uploads failed, use FileData dict format as last resort
+            if image_file_data is None or video_file_data is None:
+                print("File uploads failed, using FileData dict format")
+                image_file_data = {"path": abs_image_path, "type": "gradio.FileData"}
+                video_file_data = {"path": abs_video_path, "type": "gradio.FileData"}
             
             # View API to understand the endpoint structure
             api_endpoint = None
