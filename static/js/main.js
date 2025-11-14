@@ -1428,6 +1428,24 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
     });
   }
   
+  // Use document-level event delegation for edit buttons (works with dynamically created buttons)
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('edit-user-btn')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const userId = parseInt(e.target.getAttribute('data-user-id'));
+      const fullname = e.target.getAttribute('data-fullname') || '';
+      const email = e.target.getAttribute('data-email') || '';
+      console.log('Edit button clicked:', userId, fullname, email);
+      if (userId && window.editUser) {
+        window.editUser(userId, fullname, email);
+      } else {
+        console.error('Edit button clicked but userId or editUser function not available', userId, typeof window.editUser);
+        alert('Error: Edit function not available. Please refresh the page.');
+      }
+    }
+  });
+  
   // Initialize admin dashboard
   loadAdminProfile();
   loadUsers();
