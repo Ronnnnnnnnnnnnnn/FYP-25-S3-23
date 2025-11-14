@@ -244,14 +244,11 @@
             </div>
         </div>
     </div>
-
     <script type="module">
         const YOUR_USERNAME = "Tc12345";
         const SPACE_NAME = "fomd";
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
-
         import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
-
         let imageFile = null;
         let videoFile = null;
         let resultBlob = null;
@@ -316,7 +313,6 @@
                 showStatus('❌ Please upload both files', 'error');
                 return;
             }
-
             const btn = document.getElementById('submitBtn');
             const progressContainer = document.getElementById('progressContainer');
             const resultSection = document.getElementById('resultSection');
