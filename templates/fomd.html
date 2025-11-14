@@ -334,24 +334,41 @@
                 showStatus("📤 Uploading files...", "loading");
                 updateProgress(20);
                 
-                // Upload files using upload_file which returns file paths
-                // The backend expects file paths (strings) for gr.Image(type="filepath")
+                // Upload files and handle format
+                // Backend: gr.Image(type="filepath") needs string path
+                // Backend: gr.Video needs VideoData or path that can be converted
                 let imageHandle, videoHandle;
                 
                 try {
-                    // Try upload_file first (returns file paths)
+                    // Upload files using upload_file
                     if (app && typeof app.upload_file === 'function') {
                         console.log('Uploading image using upload_file...');
-                        imageHandle = await app.upload_file(imageFile);
+                        const imageUploadResult = await app.upload_file(imageFile);
+                        console.log('Image upload result:', imageUploadResult);
+                        
+                        // For gr.Image(type="filepath"), extract path string
+                        if (typeof imageUploadResult === 'string') {
+                            imageHandle = imageUploadResult;
+                        } else if (imageUploadResult && imageUploadResult.path) {
+                            imageHandle = imageUploadResult.path;
+                        } else {
+                            imageHandle = imageUploadResult;
+                        }
                         console.log('Image handle:', imageHandle);
                         updateProgress(40);
                         
                         console.log('Uploading video using upload_file...');
-                        videoHandle = await app.upload_file(videoFile);
+                        const videoUploadResult = await app.upload_file(videoFile);
+                        console.log('Video upload result:', videoUploadResult);
+                        
+                        // For gr.Video, pass the full FileData object
+                        // Gradio will convert it to VideoData format
+                        // The backend will extract path from dict if needed
+                        videoHandle = videoUploadResult;
                         console.log('Video handle:', videoHandle);
                         updateProgress(60);
                     } else {
-                        // Fallback: use files directly if upload_file not available
+                        // Fallback: use files directly
                         console.log('upload_file not available, using files directly');
                         imageHandle = imageFile;
                         videoHandle = videoFile;
