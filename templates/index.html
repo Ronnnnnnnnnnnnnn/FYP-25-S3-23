@@ -38,7 +38,7 @@
           <a href="#features" class="nav-link">Features</a>
           <a href="#animations" class="nav-link">Animations</a>
           <a href="#faq" class="nav-link">FAQ</a>
-          <a href="{{ url_for('login_page') }}" class="nav-link">Pricing</a>
+          <a href="#" class="nav-link" onclick="openPricingModal(); return false;">Pricing</a>
           <a href="{{ url_for('login_page') }}" class="nav-btn btn btn-secondary">Login</a>
           <a href="{{ url_for('signup_page') }}" class="nav-btn btn btn-primary">Sign Up</a>
         </div>
@@ -387,6 +387,56 @@
           faqItem.style.background = 'rgba(255, 255, 255, 0.08)';
         }
       });
+    });
+
+    // Pricing Modal Functions
+    function openPricingModal() {
+      const modal = document.getElementById('pricingModal');
+      if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      }
+    }
+
+    function closePricingModal() {
+      const modal = document.getElementById('pricingModal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto'; // Restore scrolling
+      }
+    }
+
+    function selectPricingPlan(plan) {
+      // Remove selected class from all plans
+      document.querySelectorAll('.plan-card').forEach(card => {
+        card.classList.remove('selected');
+        card.style.border = '3px solid rgba(255, 255, 255, 0.2)';
+        card.style.background = 'rgba(255, 255, 255, 0.05)';
+      });
+      
+      // Add selected class to clicked plan
+      const selectedCard = document.querySelector(`.plan-card[data-plan="${plan}"]`);
+      if (selectedCard) {
+        selectedCard.classList.add('selected');
+        selectedCard.style.border = '3px solid #111439';
+        selectedCard.style.background = 'rgba(17, 20, 57, 0.1)';
+        selectedCard.style.boxShadow = '0 10px 30px rgba(17, 20, 57, 0.4)';
+      }
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+      const modal = document.getElementById('pricingModal');
+      if (event.target === modal) {
+        closePricingModal();
+      }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closePricingModal();
+      }
     });
   </script>
 </body>
