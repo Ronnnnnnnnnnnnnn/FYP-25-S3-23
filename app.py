@@ -47,6 +47,14 @@ os.makedirs(os.path.join(app.config['ANIMATIONS_FOLDER'], 'faceswap'), exist_ok=
 os.makedirs(os.path.join(app.config['ANIMATIONS_FOLDER'], 'fomd'), exist_ok=True)
 os.makedirs(os.path.join(app.config['ANIMATIONS_FOLDER'], 'makeittalk'), exist_ok=True)
 
+# Check if gradio_client is available
+try:
+    from gradio_client import Client
+    print("✅ gradio_client package is available")
+except ImportError:
+    print("⚠️ WARNING: gradio_client package is not installed. FOMD feature will not work.")
+    print("   Install it with: pip install gradio-client")
+
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov'}
 ALLOWED_PROFILE_PICTURE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -310,14 +318,25 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
                     'message': 'No result returned from FOMD API'
                 }
                 
-        except ImportError:
-            # Gradio client not available, try direct HTTP API
-            print("Gradio client not available, trying direct HTTP API")
-            return create_fomd_animation_http(image_path, video_path, output_path, hf_space_url)
+        except ImportError as import_err:
+            # Gradio client not available
+            error_msg = f"gradio_client package is not installed. Please install it: pip install gradio_client. Error: {import_err}"
+            print(error_msg)
+            import traceback
+            traceback.print_exc()
+            return {
+                'status': 'error',
+                'message': error_msg
+            }
         except Exception as e:
             print(f"Gradio client error: {e}")
-            # Fallback to HTTP API
-            return create_fomd_animation_http(image_path, video_path, output_path, hf_space_url)
+            import traceback
+            traceback.print_exc()
+            # Don't fallback to HTTP - provide clear error
+            return {
+                'status': 'error',
+                'message': f'Gradio client failed: {str(e)}. Please check server logs for details.'
+            }
             
     except Exception as e:
         print(f"FOMD animation creation error: {e}")

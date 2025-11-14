@@ -3,5 +3,5 @@ mysql-connector-python
 gunicorn
 requests
 stripe
-gradio_client
+gradio-client>=0.7.0
 
