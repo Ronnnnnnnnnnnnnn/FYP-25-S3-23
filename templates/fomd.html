@@ -335,20 +335,34 @@
                 showStatus("📤 Uploading files...", "loading");
                 updateProgress(20);
                 
-                // Create blob objects that Gradio can handle
-                const imageBlob = new Blob([imageFile], { type: imageFile.type });
-                const videoBlob = new Blob([videoFile], { type: videoFile.type });
+                // Prepare file handles - try upload_file first, then use files directly
+                let imageHandle = imageFile;
+                let videoHandle = videoFile;
                 
-                // Upload files using handle_blob
-                console.log('Uploading image...');
-                const imageHandle = await app.handle_blob(imageBlob, imageFile.name);
-                console.log('Image handle:', imageHandle);
-                updateProgress(40);
-                
-                console.log('Uploading video...');
-                const videoHandle = await app.handle_blob(videoBlob, videoFile.name);
-                console.log('Video handle:', videoHandle);
-                updateProgress(60);
+                try {
+                    // Try to upload files using upload_file method (like faceswap)
+                    if (app && typeof app.upload_file === 'function') {
+                        console.log('Uploading image using upload_file...');
+                        imageHandle = await app.upload_file(imageFile);
+                        console.log('Image handle:', imageHandle);
+                        updateProgress(40);
+                        
+                        console.log('Uploading video using upload_file...');
+                        videoHandle = await app.upload_file(videoFile);
+                        console.log('Video handle:', videoHandle);
+                        updateProgress(60);
+                    } else {
+                        // Use files directly (like makeittalk)
+                        console.log('Using files directly (upload_file not available)');
+                        updateProgress(60);
+                    }
+                } catch (uploadError) {
+                    console.log('Upload failed, using files directly:', uploadError.message);
+                    // Fallback to using files directly
+                    imageHandle = imageFile;
+                    videoHandle = videoFile;
+                    updateProgress(60);
+                }
                 
                 showStatus("🎬 Creating animation... (1-3 minutes)", "loading");
                 
