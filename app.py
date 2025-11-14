@@ -1076,13 +1076,24 @@ def verify_session(session_id):
             )
             existing_sub = cursor.fetchone()
             
+            # Get the start_date based on whether this is a new subscription or plan change
+            if existing_user and existing_user.get('subscription_end_date'):
+                # Plan change - use existing end_date as the new start_date
+                if isinstance(existing_user['subscription_end_date'], str):
+                    subscription_start_date = datetime.strptime(existing_user['subscription_end_date'], '%Y-%m-%d').date()
+                else:
+                    subscription_start_date = existing_user['subscription_end_date']
+            else:
+                # New subscription - use today
+                subscription_start_date = datetime.now().date()
+            
             if not existing_sub:
                 # Create subscription record if it doesn't exist
                 cursor.execute(
                     """INSERT INTO subscriptions 
                        (user_id, plan_type, start_date, end_date, payment_status, amount, stripe_subscription_id)
                        VALUES (%s, %s, %s, %s, 'completed', %s, %s)""",
-                    (user_id, plan_type, start_date, end_date, amount, checkout_session.subscription)
+                    (user_id, plan_type, subscription_start_date, end_date, amount, checkout_session.subscription)
                 )
             
             db.commit()
