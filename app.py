@@ -211,299 +211,142 @@ def create_talking_animation(image_path, audio_path, output_path, api_url=None):
 def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None):
     """
     Create FOMD animation using HuggingFace Gradio API.
-    Uses the Gradio Python client to call the HuggingFace space.
+    Uses direct HTTP API calls to bypass Python client file handling issues.
     """
     try:
-        # Try using Gradio Python client if available
-        try:
-            from gradio_client import Client
-            
-            # Extract space name from URL (e.g., "Tc12345/fomd" from "https://Tc12345-fomd.hf.space")
+        # Use direct HTTP API calls instead of Python client
+        # This gives us more control over file uploads
+        print("Using direct HTTP API calls to Gradio space")
+        
+        # Determine the base URL
+        if hf_space_url and 'hf.space' in hf_space_url:
+            base_url = hf_space_url.rstrip('/')
+        else:
+            # Extract space path
             if hf_space_url:
-                # Handle different URL formats
                 if 'hf.space' in hf_space_url:
-                    # Extract username and space name from URL
-                    # Format: https://username-spacename.hf.space
                     url_parts = hf_space_url.replace('https://', '').replace('http://', '').split('.')[0]
                     if '-' in url_parts:
                         username, space_name = url_parts.split('-', 1)
                         space_path = f"{username}/{space_name}"
                     else:
-                        space_path = "Tc12345/fomd"  # Default fallback
+                        space_path = "Tc12345/fomd"
                 else:
                     space_path = hf_space_url
             else:
                 space_path = "Tc12345/fomd"
-            
-            print(f"Connecting to Gradio space: {space_path}")
-            client = Client(space_path)
-            
-            print(f"Processing FOMD animation with image: {image_path}, video: {video_path}")
-            
-            # Convert to absolute paths
-            import os
-            abs_image_path = os.path.abspath(image_path)
-            abs_video_path = os.path.abspath(video_path)
-            
-            print(f"Absolute paths - Image: {abs_image_path}, Video: {abs_video_path}")
-            
-            # Check if files exist
-            if not os.path.exists(abs_image_path):
-                raise Exception(f"Image file not found: {abs_image_path}")
-            if not os.path.exists(abs_video_path):
-                raise Exception(f"Video file not found: {abs_video_path}")
-            
-            # The Gradio client should handle file uploads automatically
-            # But based on errors, it seems we need to use the client's file handling
-            # Let's try using the client's internal file upload mechanism
-            print("Preparing files for Gradio client...")
-            
-            image_file_data = None
-            video_file_data = None
-            
-            # Method 1: Try using the client's file upload if available
+            base_url = f"https://huggingface.co/spaces/{space_path}"
+        
+        print(f"Base URL: {base_url}")
+        
+        # Step 1: Upload files to Gradio
+        print("Step 1: Uploading files to Gradio...")
+        image_file_ref = None
+        video_file_ref = None
+        
+        # Try uploading files
+        upload_endpoints = [
+            f"{base_url}/upload",
+            f"{base_url}/api/upload", 
+            f"{base_url}/file/upload"
+        ]
+        
+        for upload_url in upload_endpoints:
             try:
-                # Check if client has upload_file method
-                if hasattr(client, 'upload_file'):
-                    print("Using client.upload_file() method")
-                    image_file_data = client.upload_file(abs_image_path)
-                    video_file_data = client.upload_file(abs_video_path)
-                    print(f"Files uploaded via client: Image={image_file_data}, Video={video_file_data}")
-            except Exception as client_upload_err:
-                print(f"client.upload_file() failed: {client_upload_err}")
-            
-            # Method 2: Try using the client's file handling utilities
-            if image_file_data is None or video_file_data is None:
+                print(f"Trying upload endpoint: {upload_url}")
+                # Upload image
+                with open(image_path, 'rb') as img_file:
+                    files = {'file': (os.path.basename(image_path), img_file, 'image/jpeg')}
+                    response = requests.post(upload_url, files=files, timeout=60)
+                    if response.status_code == 200:
+                        result = response.json() if 'application/json' in response.headers.get('content-type', '') else response.text
+                        if isinstance(result, dict):
+                            image_file_ref = result.get('path') or result.get('file') or str(result)
+                        else:
+                            image_file_ref = str(result)
+                        print(f"Image uploaded: {image_file_ref}")
+                        break
+            except Exception as e:
+                print(f"Upload endpoint {upload_url} failed: {e}")
+                continue
+        
+        # Upload video if image succeeded
+        if image_file_ref:
+            for upload_url in upload_endpoints:
                 try:
-                    # Try importing and using gradio_client file utilities
-                    from gradio_client import file as gradio_file
-                    if hasattr(gradio_file, 'File'):
-                        print("Using gradio_client.file.File")
-                        image_file_data = gradio_file.File(path=abs_image_path)
-                        video_file_data = gradio_file.File(path=abs_video_path)
-                        print(f"Created File objects: Image={image_file_data}, Video={video_file_data}")
-                except Exception as file_util_err:
-                    print(f"gradio_client.file.File failed: {file_util_err}")
-            
-            # Method 3: Try HTTP upload to Gradio space
-            if image_file_data is None or video_file_data is None:
-                try:
-                    print("Trying HTTP upload to Gradio space...")
-                    base_url = hf_space_url.rstrip('/') if 'hf.space' in str(hf_space_url) else f"https://huggingface.co/spaces/{space_path}"
-                    
-                    # Try different upload endpoints
-                    upload_endpoints = [
-                        f"{base_url}/upload",
-                        f"{base_url}/api/upload",
-                        f"{base_url}/file/upload"
-                    ]
-                    
-                    for upload_url in upload_endpoints:
-                        try:
-                            print(f"Trying upload endpoint: {upload_url}")
-                            # Upload image
-                            with open(abs_image_path, 'rb') as img_file:
-                                files = {'file': (os.path.basename(abs_image_path), img_file, 'image/jpeg')}
-                                upload_response = requests.post(upload_url, files=files, timeout=60)
-                                if upload_response.status_code == 200:
-                                    upload_result = upload_response.json() if upload_response.headers.get('content-type', '').startswith('application/json') else upload_response.text
-                                    if isinstance(upload_result, dict):
-                                        image_file_data = upload_result
-                                    elif isinstance(upload_result, str):
-                                        image_file_data = {"path": upload_result, "type": "gradio.FileData"}
-                                    print(f"Image uploaded successfully: {image_file_data}")
-                                    break
-                                else:
-                                    print(f"Upload failed with status {upload_response.status_code}")
-                        except Exception as upload_try_err:
-                            print(f"Upload endpoint {upload_url} failed: {upload_try_err}")
-                            continue
-                    
-                    # Upload video
-                    if image_file_data:
-                        for upload_url in upload_endpoints:
-                            try:
-                                with open(abs_video_path, 'rb') as vid_file:
-                                    files = {'file': (os.path.basename(abs_video_path), vid_file, 'video/mp4')}
-                                    upload_response = requests.post(upload_url, files=files, timeout=60)
-                                    if upload_response.status_code == 200:
-                                        upload_result = upload_response.json() if upload_response.headers.get('content-type', '').startswith('application/json') else upload_response.text
-                                        if isinstance(upload_result, dict):
-                                            video_file_data = upload_result
-                                        elif isinstance(upload_result, str):
-                                            video_file_data = {"path": upload_result, "type": "gradio.FileData"}
-                                        print(f"Video uploaded successfully: {video_file_data}")
-                                        break
-                            except Exception as upload_try_err:
-                                continue
-                except Exception as http_upload_err:
-                    print(f"HTTP upload failed: {http_upload_err}")
-            
-            # Final fallback: Use file paths directly (might work with some Gradio versions)
-            if image_file_data is None or video_file_data is None:
-                print("All upload methods failed, using file paths directly")
-                image_file_data = abs_image_path
-                video_file_data = abs_video_path
-            
-            # View API to understand the endpoint structure
-            api_endpoint = None
-            try:
-                api_info = client.view_api()
-                print(f"API info type: {type(api_info)}")
-                print(f"API info: {api_info}")
-                
-                # The API info structure varies - it could be a dict, list, or have nested structure
-                # Try to find the predict endpoint
-                if isinstance(api_info, dict):
-                    # Look for endpoints in the dict
-                    for endpoint_name, endpoint_info in api_info.items():
-                        print(f"Found endpoint: {endpoint_name}")
-                        if 'predict' in endpoint_name.lower() or '/predict' in endpoint_name:
-                            api_endpoint = endpoint_name
-                            print(f"✅ Using endpoint: {api_endpoint}")
-                            break
-                    # If not found, try the first endpoint
-                    if not api_endpoint and len(api_info) > 0:
-                        api_endpoint = list(api_info.keys())[0]
-                        print(f"Using first available endpoint: {api_endpoint}")
-                elif isinstance(api_info, list) and len(api_info) > 0:
-                    # If it's a list, use the first one
-                    api_endpoint = api_info[0] if isinstance(api_info[0], str) else None
-                    print(f"Using endpoint from list: {api_endpoint}")
-                
-            except Exception as api_err:
-                print(f"Could not retrieve API info: {api_err}, will try common endpoint names")
-            
-            result = None
-            last_error = None
-            
-            # List of endpoint names to try
-            endpoint_names_to_try = []
-            if api_endpoint:
-                endpoint_names_to_try.append(api_endpoint)
-            # Add common variations
-            endpoint_names_to_try.extend(["/predict", "predict", 0])  # 0 means first endpoint
-            
-            # Method 1: Try with FileData format (dict or uploaded file)
-            for endpoint_name in endpoint_names_to_try:
-                try:
-                    print(f"Trying endpoint: {endpoint_name} with FileData format")
-                    if endpoint_name == 0:
-                        result = client.predict(image_file_data, video_file_data)
-                    else:
-                        result = client.predict(
-                            image_file_data,
-                            video_file_data,
-                            api_name=endpoint_name
-                        )
-                    print(f"✅ Success with endpoint: {endpoint_name}")
-                    break
-                except Exception as e1:
-                    last_error = e1
-                    error_str = str(e1)
-                    print(f"Failed with endpoint {endpoint_name}: {error_str[:200]}")
-                    
-                    # If FileData dict format failed, try with file paths as fallback
-                    if "ImageData" in error_str or "FileData" in error_str or "validation error" in error_str.lower():
-                        print("FileData format failed, trying file paths as fallback...")
-                        try:
-                            if endpoint_name == 0:
-                                result = client.predict(abs_image_path, abs_video_path)
+                    with open(video_path, 'rb') as vid_file:
+                        files = {'file': (os.path.basename(video_path), vid_file, 'video/mp4')}
+                        response = requests.post(upload_url, files=files, timeout=60)
+                        if response.status_code == 200:
+                            result = response.json() if 'application/json' in response.headers.get('content-type', '') else response.text
+                            if isinstance(result, dict):
+                                video_file_ref = result.get('path') or result.get('file') or str(result)
                             else:
-                                result = client.predict(abs_image_path, abs_video_path, api_name=endpoint_name)
-                            print(f"✅ Success with file paths for endpoint: {endpoint_name}")
+                                video_file_ref = str(result)
+                            print(f"Video uploaded: {video_file_ref}")
                             break
-                        except Exception as path_err:
-                            print(f"File paths also failed: {str(path_err)[:200]}")
+                except Exception as e:
                     continue
+        
+        # Step 2: Call the predict API with uploaded file references
+        if image_file_ref and video_file_ref:
+            print("Step 2: Calling predict API with uploaded files...")
+            predict_url = f"{base_url}/api/predict"
             
-            # Method 2: Try without api_name (uses default/first endpoint)
-            if result is None:
-                try:
-                    print("Method 2: Positional arguments without api_name")
-                    result = client.predict(image_file_data, video_file_data)
-                    print("✅ Success with Method 2")
-                except Exception as e2:
-                    last_error = e2
-                    print(f"Method 2 failed: {str(e2)[:200]}")
+            # Prepare the request data
+            # Gradio API expects data in a specific format
+            data = {
+                "data": [
+                    image_file_ref,  # source_image
+                    video_file_ref   # driving_video
+                ]
+            }
+            
+            print(f"Calling predict API: {predict_url}")
+            print(f"Data: {data}")
+            
+            response = requests.post(predict_url, json=data, timeout=300)
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(f"Predict API response: {result}")
+                
+                # Extract video URL from result
+                if 'data' in result and len(result['data']) > 0:
+                    video_url = result['data'][0]
                     
-                    # Method 3: Try using submit() for async processing
-                    try:
-                        print("Method 3: Using submit() method without api_name")
-                        job = client.submit(image_file_data, video_file_data)
-                        # Wait for result with timeout
-                        result = job.result(timeout=300)  # 5 minute timeout
-                        print("✅ Success with Method 3 (submit)")
-                    except Exception as e3:
-                        last_error = e3
-                        print(f"Method 3 failed: {str(e3)[:200]}")
+                    # Download the video
+                    if video_url.startswith('http'):
+                        print(f"Downloading video from: {video_url}")
+                        video_response = requests.get(video_url, timeout=300)
+                        video_response.raise_for_status()
                         
-                        # Method 4: Try with file paths as strings (fallback)
-                        try:
-                            print("Method 4: Trying with file paths as strings")
-                            result = client.predict(abs_image_path, abs_video_path)
-                            print("✅ Success with Method 4 (file paths)")
-                        except Exception as e4:
-                            last_error = e4
-                            print(f"Method 4 failed: {str(e4)[:200]}")
-                            raise Exception(f"All prediction methods failed. Last error: {str(e4)}")
-            
-            if result is None:
-                raise Exception("No result returned from any prediction method")
-            
-            # Result should be a video file path or URL
-            if result:
-                # Download the result video
-                if isinstance(result, (list, tuple)) and len(result) > 0:
-                    video_url = result[0]
-                elif isinstance(result, str):
-                    video_url = result
+                        with open(output_path, 'wb') as f:
+                            f.write(video_response.content)
+                        
+                        return {
+                            'status': 'success',
+                            'message': 'Animation created successfully'
+                        }
+                    else:
+                        return {
+                            'status': 'error',
+                            'message': f'Invalid video URL returned: {video_url}'
+                        }
                 else:
-                    video_url = str(result)
-                
-                # If it's a URL, download it
-                if video_url.startswith('http'):
-                    print(f"Downloading video from: {video_url}")
-                    response = requests.get(video_url, timeout=300)  # 5 minute timeout
-                    response.raise_for_status()
-                    
-                    # Save to output path
-                    with open(output_path, 'wb') as f:
-                        f.write(response.content)
-                else:
-                    # It's a local path, copy it
-                    import shutil
-                    shutil.copy2(video_url, output_path)
-                
-                print(f"FOMD animation saved to: {output_path}")
-                return {
-                    'status': 'success',
-                    'message': 'Animation created successfully'
-                }
+                    return {
+                        'status': 'error',
+                        'message': 'No video data in API response'
+                    }
             else:
                 return {
                     'status': 'error',
-                    'message': 'No result returned from FOMD API'
+                    'message': f'Predict API failed with status {response.status_code}: {response.text[:500]}'
                 }
-                
-        except ImportError as import_err:
-            # Gradio client not available
-            error_msg = f"gradio_client package is not installed. Please install it: pip install gradio_client. Error: {import_err}"
-            print(error_msg)
-            import traceback
-            traceback.print_exc()
+        else:
             return {
                 'status': 'error',
-                'message': error_msg
-            }
-        except Exception as e:
-            print(f"Gradio client error: {e}")
-            import traceback
-            traceback.print_exc()
-            # Don't fallback to HTTP - provide clear error
-            return {
-                'status': 'error',
-                'message': f'Gradio client failed: {str(e)}. Please check server logs for details.'
+                'message': 'Failed to upload files to Gradio space. Please check server logs for details.'
             }
             
     except Exception as e:
