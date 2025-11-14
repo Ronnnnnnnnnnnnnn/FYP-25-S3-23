@@ -1227,17 +1227,6 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
     });
     
     userList.appendChild(table);
-    
-    // Add event listeners to edit buttons using event delegation
-    const editButtons = table.querySelectorAll('.edit-user-btn');
-    editButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        const userId = parseInt(this.getAttribute('data-user-id'));
-        const fullname = this.getAttribute('data-fullname');
-        const email = this.getAttribute('data-email');
-        window.editUser(userId, fullname, email);
-      });
-    });
   }
   
   function getRoleColor(role) {
