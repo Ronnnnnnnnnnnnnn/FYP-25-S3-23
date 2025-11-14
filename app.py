@@ -182,7 +182,21 @@ def user_dashboard():
     status = check_account_status()
     if status == 'suspended':
         return redirect(url_for('login_page'))
-    return render_template('user.html')
+    
+    # Fetch user's fullname from database
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT fullname FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        cursor.close()
+        db.close()
+        fullname = user.get('fullname', 'User') if user else 'User'
+    except Exception as e:
+        print(f"Error fetching user fullname: {e}")
+        fullname = 'User'
+    
+    return render_template('user.html', user_fullname=fullname)
 
 @app.route('/subscriber')
 def subscriber_dashboard():
@@ -194,7 +208,21 @@ def subscriber_dashboard():
     status = check_account_status()
     if status == 'suspended':
         return redirect(url_for('login_page'))
-    return render_template('subscriber.html')
+    
+    # Fetch user's fullname from database
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT fullname FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        cursor.close()
+        db.close()
+        fullname = user.get('fullname', 'Subscriber') if user else 'Subscriber'
+    except Exception as e:
+        print(f"Error fetching user fullname: {e}")
+        fullname = 'Subscriber'
+    
+    return render_template('subscriber.html', user_fullname=fullname)
 
 @app.route('/admin')
 def admin_dashboard():
@@ -204,7 +232,21 @@ def admin_dashboard():
     status = check_account_status()
     if status == 'suspended':
         return redirect(url_for('login_page'))
-    return render_template('admin.html')
+    
+    # Fetch user's fullname from database
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT fullname FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        cursor.close()
+        db.close()
+        fullname = user.get('fullname', 'Admin') if user else 'Admin'
+    except Exception as e:
+        print(f"Error fetching user fullname: {e}")
+        fullname = 'Admin'
+    
+    return render_template('admin.html', user_fullname=fullname)
 
 @app.route('/payment')
 def payment_page():
