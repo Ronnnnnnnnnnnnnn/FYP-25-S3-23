@@ -1021,6 +1021,108 @@ def faceswap_save():
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/api/makeittalk/save', methods=['POST'])
+def makeittalk_save():
+    """Save MakeItTalk animation result to database and server"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    # Check if user is a subscriber or admin
+    if session.get('role') not in ['subscriber', 'admin']:
+        return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
+    
+    try:
+        # Get video data from request
+        if 'video' not in request.files:
+            # Try to get base64 data from JSON
+            data = request.get_json()
+            if not data or 'video_data' not in data:
+                return jsonify({'success': False, 'message': 'No video provided'}), 400
+            
+            import base64
+            
+            # Decode base64 video
+            video_data = data['video_data']
+            if video_data.startswith('data:video'):
+                video_data = video_data.split(',')[1]
+            
+            video_bytes = base64.b64decode(video_data)
+            
+            # Generate filename
+            output_filename = f"makeittalk_{uuid.uuid4()}.mp4"
+            output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], 'makeittalk', output_filename)
+            
+            # Save video
+            with open(output_path, 'wb') as f:
+                f.write(video_bytes)
+            
+            # Save to database
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                "INSERT INTO animations (user_id, tool_type, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], 'makeittalk', f'animations/makeittalk/{output_filename}', 'completed')
+            )
+            db.commit()
+            
+            animation_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'MakeItTalk animation saved successfully',
+                'animation_id': animation_id,
+                'video_url': f'/static/animations/makeittalk/{output_filename}'
+            })
+        else:
+            # Handle file upload
+            file = request.files['video']
+            if file.filename == '':
+                return jsonify({'success': False, 'message': 'No file selected'}), 400
+            
+            # Generate filename
+            output_filename = f"makeittalk_{uuid.uuid4()}.mp4"
+            output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], 'makeittalk', output_filename)
+            
+            # Save file
+            file.save(output_path)
+            
+            # Save to database
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                "INSERT INTO animations (user_id, tool_type, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], 'makeittalk', f'animations/makeittalk/{output_filename}', 'completed')
+            )
+            db.commit()
+            
+            animation_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'MakeItTalk animation saved successfully',
+                'animation_id': animation_id,
+                'video_url': f'/static/animations/makeittalk/{output_filename}'
+            })
+    
+    except Exception as e:
+        print(f"MakeItTalk save error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 # ============================================
 # FOMD API ENDPOINTS
 # ============================================

@@ -805,10 +805,16 @@
                     <div class="result-image-container">
                         <img id="resultImage" class="result-image" alt="Result">
                     </div>
-                    <button onclick="downloadImage()" class="btn btn-success">
-                        <span>📥</span>
-                        <span>Download Image</span>
-                    </button>
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
+                        <button onclick="saveToDashboard()" class="btn btn-primary" id="saveBtn" style="flex: 1; min-width: 200px;">
+                            <span>💾</span>
+                            <span>Save to Dashboard</span>
+                        </button>
+                        <button onclick="downloadImage()" class="btn btn-success" style="flex: 1; min-width: 200px;">
+                            <span>📥</span>
+                            <span>Download Image</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1345,6 +1351,68 @@
                 console.error('Error converting image:', error);
             }
         }
+        
+        // Save to Dashboard function
+        window.saveToDashboard = async function() {
+            if (!savedImageUrl) {
+                showStatus('❌ No image to save!', 'error');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span>⏳</span><span>Saving...</span>';
+            
+            try {
+                // Convert image URL to base64
+                const response = await fetch(savedImageUrl);
+                const blob = await response.blob();
+                const reader = new FileReader();
+                
+                reader.onloadend = async function() {
+                    const base64data = reader.result;
+                    
+                    try {
+                        const saveResponse = await fetch('/api/faceswap/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                image_data: base64data
+                            })
+                        });
+                        
+                        const saveData = await saveResponse.json();
+                        if (saveData.success) {
+                            showStatus('✅ Face swap saved to your dashboard!', 'success');
+                            saveBtn.innerHTML = '<span>✅</span><span>Saved!</span>';
+                            setTimeout(() => {
+                                saveBtn.innerHTML = originalText;
+                                saveBtn.disabled = false;
+                            }, 2000);
+                        } else {
+                            showStatus('❌ Failed to save: ' + saveData.message, 'error');
+                            saveBtn.innerHTML = originalText;
+                            saveBtn.disabled = false;
+                        }
+                    } catch (error) {
+                        console.error('Error saving to server:', error);
+                        showStatus('❌ Error saving to server. Please try again.', 'error');
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.disabled = false;
+                    }
+                };
+                
+                reader.readAsDataURL(blob);
+            } catch (error) {
+                console.error('Error converting image:', error);
+                showStatus('❌ Error processing image. Please try again.', 'error');
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
+        };
         
         // Download function
         window.downloadImage = function() {

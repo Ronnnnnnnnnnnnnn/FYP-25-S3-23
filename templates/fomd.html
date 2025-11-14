@@ -837,10 +837,16 @@
                     <div class="video-container">
                         <video id="resultVideo" controls autoplay loop></video>
                     </div>
-            <button onclick="downloadVideo()" class="download-btn">
-                        <span>📥</span>
-                        <span>Download Video</span>
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
+                        <button onclick="saveToDashboard()" class="btn btn-primary" id="saveBtn" style="flex: 1; min-width: 200px;">
+                            <span>💾</span>
+                            <span>Save to Dashboard</span>
+                        </button>
+                        <button onclick="downloadVideo()" class="download-btn" style="flex: 1; min-width: 200px;">
+                            <span>📥</span>
+                            <span>Download Video</span>
             </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1655,6 +1661,65 @@
                 console.error('Error converting video:', error);
             }
         }
+        
+        // Save to Dashboard function
+        window.saveToDashboard = async function() {
+            if (!resultBlob) {
+                showStatus('❌ No video to save!', 'error');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span>⏳</span><span>Saving...</span>';
+            
+            try {
+                const reader = new FileReader();
+                
+                reader.onloadend = async function() {
+                    const base64data = reader.result;
+                    
+                    try {
+                        const saveResponse = await fetch('/api/fomd/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                video_data: base64data
+                            })
+                        });
+                        
+                        const saveData = await saveResponse.json();
+                        if (saveData.success) {
+                            showStatus('✅ Animation saved to your dashboard!', 'success');
+                            saveBtn.innerHTML = '<span>✅</span><span>Saved!</span>';
+                            setTimeout(() => {
+                                saveBtn.innerHTML = originalText;
+                                saveBtn.disabled = false;
+                            }, 2000);
+                        } else {
+                            showStatus('❌ Failed to save: ' + saveData.message, 'error');
+                            saveBtn.innerHTML = originalText;
+                            saveBtn.disabled = false;
+                        }
+                    } catch (error) {
+                        console.error('Error saving to server:', error);
+                        showStatus('❌ Error saving to server. Please try again.', 'error');
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.disabled = false;
+                    }
+                };
+                
+                reader.readAsDataURL(resultBlob);
+            } catch (error) {
+                console.error('Error converting video:', error);
+                showStatus('❌ Error processing video. Please try again.', 'error');
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
+        };
         
         window.downloadVideo = function() {
             if (!resultBlob) {
