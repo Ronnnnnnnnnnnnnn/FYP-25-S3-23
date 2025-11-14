@@ -779,77 +779,26 @@
     </div>
     
     <div class="container">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">🎬</div>
-                    <div class="card-title">
-                        <h2>Create Face Animation</h2>
-                        <p>Upload your source image and driving video to get started</p>
-                    </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🎬</div>
+                <div class="card-title">
+                    <h2>Create Face Animation</h2>
+                    <p>Use the interface below to upload your source image and driving video</p>
                 </div>
+            </div>
 
-                <div class="upload-grid">
-                    <div class="upload-box" id="imageBox" onclick="document.getElementById('imageInput').click()">
-                        <div class="upload-icon">📷</div>
-                        <div class="upload-text">Source Image</div>
-                        <div class="upload-subtext">JPG, PNG • Portrait to animate</div>
-                        <div class="file-name" id="imageName"></div>
-            <input type="file" id="imageInput" accept="image/*" onchange="previewImage(this)">
-            <div class="preview-container" id="imagePreviewContainer">
-                <img id="imagePreview" class="image-preview" alt="Image preview">
+            <!-- Simple iframe approach - most reliable -->
+            <div style="width: 100%; height: calc(100vh - 300px); min-height: 600px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+                <iframe 
+                    src="https://Tc12345-fomd.hf.space" 
+                    style="width: 100%; height: 100%; border: none; border-radius: 20px;"
+                    allow="camera; microphone; clipboard-write"
+                    title="FOMD Animation Interface">
+                </iframe>
             </div>
         </div>
-        
-                    <div class="upload-box" id="videoBox" onclick="document.getElementById('videoInput').click()">
-                        <div class="upload-icon">🎥</div>
-                        <div class="upload-text">Driving Video</div>
-                        <div class="upload-subtext">MP4, MOV • Movements to apply</div>
-                        <div class="file-name" id="videoName"></div>
-            <input type="file" id="videoInput" accept="video/*" onchange="previewVideo(this)">
-            <div class="preview-container" id="videoPreviewContainer">
-                <video id="videoPreview" class="video-preview" controls></video>
-                        </div>
-            </div>
-        </div>
-        
-                <button class="btn btn-primary" onclick="createAnimation()" id="submitBtn">
-                    <span>🚀</span>
-                    <span>Create Animation</span>
-        </button>
-        
-        <div class="progress-container" id="progressContainer">
-                    <div class="progress-label">
-                        <span id="progressText">Processing...</span>
-                        <span id="progressPercent">0%</span>
-                    </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill">0%</div>
-            </div>
-        </div>
-        
-        <div id="status"></div>
-        
-        <div class="result-section" id="resultSection">
-                    <div class="result-header">
-                        <span style="font-size: 2.5rem;">🎉</span>
-                        <h3>Your Animated Result</h3>
-                    </div>
-                    <div class="video-container">
-                        <video id="resultVideo" controls autoplay loop></video>
-                    </div>
-                    <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
-                        <button onclick="saveToDashboard()" class="btn btn-primary" id="saveBtn" style="flex: 1; min-width: 200px;">
-                            <span>💾</span>
-                            <span>Save to Dashboard</span>
-                        </button>
-                        <button onclick="downloadVideo()" class="download-btn" style="flex: 1; min-width: 200px;">
-                            <span>📥</span>
-                            <span>Download Video</span>
-            </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    </div>
 
         <!-- Footer -->
         <div class="footer">
@@ -857,26 +806,7 @@
         </div>
     </div>
 
-    <script type="module">
-        // ═══════════════════════════════════════════════════════════
-        // REPLACE WITH YOUR HUGGING FACE USERNAME!
-        // ═══════════════════════════════════════════════════════════
-        const YOUR_USERNAME = "Tc12345";  // ← Your HF username
-        const SPACE_NAME = "fomd";  // ← Your FOMD space name
-        const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
-        // ═══════════════════════════════════════════════════════════
-
-        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
-
-        window.gradioClient = client;
-        window.app = null;
-        
-        let imageFile = null;
-        let videoFile = null;
-        let resultBlob = null;
-        let savedVideoUrl = null;
-        let videoFilename = 'fomd_animation.mp4';
-        
+    <script>
         // Create particles
         function createParticles() {
             const container = document.getElementById('particles');
@@ -895,154 +825,6 @@
         }
         createParticles();
         
-        // Function to try connecting with different space name formats
-        async function tryConnect(spacePath) {
-            try {
-                console.log('Attempting to connect to:', spacePath);
-                const app = await window.gradioClient(spacePath);
-                console.log('✅ Connected successfully!');
-                return app;
-            } catch (error) {
-                console.log('Failed to connect to:', spacePath, error.message);
-                throw error;
-            }
-        }
-        
-        // Initialize client (using same pattern as makeittalk)
-        async function initClient() {
-            if (!window.app) {
-                try {
-                    console.log('🔍 Checking connection to:', SPACE_URL);
-                    
-                    const statusDiv = document.getElementById('connectionStatus');
-                    if (statusDiv) {
-                        statusDiv.textContent = '⏳ Connecting...';
-                        statusDiv.className = 'connection-status status-offline';
-                    }
-                    
-                    // Try different space name variations
-                    const spaceVariations = [
-                        SPACE_URL,
-                        `${YOUR_USERNAME}/${SPACE_NAME.toLowerCase()}`,
-                        `${YOUR_USERNAME}/${SPACE_NAME.toUpperCase()}`,
-                    ];
-                    
-                    let connected = false;
-                    let lastError = null;
-                    
-                    for (const spacePath of spaceVariations) {
-                        try {
-                            window.app = await tryConnect(spacePath);
-                            connected = true;
-                            if (statusDiv) {
-                                statusDiv.textContent = '✅ Connected to API';
-                                statusDiv.className = 'connection-status status-online';
-                            }
-                            console.log(`✅ Successfully connected to: ${spacePath}`);
-                            break;
-                        } catch (error) {
-                            lastError = error;
-                            console.log(`❌ Failed to connect to: ${spacePath}`);
-                        }
-                    }
-                    
-                    if (!connected) {
-                        console.error('❌ All connection attempts failed');
-                        if (statusDiv) {
-                            statusDiv.textContent = '❌ API Offline';
-                            statusDiv.className = 'connection-status status-offline';
-                        }
-                        throw lastError || new Error('Connection failed');
-                    }
-                } catch (error) {
-                    console.error("❌ Failed to connect:", error);
-                    const statusDiv = document.getElementById('connectionStatus');
-                    if (statusDiv) {
-                        statusDiv.textContent = '❌ API Offline';
-                        statusDiv.className = 'connection-status status-offline';
-                    }
-                    showStatus("Failed to connect to server", "error");
-                    throw error;
-                }
-            }
-            return window.app;
-        }
-        
-        // Preview functions
-        window.previewImage = function(input) {
-            const previewContainer = document.getElementById('imagePreviewContainer');
-            const preview = document.getElementById('imagePreview');
-            const imageBox = document.getElementById('imageBox');
-            const imageName = document.getElementById('imageName');
-            
-            if (input.files && input.files[0]) {
-                imageFile = input.files[0];
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.classList.add('show');
-                    previewContainer.classList.add('active');
-                    imageName.textContent = '✓ ' + imageFile.name;
-                    imageBox.classList.add('active');
-                    checkReadyToAnimate();
-                };
-                
-                reader.readAsDataURL(imageFile);
-            } else {
-                imageFile = null;
-                previewContainer.classList.remove('active');
-                preview.classList.remove('show');
-                imageName.textContent = '';
-                imageBox.classList.remove('active');
-                checkReadyToAnimate();
-            }
-        };
-        
-        window.previewVideo = function(input) {
-            const previewContainer = document.getElementById('videoPreviewContainer');
-            const videoPreview = document.getElementById('videoPreview');
-            const videoBox = document.getElementById('videoBox');
-            const videoName = document.getElementById('videoName');
-            
-            if (input.files && input.files[0]) {
-                videoFile = input.files[0];
-                const url = URL.createObjectURL(videoFile);
-                videoPreview.src = url;
-                videoPreview.classList.add('show');
-                previewContainer.classList.add('active');
-                videoName.textContent = '✓ ' + videoFile.name;
-                videoBox.classList.add('active');
-                checkReadyToAnimate();
-            } else {
-                videoFile = null;
-                previewContainer.classList.remove('active');
-                videoPreview.classList.remove('show');
-                if (videoPreview.src) {
-                    URL.revokeObjectURL(videoPreview.src);
-                }
-                videoPreview.src = '';
-                videoName.textContent = '';
-                videoBox.classList.remove('active');
-                checkReadyToAnimate();
-            }
-        };
-
-        function checkReadyToAnimate() {
-            const btn = document.getElementById('submitBtn');
-            if (btn) {
-                btn.disabled = !(imageFile && videoFile);
-            }
-        }
-
-        function showStatus(message, type) {
-            const status = document.getElementById('status');
-            status.innerHTML = message;
-            status.className = `${type} show`;
-        }
-
-        window.showStatus = showStatus;
-
         // Logout function
         window.logout = async function() {
             try {
@@ -1058,264 +840,14 @@
                 window.location.href = '/';
             }
         };
-
-        // Check connection on load
-        window.addEventListener('load', async () => {
-            console.log("🚀 Client ready");
-            console.log('🔍 Checking connection to:', SPACE_URL);
-            
+        
+        // Remove connection status since we're using iframe
+        window.addEventListener('load', () => {
             const statusDiv = document.getElementById('connectionStatus');
             if (statusDiv) {
-            statusDiv.textContent = '⏳ Connecting...';
-            statusDiv.className = 'connection-status status-offline';
+                statusDiv.style.display = 'none';
             }
-            
-            // Initialize client
-            await initClient();
         });
-
-        window.createAnimation = async function() {
-            if (!imageFile || !videoFile) {
-                showStatus('❌ Please upload both image and video files', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('submitBtn');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressFill = document.getElementById('progressFill');
-            const progressText = document.getElementById('progressText');
-            const progressPercent = document.getElementById('progressPercent');
-            const resultSection = document.getElementById('resultSection');
-            
-            btn.disabled = true;
-            btn.innerHTML = '<span>⏳</span><span>Processing...</span>';
-            
-            // Reset UI
-            resultSection.classList.remove('show');
-            progressContainer.classList.add('show');
-            progressFill.style.width = '0%';
-            progressFill.textContent = '0%';
-            if (progressPercent) progressPercent.textContent = '0%';
-            progressText.textContent = 'Initializing...';
-            showStatus("Initializing...", "loading");
-            
-            try {
-                // Step 1: Prepare files for upload
-                console.log('Step 1: Preparing files for upload');
-                showStatus("📤 Uploading files...", "loading");
-                updateProgress(10);
-                
-                console.log('Image file details:', {
-                    name: imageFile.name,
-                    type: imageFile.type,
-                    size: imageFile.size
-                });
-                
-                console.log('Video file details:', {
-                    name: videoFile.name,
-                    type: videoFile.type,
-                    size: videoFile.size
-                });
-                
-                // Step 2: Upload files and process via backend API
-                console.log('Step 2: Calling backend API');
-                showStatus("🎬 Creating animation... This may take 1-3 minutes", "loading");
-                updateProgress(30);
-                
-                // Create FormData for file upload
-                const formData = new FormData();
-                formData.append('image', imageFile);
-                formData.append('video', videoFile);
-                
-                // Call backend API
-                const response = await fetch('/api/fomd/animate', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                updateProgress(70);
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to create animation');
-                }
-                
-                const result = await response.json();
-                console.log('✅ Animation created:', result);
-                
-                if (!result.success) {
-                    throw new Error(result.message || 'Animation creation failed');
-                }
-                
-                // Step 3: Display result
-                showStatus("📥 Loading result...", "loading");
-                updateProgress(90);
-                
-                const videoUrl = result.video_url;
-                console.log('✅ Video URL:', videoUrl);
-                
-                // Fetch and display the video
-                const videoResponse = await fetch(videoUrl);
-                resultBlob = await videoResponse.blob();
-                
-                const resultUrl = URL.createObjectURL(resultBlob);
-                const video = document.getElementById('resultVideo');
-                video.src = resultUrl;
-                video.load();
-                
-                updateProgress(100);
-                showStatus("✅ Animation complete!", "success");
-                
-                resultSection.classList.add('show');
-                resultSection.scrollIntoView({ behavior: 'smooth' });
-                
-                // Video is already saved to server by the backend, just show success
-                showStatus('✅ Animation saved to your dashboard!', 'success');
-                
-                // Hide status after 3 seconds
-                setTimeout(() => {
-                    const status = document.getElementById('status');
-                    if (status) status.classList.remove('show');
-                }, 3000);
-                
-                console.log('✅ All steps completed successfully!');
-                
-            } catch (error) {
-                console.log('❌ Error occurred:', error.message);
-                console.error("Full error:", error);
-                showStatus("❌ Error: " + error.message, "error");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<span>🚀</span><span>Create Animation</span>';
-                setTimeout(() => {
-                    progressContainer.classList.remove('show');
-                }, 2000);
-            }
-        };
-
-        function updateProgress(percent) {
-            const progressFill = document.getElementById('progressFill');
-            const progressPercent = document.getElementById('progressPercent');
-            if (progressFill) {
-                progressFill.style.width = percent + '%';
-                progressFill.textContent = percent + '%';
-            }
-            if (progressPercent) {
-                progressPercent.textContent = percent + '%';
-            }
-        }
-
-        // Save to server function
-        async function saveFOMDToServer(videoBlob) {
-            try {
-                const reader = new FileReader();
-                
-                reader.onloadend = async function() {
-                    const base64data = reader.result;
-                    
-                    try {
-                        const saveResponse = await fetch('/api/fomd/save', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                video_data: base64data
-                            })
-                        });
-                        
-                        const saveData = await saveResponse.json();
-                        if (saveData.success) {
-                            console.log('✅ FOMD animation saved to server:', saveData.video_url);
-                            showStatus('✅ Animation saved to your dashboard!', 'success');
-                        } else {
-                            console.error('Failed to save:', saveData.message);
-                        }
-                    } catch (error) {
-                        console.error('Error saving to server:', error);
-                    }
-                };
-                
-                reader.readAsDataURL(videoBlob);
-            } catch (error) {
-                console.error('Error converting video:', error);
-            }
-        }
-        
-        // Save to Dashboard function
-        window.saveToDashboard = async function() {
-            if (!resultBlob) {
-                showStatus('❌ No video to save!', 'error');
-                return;
-            }
-            
-            const saveBtn = document.getElementById('saveBtn');
-            const originalText = saveBtn.innerHTML;
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span>⏳</span><span>Saving...</span>';
-            
-            try {
-                const reader = new FileReader();
-                
-                reader.onloadend = async function() {
-                    const base64data = reader.result;
-                    
-                    try {
-                        const saveResponse = await fetch('/api/fomd/save', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                video_data: base64data
-                            })
-                        });
-                        
-                        const saveData = await saveResponse.json();
-                        if (saveData.success) {
-                            showStatus('✅ Animation saved to your dashboard!', 'success');
-                            saveBtn.innerHTML = '<span>✅</span><span>Saved!</span>';
-                            setTimeout(() => {
-                                saveBtn.innerHTML = originalText;
-                                saveBtn.disabled = false;
-                            }, 2000);
-                        } else {
-                            showStatus('❌ Failed to save: ' + saveData.message, 'error');
-                            saveBtn.innerHTML = originalText;
-                            saveBtn.disabled = false;
-                        }
-                    } catch (error) {
-                        console.error('Error saving to server:', error);
-                        showStatus('❌ Error saving to server. Please try again.', 'error');
-                        saveBtn.innerHTML = originalText;
-                        saveBtn.disabled = false;
-                    }
-                };
-                
-                reader.readAsDataURL(resultBlob);
-            } catch (error) {
-                console.error('Error converting video:', error);
-                showStatus('❌ Error processing video. Please try again.', 'error');
-                saveBtn.innerHTML = originalText;
-                saveBtn.disabled = false;
-            }
-        };
-        
-        window.downloadVideo = function() {
-            if (!resultBlob) {
-                alert('❌ No video available to download!');
-                return;
-            }
-            
-            const url = URL.createObjectURL(resultBlob);
-                const a = document.createElement('a');
-            a.href = url;
-            a.download = 'animated_face_' + Date.now() + '.mp4';
-                document.body.appendChild(a);
-                a.click();
-                    document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        };
     </script>
 </body>
 </html>
