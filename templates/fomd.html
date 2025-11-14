@@ -338,11 +338,46 @@
                 showStatus("📤 Uploading files...", "loading");
                 updateProgress(20);
                 
-                // Upload files
-                const imageHandle = await app.handle_blob(imageFile);
+                // Upload files and extract paths
+                // For gr.Image(type="filepath"), pass path string directly
+                // For gr.Video(sources=["upload"]), construct VideoData object with 'video' field
+                
+                const imageFileData = await app.handle_blob(imageFile);
+                console.log('Image file data:', imageFileData);
+                
+                // Extract path for image (gr.Image type="filepath" expects string)
+                const imageHandle = typeof imageFileData === 'string' 
+                    ? imageFileData 
+                    : (imageFileData?.path || imageFile);
+                
                 updateProgress(40);
                 
-                const videoHandle = await app.handle_blob(videoFile);
+                const videoFileData = await app.handle_blob(videoFile);
+                console.log('Video file data:', videoFileData);
+                
+                // Extract path and construct VideoData format
+                // gr.Video(sources=["upload"]) expects VideoData: {video: path, ...}
+                const videoPath = typeof videoFileData === 'string'
+                    ? videoFileData
+                    : (videoFileData?.path || null);
+                
+                if (!videoPath) {
+                    throw new Error('Failed to upload video file');
+                }
+                
+                // Construct VideoData object that gr.Video expects
+                // The 'video' field is required for VideoData validation
+                const videoHandle = {
+                    video: videoPath,
+                    orig_name: videoFile.name || 'video.mp4',
+                    is_file: true
+                };
+                
+                console.log('Final handles:', {
+                    image: imageHandle,
+                    video: videoHandle
+                });
+                
                 updateProgress(60);
                 
                 showStatus("🎬 Creating animation... (1-3 minutes)", "loading");
