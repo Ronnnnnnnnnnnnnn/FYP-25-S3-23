@@ -761,7 +761,6 @@ def api_upload_profile_picture():
 @app.route('/api/stripe/create-checkout-session', methods=['POST'])
 def create_checkout_session():
     """Create Stripe checkout session for subscription"""
-    # Check authentication
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
     
@@ -770,31 +769,15 @@ def create_checkout_session():
     if status == 'suspended':
         return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
     
-    # Validate Stripe configuration
-    if not stripe.api_key:
-        print("ERROR: STRIPE_SECRET_KEY not set in environment variables")
-        return jsonify({
-            'success': False, 
-            'message': 'Stripe is not configured. Please set STRIPE_SECRET_KEY in Railway environment variables.'
-        }), 500
-    
-    # Get plan type
     data = request.get_json()
     plan_type = data.get('plan', 'monthly')  # 'monthly' or 'yearly'
     
     if plan_type not in ['monthly', 'yearly']:
-        return jsonify({'success': False, 'message': 'Invalid plan type. Must be "monthly" or "yearly".'}), 400
+        return jsonify({'success': False, 'message': 'Invalid plan type'}), 400
     
-    # Get price ID
     price_id = PRICE_IDS.get(plan_type)
     if not price_id:
-        print(f"ERROR: Price ID not configured for plan: {plan_type}")
-        print(f"DEBUG: PRICE_IDS = {PRICE_IDS}")
-        missing_var = f'STRIPE_PRICE_ID_{plan_type.upper()}'
-        return jsonify({
-            'success': False, 
-            'message': f'Price ID not configured. Please set {missing_var} in Railway environment variables. Current PRICE_IDS: {PRICE_IDS}'
-        }), 500
+        return jsonify({'success': False, 'message': 'Price ID not configured. Please set STRIPE_PRICE_ID_MONTHLY and STRIPE_PRICE_ID_YEARLY in environment variables.'}), 500
     
     db = None
     cursor = None
@@ -826,21 +809,6 @@ def create_checkout_session():
             )
             db.commit()
         
-        # Validate FRONTEND_URL
-        if not FRONTEND_URL or FRONTEND_URL == 'http://localhost:5000':
-            print("WARNING: FRONTEND_URL not set or using default. Using request host instead.")
-            # Fallback to request host
-            frontend_url = request.url_root.rstrip('/')
-        else:
-            frontend_url = FRONTEND_URL.rstrip('/')
-        
-        print(f"DEBUG: Creating checkout session with:")
-        print(f"  - Customer ID: {customer_id}")
-        print(f"  - Price ID: {price_id}")
-        print(f"  - Plan type: {plan_type}")
-        print(f"  - Frontend URL: {frontend_url}")
-        print(f"  - Stripe API key set: {bool(stripe.api_key)}")
-        
         # Create checkout session
         checkout_session = stripe.checkout.Session.create(
             customer=customer_id,
@@ -850,44 +818,28 @@ def create_checkout_session():
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=f'{frontend_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}',
-            cancel_url=f'{frontend_url}/payment',
+            success_url=f'{FRONTEND_URL}/payment-success?session_id={{CHECKOUT_SESSION_ID}}',
+            cancel_url=f'{FRONTEND_URL}/payment',
             metadata={
                 'user_id': str(session['user_id']),
                 'plan_type': plan_type
             }
         )
         
-        print(f"✅ Checkout session created: {checkout_session.id}")
-        
         return jsonify({
             'success': True,
             'sessionId': checkout_session.id,
-            'publishableKey': STRIPE_PUBLISHABLE_KEY or ''
+            'publishableKey': STRIPE_PUBLISHABLE_KEY
         })
     
     except stripe.error.StripeError as e:
-        error_msg = str(e)
-        print(f"❌ Stripe API error: {error_msg}")
-        print(f"   Error type: {type(e).__name__}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'success': False, 
-            'message': f'Stripe API error: {error_msg}. Please check your Stripe API keys and Price IDs are correct.',
-            'error_type': type(e).__name__
-        }), 500
+        print(f"Stripe error: {e}")
+        return jsonify({'success': False, 'message': f'Stripe error: {str(e)}'}), 500
     except Exception as e:
-        error_msg = str(e)
-        print(f"❌ Create checkout session error: {error_msg}")
-        print(f"   Error type: {type(e).__name__}")
+        print(f"Create checkout session error: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({
-            'success': False, 
-            'message': f'Server error: {error_msg}. Check Railway logs for more details.',
-            'error_type': type(e).__name__
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         if cursor:
             cursor.close()

@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS animations (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- Subscriptions table
+-- Subscriptions table (includes Stripe integration fields)
 CREATE TABLE IF NOT EXISTS subscriptions (
     subscription_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,

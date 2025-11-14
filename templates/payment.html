@@ -455,17 +455,6 @@
           const data = await response.json();
           console.log('Checkout session response:', data);
 
-          if (!response.ok) {
-            // Server returned an error
-            alertDiv.className = 'alert error';
-            alertDiv.textContent = '❌ ' + (data.message || `Server error: ${response.status}. Check Railway logs for details.`);
-            alertDiv.style.display = 'block';
-            btn.disabled = false;
-            btn.textContent = 'Subscribe Now';
-            console.error('Server error:', data);
-            return;
-          }
-
           if (data.success && data.sessionId) {
             // Redirect to Stripe Checkout
             // Stripe will handle payment securely on their servers
