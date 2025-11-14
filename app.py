@@ -240,45 +240,67 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
             
             print(f"Processing FOMD animation with image: {image_path}, video: {video_path}")
             
-            # The Gradio client predict method uses positional arguments
-            # The order matches the Gradio interface inputs
-            # api_name can be "/predict" or we can use the endpoint index
-            # Try different formats to find what works
+            # Convert to absolute paths
+            import os
+            abs_image_path = os.path.abspath(image_path)
+            abs_video_path = os.path.abspath(video_path)
+            
+            print(f"Absolute paths - Image: {abs_image_path}, Video: {abs_video_path}")
+            
+            # Check if files exist
+            if not os.path.exists(abs_image_path):
+                raise Exception(f"Image file not found: {abs_image_path}")
+            if not os.path.exists(abs_video_path):
+                raise Exception(f"Video file not found: {abs_video_path}")
+            
+            # View API to understand the endpoint structure
+            try:
+                api_info = client.view_api()
+                print(f"API info available. Endpoints: {list(api_info.keys()) if isinstance(api_info, dict) else 'N/A'}")
+            except:
+                print("Could not retrieve API info, proceeding with standard methods")
             
             result = None
             last_error = None
             
-            # Method 1: Positional arguments with api_name
+            # Method 1: Use positional arguments with api_name="/predict"
+            # This is the standard way for Gradio client
             try:
-                print("Trying positional arguments with api_name='/predict'")
+                print("Method 1: Positional arguments with api_name='/predict'")
                 result = client.predict(
-                    image_path,
-                    video_path,
+                    abs_image_path,  # First input: source_image
+                    abs_video_path,  # Second input: driving_video
                     api_name="/predict"
                 )
-                print("✅ Success with positional arguments")
+                print("✅ Success with Method 1")
             except Exception as e1:
                 last_error = e1
-                print(f"Method 1 failed: {e1}")
+                print(f"Method 1 failed: {str(e1)[:200]}")
                 
-                # Method 2: Try without api_name (uses first endpoint)
+                # Method 2: Try without api_name (uses default/first endpoint)
                 try:
-                    print("Trying positional arguments without api_name")
-                    result = client.predict(image_path, video_path)
-                    print("✅ Success without api_name")
+                    print("Method 2: Positional arguments without api_name")
+                    result = client.predict(abs_image_path, abs_video_path)
+                    print("✅ Success with Method 2")
                 except Exception as e2:
                     last_error = e2
-                    print(f"Method 2 failed: {e2}")
+                    print(f"Method 2 failed: {str(e2)[:200]}")
                     
-                    # Method 3: Try with endpoint index 0
+                    # Method 3: Try using submit() for async processing
                     try:
-                        print("Trying with endpoint index 0")
-                        result = client.predict(0, [image_path, video_path])
-                        print("✅ Success with endpoint index")
+                        print("Method 3: Using submit() method")
+                        job = client.submit(
+                            abs_image_path,
+                            abs_video_path,
+                            api_name="/predict"
+                        )
+                        # Wait for result with timeout
+                        result = job.result(timeout=300)  # 5 minute timeout
+                        print("✅ Success with Method 3 (submit)")
                     except Exception as e3:
                         last_error = e3
-                        print(f"Method 3 failed: {e3}")
-                        raise Exception(f"All prediction methods failed. Last error: {e3}")
+                        print(f"Method 3 failed: {str(e3)[:200]}")
+                        raise Exception(f"All prediction methods failed. Last error: {str(e3)}")
             
             if result is None:
                 raise Exception("No result returned from any prediction method")
