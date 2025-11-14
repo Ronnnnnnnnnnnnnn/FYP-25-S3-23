@@ -1429,25 +1429,6 @@ def admin_manage_user(user_id):
                 db.commit()
                 return jsonify({'success': True, 'message': 'User activated'})
             
-            elif action == 'edit':
-                fullname = data.get('fullname')
-                email = data.get('email')
-                
-                if not fullname or not email:
-                    return jsonify({'success': False, 'message': 'Fullname and email are required'}), 400
-                
-                # Check if email is already taken by another user
-                cursor.execute("SELECT user_id FROM users WHERE email = %s AND user_id != %s", (email, user_id))
-                if cursor.fetchone():
-                    return jsonify({'success': False, 'message': 'Email already exists'}), 400
-                
-                cursor.execute(
-                    "UPDATE users SET fullname = %s, email = %s WHERE user_id = %s",
-                    (fullname, email, user_id)
-                )
-                db.commit()
-                return jsonify({'success': True, 'message': 'User updated successfully'})
-            
             else:
                 return jsonify({'success': False, 'message': 'Invalid action'}), 400
         
