@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOMD - First Order Motion Model - FIXED</title>
+    <title>FOMD - First Order Motion Model</title>
     <style>
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -195,28 +195,12 @@
             display: block;
             border-radius: 10px;
         }
-        
-        .debug-info {
-            background: #f3f4f6;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .debug-info h3 {
-            margin-top: 0;
-            color: #667eea;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎬 FOMD Animation</h1>
-        <p class="subtitle">First Order Motion Model - Fixed Version</p>
+        <p class="subtitle">First Order Motion Model</p>
         
         <div class="upload-section">
             <div class="upload-box" id="imageBox">
@@ -259,40 +243,20 @@
                 <button onclick="downloadVideo()" class="file-label">📥 Download Video</button>
             </div>
         </div>
-        
-        <div id="debugInfo" class="debug-info">
-            <h3>🔍 Debug Information</h3>
-            <div id="debugLog"></div>
-        </div>
     </div>
 
     <script type="module">
-        // ═══════════════════════════════════════════════════════════
-        // CONFIGURATION - REPLACE WITH YOUR HUGGING FACE SPACE!
-        // ═══════════════════════════════════════════════════════════
-        const YOUR_USERNAME = "Tc12345";  // ← Your HF username
-        const SPACE_NAME = "fomd";  // ← Your FOMD space name
+        const YOUR_USERNAME = "Tc12345";
+        const SPACE_NAME = "fomd";
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
-        // ═══════════════════════════════════════════════════════════
 
-        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+        import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
 
         let imageFile = null;
         let videoFile = null;
         let resultBlob = null;
         let app = null;
         
-        // Debug logging
-        function debugLog(message, data = null) {
-            const log = document.getElementById('debugLog');
-            const timestamp = new Date().toLocaleTimeString();
-            const entry = `[${timestamp}] ${message}${data ? '\n' + JSON.stringify(data, null, 2) : ''}`;
-            log.innerHTML += `<div>${entry}</div>`;
-            log.scrollTop = log.scrollHeight;
-            console.log(message, data);
-        }
-        
-        // Preview functions
         window.previewImage = function(input) {
             const preview = document.getElementById('imagePreview');
             const imageName = document.getElementById('imageName');
@@ -300,12 +264,6 @@
             
             if (input.files && input.files[0]) {
                 imageFile = input.files[0];
-                debugLog('📷 Image selected:', {
-                    name: imageFile.name,
-                    type: imageFile.type,
-                    size: imageFile.size
-                });
-                
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     preview.src = e.target.result;
@@ -315,12 +273,6 @@
                     checkReadyToAnimate();
                 };
                 reader.readAsDataURL(imageFile);
-            } else {
-                imageFile = null;
-                preview.style.display = 'none';
-                imageName.textContent = '';
-                imageBox.classList.remove('has-file');
-                checkReadyToAnimate();
             }
         };
         
@@ -331,23 +283,11 @@
             
             if (input.files && input.files[0]) {
                 videoFile = input.files[0];
-                debugLog('🎥 Video selected:', {
-                    name: videoFile.name,
-                    type: videoFile.type,
-                    size: videoFile.size
-                });
-                
                 const url = URL.createObjectURL(videoFile);
                 preview.src = url;
                 preview.style.display = 'block';
                 videoName.textContent = '✓ ' + videoFile.name;
                 videoBox.classList.add('has-file');
-                checkReadyToAnimate();
-            } else {
-                videoFile = null;
-                preview.style.display = 'none';
-                videoName.textContent = '';
-                videoBox.classList.remove('has-file');
                 checkReadyToAnimate();
             }
         };
@@ -371,34 +311,9 @@
             }
         }
         
-        // Initialize connection to Gradio space
-        async function initClient() {
-            if (!app) {
-                try {
-                    debugLog('🔌 Connecting to Gradio space:', SPACE_URL);
-                    showStatus('⏳ Connecting to server...', 'loading');
-                    
-                    app = await client(SPACE_URL);
-                    debugLog('✅ Connected successfully!');
-                    showStatus('✅ Connected to server', 'success');
-                    setTimeout(() => {
-                        document.getElementById('status').classList.remove('show');
-                    }, 2000);
-                    
-                    return app;
-                } catch (error) {
-                    debugLog('❌ Connection failed:', error.message);
-                    showStatus('❌ Failed to connect to server', 'error');
-                    throw error;
-                }
-            }
-            return app;
-        }
-        
-        // Main animation function - FIXED VERSION
         window.createAnimation = async function() {
             if (!imageFile || !videoFile) {
-                showStatus('❌ Please upload both image and video files', 'error');
+                showStatus('❌ Please upload both files', 'error');
                 return;
             }
 
@@ -408,104 +323,54 @@
             
             btn.disabled = true;
             btn.textContent = '⏳ Processing...';
-            
-            // Reset UI
             resultSection.classList.remove('show');
             progressContainer.classList.add('show');
             updateProgress(0);
-            showStatus("Initializing...", "loading");
             
             try {
-                // Step 1: Connect to Gradio
-                debugLog('Step 1: Connecting to Gradio');
-                await initClient();
+                showStatus("Connecting...", "loading");
                 updateProgress(10);
                 
-                // Step 2: Upload image file
-                debugLog('Step 2: Uploading image file');
-                showStatus("📤 Uploading image...", "loading");
-                
-                let imageHandle;
-                try {
-                    debugLog('Image file details:', {
-                        name: imageFile.name,
-                        type: imageFile.type,
-                        size: imageFile.size
-                    });
-                    
-                    imageHandle = await app.upload_file(imageFile);
-                    debugLog('✅ Image uploaded successfully:', imageHandle);
-                } catch (error) {
-                    debugLog('❌ Image upload failed:', error.message);
-                    throw new Error('Failed to upload image: ' + error.message);
+                if (!app) {
+                    app = await Client.connect(SPACE_URL);
                 }
                 
-                updateProgress(30);
+                showStatus("📤 Uploading files...", "loading");
+                updateProgress(20);
                 
-                // Step 3: Upload video file
-                debugLog('Step 3: Uploading video file');
-                showStatus("📤 Uploading video...", "loading");
+                // Use handle_file for Gradio Client
+                const imageHandle = await app.handle_blob(imageFile);
+                updateProgress(40);
                 
-                let videoHandle;
-                try {
-                    debugLog('Video file details:', {
-                        name: videoFile.name,
-                        type: videoFile.type,
-                        size: videoFile.size
-                    });
-                    
-                    videoHandle = await app.upload_file(videoFile);
-                    debugLog('✅ Video uploaded successfully:', videoHandle);
-                } catch (error) {
-                    debugLog('❌ Video upload failed:', error.message);
-                    throw new Error('Failed to upload video: ' + error.message);
-                }
+                const videoHandle = await app.handle_blob(videoFile);
+                updateProgress(60);
                 
-                updateProgress(50);
+                showStatus("🎬 Creating animation...", "loading");
                 
-                // Step 4: Call the animation function
-                debugLog('Step 4: Calling Gradio predict function');
-                debugLog('Sending parameters:', {
-                    image: imageHandle,
-                    video: videoHandle
-                });
-                showStatus("🎬 Creating animation... This may take 1-3 minutes", "loading");
+                const result = await app.predict("/predict", [imageHandle, videoHandle]);
                 
-                // THE KEY FIX: Ensure both parameters are properly passed
-                const result = await app.predict("/predict", {
-                    source_image: imageHandle,
-                    driving_video: videoHandle
-                });
-                
-                debugLog('✅ Predict completed:', result);
                 updateProgress(90);
+                showStatus("📥 Processing result...", "loading");
                 
-                // Step 5: Extract video URL from result
-                showStatus("📥 Downloading result...", "loading");
-                
+                // Extract video URL
                 let videoUrl = null;
-                if (result && result.data && result.data[0]) {
+                if (result?.data?.[0]?.video) {
+                    videoUrl = result.data[0].video.url;
+                } else if (result?.data?.[0]?.url) {
+                    videoUrl = result.data[0].url;
+                } else if (result?.data?.[0]) {
                     videoUrl = result.data[0];
-                } else if (result && result.data && result.data.video) {
-                    videoUrl = result.data.video;
-                } else if (typeof result === 'object' && result.url) {
-                    videoUrl = result.url;
                 }
                 
                 if (!videoUrl) {
-                    debugLog('❌ No video URL found in result');
-                    throw new Error('No video URL found in result');
+                    throw new Error('No video URL in result');
                 }
                 
-                debugLog('✅ Video URL extracted:', videoUrl);
-                
-                // Make URL absolute if needed
+                // Make absolute URL
                 if (!videoUrl.startsWith('http')) {
                     videoUrl = new URL(videoUrl, `https://huggingface.co/spaces/${SPACE_URL}`).href;
-                    debugLog('Converted to absolute URL:', videoUrl);
                 }
                 
-                // Step 6: Fetch and display result
                 const response = await fetch(videoUrl);
                 resultBlob = await response.blob();
                 
@@ -515,29 +380,24 @@
                 video.load();
                 
                 updateProgress(100);
-                showStatus("✅ Animation complete!", "success");
+                showStatus("✅ Complete!", "success");
                 
                 resultSection.classList.add('show');
                 resultSection.scrollIntoView({ behavior: 'smooth' });
                 
-                debugLog('✅ All steps completed successfully!');
-                
             } catch (error) {
-                debugLog('❌ Error occurred:', error.message);
-                console.error("Full error:", error);
+                console.error("Error:", error);
                 showStatus("❌ Error: " + error.message, "error");
             } finally {
                 btn.disabled = false;
                 btn.textContent = '🚀 Create Animation';
-                setTimeout(() => {
-                    progressContainer.classList.remove('show');
-                }, 2000);
+                setTimeout(() => progressContainer.classList.remove('show'), 2000);
             }
         };
         
         window.downloadVideo = function() {
             if (!resultBlob) {
-                alert('❌ No video available to download!');
+                alert('No video available!');
                 return;
             }
             
@@ -549,15 +409,7 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
-            debugLog('✅ Video downloaded');
         };
-        
-        // Initialize on page load
-        window.addEventListener('load', () => {
-            debugLog('🚀 Page loaded, ready to use');
-            debugLog('Space URL:', SPACE_URL);
-        });
     </script>
 </body>
 </html>
