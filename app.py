@@ -415,9 +415,6 @@ def login_page():
 def signup_page():
     return render_template('signup.html')
 
-@app.route('/forgot-password')
-def forgot_password_page():
-    return render_template('forgot_password.html')
 
 @app.route('/verify-account')
 def verify_account_page():
@@ -904,35 +901,7 @@ def api_delete_account():
         if db:
             db.close()
 
-@app.route('/api/forgot-password', methods=['POST'])
-def api_forgot_password():
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        
-        if not email:
-            return jsonify({'success': False, 'message': 'Email is required'}), 400
-        
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
-        
-        # Check if email exists
-        cursor.execute("SELECT user_id, fullname FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
-        
-        cursor.close()
-        db.close()
-        
-        # Always return success message for security (don't reveal if email exists)
-        # In production, you would send an email with reset link here
-        return jsonify({
-            'success': True,
-            'message': 'If an account with that email exists, password reset instructions have been sent.'
-        })
-    
-    except Exception as e:
-        print(f"Forgot password error: {e}")
-        return jsonify({'success': False, 'message': 'An error occurred. Please try again.'}), 500
+# Removed forgot password functionality
 
 @app.route('/api/change-password', methods=['POST'])
 def api_change_password():
