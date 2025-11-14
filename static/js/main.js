@@ -1335,12 +1335,27 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
   
   // Edit user (fullname and email only) - Make sure it's globally available
   window.editUser = function(userId, currentFullname, currentEmail) {
-    console.log('Edit user called:', userId, currentFullname, currentEmail);
-    const newFullname = prompt('Enter new full name:', currentFullname);
-    if (newFullname === null) return;
+    console.log('Edit user function called:', userId, currentFullname, currentEmail);
     
-    const newEmail = prompt('Enter new email:', currentEmail);
-    if (newEmail === null) return;
+    // Decode HTML entities from data attributes
+    if (currentFullname) {
+      currentFullname = currentFullname.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    }
+    if (currentEmail) {
+      currentEmail = currentEmail.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    }
+    
+    const newFullname = prompt('Enter new full name:', currentFullname || '');
+    if (newFullname === null) {
+      console.log('User cancelled fullname prompt');
+      return;
+    }
+    
+    const newEmail = prompt('Enter new email:', currentEmail || '');
+    if (newEmail === null) {
+      console.log('User cancelled email prompt');
+      return;
+    }
     
     if (!newFullname.trim() || !newEmail.trim()) {
       showMessage('Full name and email are required', 'error');
