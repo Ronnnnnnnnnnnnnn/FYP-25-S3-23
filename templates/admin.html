@@ -179,10 +179,28 @@
         e.preventDefault();
         console.log('📝 Form submitted');
         
-        const fullname = document.getElementById('adminFullname').value.trim();
-        const email = document.getElementById('adminEmail').value.trim();
-        const password = document.getElementById('adminPassword').value;
-        const confirmPassword = document.getElementById('adminConfirmPassword').value;
+        // Get form elements with null checks
+        const fullnameInput = document.getElementById('adminFullname');
+        const emailInput = document.getElementById('adminEmail');
+        const passwordInput = document.getElementById('adminPassword');
+        const confirmPasswordInput = document.getElementById('adminConfirmPassword');
+        
+        // Check if all elements exist
+        if (!fullnameInput || !emailInput || !passwordInput || !confirmPasswordInput) {
+          console.error('❌ Form elements not found!', {
+            fullname: !!fullnameInput,
+            email: !!emailInput,
+            password: !!passwordInput,
+            confirmPassword: !!confirmPasswordInput
+          });
+          showCreateAdminMessage('❌ Form elements not found. Please refresh the page.', 'error');
+          return;
+        }
+        
+        const fullname = fullnameInput.value.trim();
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
         
         console.log('Form data:', { fullname, email, passwordLength: password.length });
         
