@@ -285,8 +285,8 @@
 
     <div class="payment-container">
       <div class="payment-header">
-        <h1>💳 Upgrade to Premium</h1>
-        <p>Unlock exclusive features: FOMD and MakeItTalk animations</p>
+        <h1>💳 {% if is_plan_change %}Change Your Plan{% else %}Upgrade to Premium{% endif %}</h1>
+        <p>{% if is_plan_change %}Your current plan will remain active until the end of the billing period.{% else %}Unlock exclusive features: FOMD and MakeItTalk animations{% endif %}</p>
       </div>
 
       <div class="info-box">
