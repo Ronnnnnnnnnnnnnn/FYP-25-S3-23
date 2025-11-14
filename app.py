@@ -277,20 +277,61 @@ def subscriber_dashboard():
     if status == 'suspended':
         return redirect(url_for('login_page'))
     
-    # Fetch user's fullname from database
+    # Fetch user's fullname and subscription info from database
+    subscription_info = None
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT fullname FROM users WHERE user_id = %s", (session['user_id'],))
+        
+        # Get user info
+        cursor.execute("SELECT fullname, subscription_plan FROM users WHERE user_id = %s", (session['user_id'],))
         user = cursor.fetchone()
+        
+        if user:
+            fullname = user.get('fullname', 'Subscriber')
+            
+            # Get subscription details (most recent active subscription)
+            cursor.execute(
+                """SELECT plan_type, start_date, end_date, payment_status, amount 
+                   FROM subscriptions 
+                   WHERE user_id = %s AND payment_status = 'completed'
+                   ORDER BY created_at DESC 
+                   LIMIT 1""",
+                (session['user_id'],)
+            )
+            subscription = cursor.fetchone()
+            
+            if subscription:
+                subscription_info = {
+                    'plan_type': subscription.get('plan_type', 'monthly'),
+                    'start_date': subscription.get('start_date'),
+                    'end_date': subscription.get('end_date'),
+                    'amount': float(subscription.get('amount', 0)),
+                    'payment_status': subscription.get('payment_status', 'completed')
+                }
+            elif user.get('subscription_plan'):
+                # Fallback to user table if no subscription record found
+                plan_type = user.get('subscription_plan', 'monthly')
+                subscription_info = {
+                    'plan_type': plan_type,
+                    'start_date': None,
+                    'end_date': None,
+                    'amount': 9.99 if plan_type == 'monthly' else 99.99,
+                    'payment_status': 'completed'
+                }
+        else:
+            fullname = 'Subscriber'
+        
         cursor.close()
         db.close()
-        fullname = user.get('fullname', 'Subscriber') if user else 'Subscriber'
     except Exception as e:
-        print(f"Error fetching user fullname: {e}")
+        print(f"Error fetching subscriber info: {e}")
+        import traceback
+        traceback.print_exc()
         fullname = 'Subscriber'
+        subscription_info = None
     
-    return render_template('subscriber.html', user_fullname=fullname)
+    return render_template('subscriber.html', user_fullname=fullname, subscription_info=subscription_info)
 
 @app.route('/admin')
 def admin_dashboard():

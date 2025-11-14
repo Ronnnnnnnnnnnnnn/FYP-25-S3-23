@@ -109,20 +109,50 @@
 
         <!-- Subscription Management -->
         <div class="subscription-management" style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 30px; margin-top: 30px;">
-          <h3 style="color: white;">💳 Subscription & Payment</h3>
-          <p style="color: rgba(255, 255, 255, 0.9);"><strong>Status:</strong> Active Premium</p>
-          <p style="color: rgba(255, 255, 255, 0.9);"><strong>Benefits:</strong> Unlimited animations, MP4 download, MakeItTalk audio</p>
-          <form class="subscription-form">
-            <label for="planSelect" style="color: rgba(255, 255, 255, 0.9);">Modify Plan:</label>
-            <select id="planSelect" style="width: 100%; padding: 14px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 10px; background: rgba(255, 255, 255, 0.1); color: white; margin-bottom: 15px; box-sizing: border-box;">
-              <option value="monthly">Monthly - $9.99</option>
-              <option value="yearly">Yearly - $99.99</option>
-            </select>
-            <label for="paymentMethod" style="color: rgba(255, 255, 255, 0.9);">Update Payment Method:</label>
-            <input type="text" id="paymentMethod" placeholder="Card Number" style="width: 100%; padding: 14px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 10px; background: rgba(255, 255, 255, 0.1); color: white; margin-bottom: 15px; box-sizing: border-box;">
-            <button type="button" class="btn btn-primary" id="updateSubscriptionBtn">Update Subscription</button>
-            <button type="button" class="btn danger-btn" id="cancelSubscriptionBtn">Cancel Subscription</button>
-          </form>
+          <h3 style="color: white; margin-bottom: 20px;">💳 Subscription & Payment</h3>
+          
+          {% if subscription_info %}
+            <div style="margin-bottom: 25px;">
+              <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 10px;">
+                <strong style="color: white;">Plan:</strong> 
+                <span style="text-transform: capitalize;">{{ subscription_info.plan_type }}</span> 
+                (${{ "%.2f"|format(subscription_info.amount) }}/{{ "month" if subscription_info.plan_type == "monthly" else "year" }})
+              </p>
+              
+              {% if subscription_info.start_date %}
+                <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 10px;">
+                  <strong style="color: white;">Billing Start Date:</strong> 
+                  {{ subscription_info.start_date.strftime('%B %d, %Y') }}
+                </p>
+              {% endif %}
+              
+              {% if subscription_info.end_date %}
+                <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 10px;">
+                  <strong style="color: white;">Billing End Date:</strong> 
+                  {{ subscription_info.end_date.strftime('%B %d, %Y') }}
+                </p>
+              {% endif %}
+              
+              <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 15px;">
+                <strong style="color: white;">Status:</strong> 
+                <span class="premium-badge" style="padding: 4px 12px; font-size: 14px;">Active Premium</span>
+              </p>
+            </div>
+            
+            <div style="padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              <p style="color: rgba(255, 255, 255, 0.8); font-size: 14px; margin-bottom: 20px;">
+                <strong>Benefits:</strong> Unlimited animations, MP4 download, MakeItTalk audio, FOMD animations
+              </p>
+              <button type="button" class="btn danger-btn" id="cancelSubscriptionBtn" style="width: 100%;">
+                Cancel Subscription
+              </button>
+              <p style="color: rgba(255, 255, 255, 0.6); font-size: 12px; margin-top: 10px; text-align: center;">
+                Your subscription will remain active until the end of the current billing period
+              </p>
+            </div>
+          {% else %}
+            <p style="color: rgba(255, 255, 255, 0.9);">Loading subscription information...</p>
+          {% endif %}
         </div>
 
       </div>
@@ -248,7 +278,6 @@
     // Cancel subscription handler
     document.addEventListener('DOMContentLoaded', function() {
       const cancelBtn = document.getElementById('cancelSubscriptionBtn');
-      const updateBtn = document.getElementById('updateSubscriptionBtn');
       
       if (cancelBtn) {
         cancelBtn.addEventListener('click', async function() {
@@ -283,12 +312,6 @@
             cancelBtn.disabled = false;
             cancelBtn.textContent = 'Cancel Subscription';
           }
-        });
-      }
-      
-      if (updateBtn) {
-        updateBtn.addEventListener('click', function() {
-          window.location.href = '/payment';
         });
       }
     });

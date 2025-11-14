@@ -53,9 +53,30 @@ INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
 ('Jane Smith', 'user2@example.com', 'scrypt:32768:8:1$Omofv9wsjMy4sitA$11d1aaf9f50747efd0518d52cfd0aab5a81c1ac98657c93ea9df66edc4214549b4462cf2a9886f6e239fd39f10829afd533057b85fc961cf9e7265d169099936', 'user', 'inactive');
 
 -- Insert 2 subscribers (password: password123)
-INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
-('Alice Johnson', 'subscriber1@example.com', 'scrypt:32768:8:1$28SDIt4iRCoItfuJ$551c35735a2fbc7f34a29eec1d22f314f318223328ce90356b1a9babe61c11b0ed6fd924c4cb55256117752c432ba1200a91dff82dff977865e4be8210fbaa07', 'subscriber', 'active'),
-('Bob Williams', 'subscriber2@example.com', 'scrypt:32768:8:1$UY7p2V0jCvkD0uOq$072803b783157d3d9d60dd3f91114cc2b8f70947496efbdf862e3954fffe9cf5e9c331b2ce0a547958d198f50dbfea3ebc6652edc2a36c7ab1b7f0b623304edd', 'subscriber', 'active');
+INSERT INTO users (fullname, email, password, role, subscription_status, subscription_plan, subscription_end_date) VALUES
+('Alice Johnson', 'subscriber1@example.com', 'scrypt:32768:8:1$28SDIt4iRCoItfuJ$551c35735a2fbc7f34a29eec1d22f314f318223328ce90356b1a9babe61c11b0ed6fd924c4cb55256117752c432ba1200a91dff82dff977865e4be8210fbaa07', 'subscriber', 'active', 'monthly', DATE_ADD(CURDATE(), INTERVAL 30 DAY)),
+('Bob Williams', 'subscriber2@example.com', 'scrypt:32768:8:1$UY7p2V0jCvkD0uOq$072803b783157d3d9d60dd3f91114cc2b8f70947496efbdf862e3954fffe9cf5e9c331b2ce0a547958d198f50dbfea3ebc6652edc2a36c7ab1b7f0b623304edd', 'subscriber', 'active', 'yearly', DATE_ADD(CURDATE(), INTERVAL 365 DAY));
+
+-- Insert subscription records for subscribers
+INSERT INTO subscriptions (user_id, plan_type, start_date, end_date, payment_status, amount) 
+SELECT 
+    u.user_id,
+    CASE 
+        WHEN u.email = 'subscriber1@example.com' THEN 'monthly'
+        WHEN u.email = 'subscriber2@example.com' THEN 'yearly'
+    END as plan_type,
+    CURDATE() as start_date,
+    CASE 
+        WHEN u.email = 'subscriber1@example.com' THEN DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        WHEN u.email = 'subscriber2@example.com' THEN DATE_ADD(CURDATE(), INTERVAL 365 DAY)
+    END as end_date,
+    'completed' as payment_status,
+    CASE 
+        WHEN u.email = 'subscriber1@example.com' THEN 9.99
+        WHEN u.email = 'subscriber2@example.com' THEN 99.99
+    END as amount
+FROM users u
+WHERE u.email IN ('subscriber1@example.com', 'subscriber2@example.com');
 
 -- Insert 2 additional admins (password: password123)
 INSERT INTO users (fullname, email, password, role, subscription_status) VALUES
