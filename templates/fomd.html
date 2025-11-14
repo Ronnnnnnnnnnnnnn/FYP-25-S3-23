@@ -338,60 +338,17 @@
                 showStatus("📤 Preparing files...", "loading");
                 updateProgress(20);
                 
-                // Try upload_file method to get proper file handles
-                let imageHandle, videoHandle;
+                // Pass File objects directly - Gradio client will handle conversion to filepaths
+                // This works for both gr.Image(type="filepath") and gr.Video(type="filepath")
+                const imageHandle = imageFile;
+                const videoHandle = videoFile;
                 
-                try {
-                    console.log('Uploading files via upload_file...');
-                    
-                    // Use upload_file to get file paths
-                    const imageUploadResult = await app.upload_file(imageFile);
-                    console.log('Image upload result:', imageUploadResult);
-                    
-                    // Extract path for image (gr.Image type="filepath" expects string)
-                    const imagePath = typeof imageUploadResult === 'string' 
-                        ? imageUploadResult 
-                        : (imageUploadResult?.path || imageUploadResult);
-                    
-                    imageHandle = imagePath;
-                    
-                    updateProgress(40);
-                    
-                    const videoUploadResult = await app.upload_file(videoFile);
-                    console.log('Video upload result:', videoUploadResult);
-                    
-                    // Extract path and construct VideoData format
-                    // gr.Video(sources=["upload"]) expects VideoData: {video: path, ...}
-                    const videoPath = typeof videoUploadResult === 'string'
-                        ? videoUploadResult
-                        : (videoUploadResult?.path || videoUploadResult);
-                    
-                    if (!videoPath) {
-                        throw new Error('Failed to get video path from upload');
-                    }
-                    
-                    // Construct VideoData object that gr.Video expects
-                    // The 'video' field is required for VideoData validation
-                    videoHandle = {
-                        video: videoPath,
-                        orig_name: videoFile.name || 'video.mp4',
-                        is_file: true
-                    };
-                    
-                    console.log('Final handles:', {
-                        image: imageHandle,
-                        video: videoHandle
-                    });
-                    
-                    updateProgress(60);
-                } catch (uploadError) {
-                    console.error('Upload error:', uploadError);
-                    console.log('Falling back to passing File objects directly...');
-                    // Fallback: pass File objects directly and let Gradio client handle it
-                    imageHandle = imageFile;
-                    videoHandle = videoFile;
-                    updateProgress(60);
-                }
+                console.log('Passing File objects directly (Gradio will convert to filepaths):', {
+                    image: imageFile.name,
+                    video: videoFile.name
+                });
+                
+                updateProgress(60);
                 
                 showStatus("🎬 Creating animation... (1-3 minutes)", "loading");
                 
