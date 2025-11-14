@@ -254,30 +254,67 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
                 raise Exception(f"Video file not found: {abs_video_path}")
             
             # View API to understand the endpoint structure
+            api_endpoint = None
             try:
                 api_info = client.view_api()
-                print(f"API info available. Endpoints: {list(api_info.keys()) if isinstance(api_info, dict) else 'N/A'}")
-            except:
-                print("Could not retrieve API info, proceeding with standard methods")
+                print(f"API info type: {type(api_info)}")
+                print(f"API info: {api_info}")
+                
+                # The API info structure varies - it could be a dict, list, or have nested structure
+                # Try to find the predict endpoint
+                if isinstance(api_info, dict):
+                    # Look for endpoints in the dict
+                    for endpoint_name, endpoint_info in api_info.items():
+                        print(f"Found endpoint: {endpoint_name}")
+                        if 'predict' in endpoint_name.lower() or '/predict' in endpoint_name:
+                            api_endpoint = endpoint_name
+                            print(f"✅ Using endpoint: {api_endpoint}")
+                            break
+                    # If not found, try the first endpoint
+                    if not api_endpoint and len(api_info) > 0:
+                        api_endpoint = list(api_info.keys())[0]
+                        print(f"Using first available endpoint: {api_endpoint}")
+                elif isinstance(api_info, list) and len(api_info) > 0:
+                    # If it's a list, use the first one
+                    api_endpoint = api_info[0] if isinstance(api_info[0], str) else None
+                    print(f"Using endpoint from list: {api_endpoint}")
+                
+            except Exception as api_err:
+                print(f"Could not retrieve API info: {api_err}, will try common endpoint names")
             
             result = None
             last_error = None
             
-            # Method 1: Use positional arguments with api_name="/predict"
-            # This is the standard way for Gradio client
-            try:
-                print("Method 1: Positional arguments with api_name='/predict'")
-                result = client.predict(
-                    abs_image_path,  # First input: source_image
-                    abs_video_path,  # Second input: driving_video
-                    api_name="/predict"
-                )
-                print("✅ Success with Method 1")
-            except Exception as e1:
-                last_error = e1
-                print(f"Method 1 failed: {str(e1)[:200]}")
-                
-                # Method 2: Try without api_name (uses default/first endpoint)
+            # List of endpoint names to try
+            endpoint_names_to_try = []
+            if api_endpoint:
+                endpoint_names_to_try.append(api_endpoint)
+            # Add common variations
+            endpoint_names_to_try.extend(["/predict", "predict", 0])  # 0 means first endpoint
+            
+            # Method 1: Try with the discovered endpoint or common names
+            for endpoint_name in endpoint_names_to_try:
+                try:
+                    print(f"Trying endpoint: {endpoint_name}")
+                    if endpoint_name == 0:
+                        # Use endpoint index
+                        result = client.predict(abs_image_path, abs_video_path)
+                    else:
+                        # Use api_name
+                        result = client.predict(
+                            abs_image_path,  # First input: source_image
+                            abs_video_path,  # Second input: driving_video
+                            api_name=endpoint_name
+                        )
+                    print(f"✅ Success with endpoint: {endpoint_name}")
+                    break
+                except Exception as e1:
+                    last_error = e1
+                    print(f"Failed with endpoint {endpoint_name}: {str(e1)[:200]}")
+                    continue
+            
+            # Method 2: Try without api_name (uses default/first endpoint)
+            if result is None:
                 try:
                     print("Method 2: Positional arguments without api_name")
                     result = client.predict(abs_image_path, abs_video_path)
@@ -288,12 +325,8 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
                     
                     # Method 3: Try using submit() for async processing
                     try:
-                        print("Method 3: Using submit() method")
-                        job = client.submit(
-                            abs_image_path,
-                            abs_video_path,
-                            api_name="/predict"
-                        )
+                        print("Method 3: Using submit() method without api_name")
+                        job = client.submit(abs_image_path, abs_video_path)
                         # Wait for result with timeout
                         result = job.result(timeout=300)  # 5 minute timeout
                         print("✅ Success with Method 3 (submit)")
