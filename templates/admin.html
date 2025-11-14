@@ -151,56 +151,67 @@
       createParticles();
     }
   </script>
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   <script>
-    // Create Admin Account Handler
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🔧 Initializing Create Admin functionality...');
-      
-      const createAdminForm = document.getElementById('createAdminForm');
-      const createAdminMessage = document.getElementById('createAdminMessage');
-      const createAdminBtn = document.getElementById('createAdminBtn');
-      const createAdminBtnText = document.getElementById('createAdminBtnText');
-      
-      if (!createAdminForm) {
-        console.error('❌ Create Admin Form not found!');
-        return;
-      }
-      
-      if (!createAdminBtn) {
-        console.error('❌ Create Admin Button not found!');
-        return;
-      }
-      
-      console.log('✅ Create Admin Form and Button found');
-      
-      // Handle form submission
-      createAdminForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        console.log('📝 Form submitted');
+    // Create Admin Account Handler - Run after DOM and other scripts
+    (function() {
+      function initCreateAdmin() {
+        console.log('🔧 Initializing Create Admin functionality...');
         
-        // Get form elements with null checks
-        const fullnameInput = document.getElementById('adminFullname');
-        const emailInput = document.getElementById('adminEmail');
-        const passwordInput = document.getElementById('adminPassword');
-        const confirmPasswordInput = document.getElementById('adminConfirmPassword');
+        const createAdminForm = document.getElementById('createAdminForm');
+        const createAdminMessage = document.getElementById('createAdminMessage');
+        const createAdminBtn = document.getElementById('createAdminBtn');
+        const createAdminBtnText = document.getElementById('createAdminBtnText');
         
-        // Check if all elements exist
-        if (!fullnameInput || !emailInput || !passwordInput || !confirmPasswordInput) {
-          console.error('❌ Form elements not found!', {
-            fullname: !!fullnameInput,
-            email: !!emailInput,
-            password: !!passwordInput,
-            confirmPassword: !!confirmPasswordInput
-          });
-          showCreateAdminMessage('❌ Form elements not found. Please refresh the page.', 'error');
-          return;
+        if (!createAdminForm) {
+          console.error('❌ Create Admin Form not found!');
+          return false;
         }
         
-        const fullname = fullnameInput.value.trim();
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
+        if (!createAdminBtn) {
+          console.error('❌ Create Admin Button not found!');
+          return false;
+        }
+        
+        console.log('✅ Create Admin Form and Button found');
+        
+        // Remove any existing listeners to prevent duplicates
+        const newForm = createAdminForm.cloneNode(true);
+        createAdminForm.parentNode.replaceChild(newForm, createAdminForm);
+        
+        // Get fresh references after clone
+        const form = document.getElementById('createAdminForm');
+        const btn = document.getElementById('createAdminBtn');
+        const btnText = document.getElementById('createAdminBtnText');
+        const message = document.getElementById('createAdminMessage');
+        
+        // Handle form submission
+        form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('📝 Form submitted');
+          
+          // Get form elements with null checks - use form.querySelector for reliability
+          const fullnameInput = form.querySelector('#adminFullname') || document.getElementById('adminFullname');
+          const emailInput = form.querySelector('#adminEmail') || document.getElementById('adminEmail');
+          const passwordInput = form.querySelector('#adminPassword') || document.getElementById('adminPassword');
+          const confirmPasswordInput = form.querySelector('#adminConfirmPassword') || document.getElementById('adminConfirmPassword');
+          
+          // Check if all elements exist
+          if (!fullnameInput || !emailInput || !passwordInput || !confirmPasswordInput) {
+            console.error('❌ Form elements not found!', {
+              fullname: !!fullnameInput,
+              email: !!emailInput,
+              password: !!passwordInput,
+              confirmPassword: !!confirmPasswordInput
+            });
+            showCreateAdminMessage('❌ Form elements not found. Please refresh the page.', 'error');
+            return;
+          }
+          
+          const fullname = (fullnameInput.value || '').trim();
+          const email = (emailInput.value || '').trim();
+          const password = passwordInput.value || '';
+          const confirmPassword = confirmPasswordInput.value || '';
         
         console.log('Form data:', { fullname, email, passwordLength: password.length });
         
@@ -299,8 +310,54 @@
         }, 5000);
       }
       
-      console.log('✅ Create Admin handler initialized');
-    });
+        return true;
+      }
+      
+      function showCreateAdminMessage(message, type) {
+        const createAdminMessage = document.getElementById('createAdminMessage');
+        if (!createAdminMessage) {
+          console.error('❌ Message element not found!');
+          return;
+        }
+        
+        createAdminMessage.textContent = message;
+        createAdminMessage.style.display = 'block';
+        createAdminMessage.style.color = type === 'success' ? '#10b981' : '#ef4444';
+        createAdminMessage.style.background = type === 'success' 
+          ? 'rgba(16, 185, 129, 0.2)' 
+          : 'rgba(239, 68, 68, 0.2)';
+        createAdminMessage.style.border = `2px solid ${type === 'success' ? '#10b981' : '#ef4444'}`;
+        createAdminMessage.style.padding = '12px';
+        createAdminMessage.style.borderRadius = '8px';
+        createAdminMessage.style.marginTop = '10px';
+        createAdminMessage.style.fontWeight = '500';
+        
+        // Hide message after 5 seconds
+        setTimeout(() => {
+          createAdminMessage.style.display = 'none';
+        }, 5000);
+      }
+      
+      // Try to initialize immediately
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(initCreateAdmin, 100);
+        });
+      } else {
+        // DOM already loaded
+        setTimeout(initCreateAdmin, 100);
+      }
+      
+      // Also try after a delay in case scripts load asynchronously
+      setTimeout(function() {
+        if (!document.getElementById('createAdminForm') || !document.getElementById('createAdminForm').hasAttribute('data-initialized')) {
+          if (initCreateAdmin()) {
+            document.getElementById('createAdminForm').setAttribute('data-initialized', 'true');
+          }
+        }
+      }, 500);
+    })();
   </script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
