@@ -5,431 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FOMD - First Order Motion Model</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
-            margin: 0;
         }
         
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
         
         h1 {
-            text-align: center;
+            font-size: 2.5em;
             color: #333;
             margin-bottom: 10px;
-            font-size: 2.5em;
         }
         
         .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 40px;
             font-size: 1.1em;
+            color: #666;
         }
         
-        .upload-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-        
-        .upload-box {
-            border: 3px dashed #ddd;
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            transition: all 0.3s;
-            background: #fafafa;
-        }
-        
-        .upload-box:hover {
-            border-color: #667eea;
-            background: #f8f9ff;
-        }
-        
-        .upload-box.has-file {
-            border-color: #10b981;
-            background: #f0fdf4;
-        }
-        
-        input[type="file"] {
-            display: none;
-        }
-        
-        .file-label {
-            display: inline-block;
-            padding: 14px 35px;
-            background: #667eea;
-            color: white;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-        
-        .file-label:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-        }
-        
-        .preview-container {
-            margin-top: 20px;
-            min-height: 150px;
-        }
-        
-        .preview-container img,
-        .preview-container video {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 10px;
-            margin-top: 10px;
-        }
-        
-        .submit-btn {
+        .iframe-container {
             width: 100%;
-            padding: 18px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.2em;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
-        }
-        
-        .submit-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-        }
-        
-        .submit-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .status {
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: 600;
-            margin: 20px 0;
-            display: none;
-        }
-        
-        .status.show {
-            display: block;
-        }
-        
-        .status.loading {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-        
-        .status.success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .status.error {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .progress-container {
-            display: none;
-            margin: 20px 0;
-        }
-        
-        .progress-container.show {
-            display: block;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 30px;
-            background: #f3f4f6;
-            border-radius: 15px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 700;
-        }
-        
-        .result-section {
-            display: none;
-            margin-top: 30px;
+            height: calc(100vh - 140px);
             padding: 20px;
-            background: #f9fafb;
-            border-radius: 15px;
         }
         
-        .result-section.show {
-            display: block;
-        }
-        
-        .result-video {
+        iframe {
             width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
-            display: block;
-            border-radius: 10px;
+            height: 100%;
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            background: white;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            .subtitle {
+                font-size: 1em;
+            }
+            .header {
+                padding: 20px 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎬 FOMD Animation</h1>
-        <p class="subtitle">First Order Motion Model</p>
-        
-        <div class="upload-section">
-            <div class="upload-box" id="imageBox">
-                <h3>📷 Source Image</h3>
-                <label for="imageInput" class="file-label">Choose Image</label>
-                <input type="file" id="imageInput" accept="image/*" onchange="previewImage(this)">
-                <div class="preview-container">
-                    <p id="imageName"></p>
-                    <img id="imagePreview">
-                </div>
-            </div>
-            
-            <div class="upload-box" id="videoBox">
-                <h3>🎥 Driving Video</h3>
-                <label for="videoInput" class="file-label">Choose Video</label>
-                <input type="file" id="videoInput" accept="video/*" onchange="previewVideo(this)">
-                <div class="preview-container">
-                    <p id="videoName"></p>
-                    <video id="videoPreview" controls></video>
-                </div>
-            </div>
-        </div>
-        
-        <button class="submit-btn" id="submitBtn" onclick="createAnimation()" disabled>
-            🚀 Create Animation
-        </button>
-        
-        <div id="status" class="status"></div>
-        
-        <div id="progressContainer" class="progress-container">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill">0%</div>
-            </div>
-        </div>
-        
-        <div id="resultSection" class="result-section">
-            <h3 style="text-align: center;">✅ Your Animated Video:</h3>
-            <video id="resultVideo" class="result-video" controls></video>
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="downloadVideo()" class="file-label">📥 Download Video</button>
-            </div>
-        </div>
+    <div class="header">
+        <h1>🎬 FOMD Animation Studio</h1>
+        <p class="subtitle">Transform static images into animated videos using AI</p>
     </div>
-
-    <script type="module">
-        const YOUR_USERNAME = "Tc12345";
-        const SPACE_NAME = "fomd";
-        const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
-
-        import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
-
-        let imageFile = null;
-        let videoFile = null;
-        let resultBlob = null;
-        let app = null;
-        
-        window.previewImage = function(input) {
-            const preview = document.getElementById('imagePreview');
-            const imageName = document.getElementById('imageName');
-            const imageBox = document.getElementById('imageBox');
-            
-            if (input.files && input.files[0]) {
-                imageFile = input.files[0];
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    imageName.textContent = '✓ ' + imageFile.name;
-                    imageBox.classList.add('has-file');
-                    checkReadyToAnimate();
-                };
-                reader.readAsDataURL(imageFile);
-            }
-        };
-        
-        window.previewVideo = function(input) {
-            const preview = document.getElementById('videoPreview');
-            const videoName = document.getElementById('videoName');
-            const videoBox = document.getElementById('videoBox');
-            
-            if (input.files && input.files[0]) {
-                videoFile = input.files[0];
-                const url = URL.createObjectURL(videoFile);
-                preview.src = url;
-                preview.style.display = 'block';
-                videoName.textContent = '✓ ' + videoFile.name;
-                videoBox.classList.add('has-file');
-                checkReadyToAnimate();
-            }
-        };
-        
-        function checkReadyToAnimate() {
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = !(imageFile && videoFile);
-        }
-        
-        function showStatus(message, type) {
-            const status = document.getElementById('status');
-            status.innerHTML = message;
-            status.className = `status ${type} show`;
-        }
-        
-        function updateProgress(percent) {
-            const progressFill = document.getElementById('progressFill');
-            if (progressFill) {
-                progressFill.style.width = percent + '%';
-                progressFill.textContent = percent + '%';
-            }
-        }
-        
-        window.createAnimation = async function() {
-            if (!imageFile || !videoFile) {
-                showStatus('❌ Please upload both files', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('submitBtn');
-            const progressContainer = document.getElementById('progressContainer');
-            const resultSection = document.getElementById('resultSection');
-            
-            btn.disabled = true;
-            btn.textContent = '⏳ Processing...';
-            resultSection.classList.remove('show');
-            progressContainer.classList.add('show');
-            updateProgress(0);
-            
-            try {
-                showStatus("Connecting...", "loading");
-                updateProgress(10);
-                
-                if (!app) {
-                    app = await Client.connect(SPACE_URL);
-                }
-                
-                showStatus("📤 Uploading files...", "loading");
-                updateProgress(20);
-                
-                // Upload files
-                const imageHandle = await app.handle_blob(imageFile);
-                updateProgress(40);
-                
-                const videoHandle = await app.handle_blob(videoFile);
-                updateProgress(60);
-                
-                showStatus("🎬 Creating animation... (1-3 minutes)", "loading");
-                
-                // For gr.Blocks, the endpoint is typically the first one (index 0)
-                // Use submit which handles async generators better
-                const job = app.submit(0, [imageHandle, videoHandle]);
-                
-                // Handle streaming results
-                for await (const msg of job) {
-                    if (msg.type === "data") {
-                        // Got the final result
-                        const resultData = msg.data;
-                        console.log('Result data:', resultData);
-                        
-                        updateProgress(90);
-                        showStatus("📥 Processing result...", "loading");
-                        
-                        // Extract video URL
-                        let videoUrl = null;
-                        if (Array.isArray(resultData) && resultData[0]) {
-                            const videoData = resultData[0];
-                            if (videoData?.url) {
-                                videoUrl = videoData.url;
-                            } else if (videoData?.path) {
-                                videoUrl = videoData.path;
-                            } else if (typeof videoData === 'string') {
-                                videoUrl = videoData;
-                            }
-                        }
-                        
-                        if (!videoUrl) {
-                            throw new Error('No video URL in result');
-                        }
-                        
-                        console.log('Video URL:', videoUrl);
-                        
-                        // Fetch the video
-                        const response = await fetch(videoUrl);
-                        resultBlob = await response.blob();
-                        
-                        const resultUrl = URL.createObjectURL(resultBlob);
-                        const video = document.getElementById('resultVideo');
-                        video.src = resultUrl;
-                        video.load();
-                        
-                        updateProgress(100);
-                        showStatus("✅ Complete!", "success");
-                        
-                        resultSection.classList.add('show');
-                        resultSection.scrollIntoView({ behavior: 'smooth' });
-                        
-                    } else if (msg.type === "status") {
-                        console.log('Status:', msg.stage);
-                        if (msg.stage === "pending") {
-                            showStatus("⏳ In queue...", "loading");
-                        } else if (msg.stage === "generating") {
-                            showStatus("🎬 Creating animation...", "loading");
-                        }
-                    }
-                }
-                
-            } catch (error) {
-                console.error("Error:", error);
-                showStatus("❌ Error: " + error.message, "error");
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🚀 Create Animation';
-                setTimeout(() => progressContainer.classList.remove('show'), 2000);
-            }
-        };
-        
-        window.downloadVideo = function() {
-            if (!resultBlob) {
-                alert('No video available!');
-                return;
-            }
-            
-            const url = URL.createObjectURL(resultBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'fomd_animation_' + Date.now() + '.mp4';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        };
-    </script>
+    
+    <div class="iframe-container">
+        <iframe src="https://Tc12345-fomd.hf.space" allow="camera; microphone; clipboard-write"></iframe>
+    </div>
 </body>
 </html>
