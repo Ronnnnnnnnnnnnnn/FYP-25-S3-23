@@ -1448,6 +1448,75 @@ def admin_manage_user(user_id):
         cursor.close()
         db.close()
 
+@app.route('/api/admin/create-admin', methods=['POST'])
+def admin_create_admin():
+    """Create a new admin account (admin-only)"""
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = None
+    cursor = None
+    try:
+        data = request.get_json()
+        fullname = data.get('fullname', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        # Validation
+        if not fullname or not email or not password:
+            return jsonify({'success': False, 'message': 'All fields are required'}), 400
+        
+        if len(password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'}), 400
+        
+        # Check if email already exists
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (email,))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            cursor.close()
+            db.close()
+            return jsonify({'success': False, 'message': 'Email already exists'}), 400
+        
+        # Hash password
+        from werkzeug.security import generate_password_hash
+        hashed_password = generate_password_hash(password)
+        
+        # Create admin account
+        cursor.execute(
+            """INSERT INTO users (fullname, email, password, role, subscription_status) 
+               VALUES (%s, %s, %s, 'admin', 'active')""",
+            (fullname, email, hashed_password)
+        )
+        db.commit()
+        
+        new_admin_id = cursor.lastrowid
+        print(f'✅ Admin account created: {email} (user_id: {new_admin_id})')
+        
+        cursor.close()
+        db.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Admin account created successfully',
+            'user_id': new_admin_id
+        })
+    
+    except Exception as e:
+        print(f"Create admin error: {e}")
+        import traceback
+        traceback.print_exc()
+        if db:
+            db.rollback()
+        return jsonify({'success': False, 'message': f'Error creating admin: {str(e)}'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if db:
+            db.close()
+
 # ============================================
 # MAKEITTALK API ENDPOINTS
 # ============================================
