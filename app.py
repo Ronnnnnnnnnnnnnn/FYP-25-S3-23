@@ -253,6 +253,26 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
             if not os.path.exists(abs_video_path):
                 raise Exception(f"Video file not found: {abs_video_path}")
             
+            # The Gradio client may need file objects or file handles
+            # Try opening files and using file handles
+            # For newer versions of gradio_client, we might need to use file objects
+            try:
+                from gradio_client.utils import handle_file
+                # Use handle_file if available
+                image_file_data = handle_file(abs_image_path)
+                video_file_data = handle_file(abs_video_path)
+                print("Using handle_file utility for file processing")
+            except ImportError:
+                # handle_file not available, use file paths directly
+                image_file_data = abs_image_path
+                video_file_data = abs_video_path
+                print("Using file paths directly (handle_file not available)")
+            except Exception as handle_err:
+                # If handle_file fails, fall back to paths
+                print(f"handle_file failed: {handle_err}, using file paths")
+                image_file_data = abs_image_path
+                video_file_data = abs_video_path
+            
             # View API to understand the endpoint structure
             api_endpoint = None
             try:
@@ -293,17 +313,18 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
             endpoint_names_to_try.extend(["/predict", "predict", 0])  # 0 means first endpoint
             
             # Method 1: Try with the discovered endpoint or common names
+            # Use file_data (either from handle_file or file paths)
             for endpoint_name in endpoint_names_to_try:
                 try:
-                    print(f"Trying endpoint: {endpoint_name}")
+                    print(f"Trying endpoint: {endpoint_name} with file_data")
                     if endpoint_name == 0:
                         # Use endpoint index
-                        result = client.predict(abs_image_path, abs_video_path)
+                        result = client.predict(image_file_data, video_file_data)
                     else:
                         # Use api_name
                         result = client.predict(
-                            abs_image_path,  # First input: source_image
-                            abs_video_path,  # Second input: driving_video
+                            image_file_data,  # First input: source_image
+                            video_file_data,  # Second input: driving_video
                             api_name=endpoint_name
                         )
                     print(f"✅ Success with endpoint: {endpoint_name}")
@@ -317,7 +338,7 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
             if result is None:
                 try:
                     print("Method 2: Positional arguments without api_name")
-                    result = client.predict(abs_image_path, abs_video_path)
+                    result = client.predict(image_file_data, video_file_data)
                     print("✅ Success with Method 2")
                 except Exception as e2:
                     last_error = e2
@@ -326,14 +347,23 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
                     # Method 3: Try using submit() for async processing
                     try:
                         print("Method 3: Using submit() method without api_name")
-                        job = client.submit(abs_image_path, abs_video_path)
+                        job = client.submit(image_file_data, video_file_data)
                         # Wait for result with timeout
                         result = job.result(timeout=300)  # 5 minute timeout
                         print("✅ Success with Method 3 (submit)")
                     except Exception as e3:
                         last_error = e3
                         print(f"Method 3 failed: {str(e3)[:200]}")
-                        raise Exception(f"All prediction methods failed. Last error: {str(e3)}")
+                        
+                        # Method 4: Try with file paths as strings (fallback)
+                        try:
+                            print("Method 4: Trying with file paths as strings")
+                            result = client.predict(abs_image_path, abs_video_path)
+                            print("✅ Success with Method 4 (file paths)")
+                        except Exception as e4:
+                            last_error = e4
+                            print(f"Method 4 failed: {str(e4)[:200]}")
+                            raise Exception(f"All prediction methods failed. Last error: {str(e4)}")
             
             if result is None:
                 raise Exception("No result returned from any prediction method")
