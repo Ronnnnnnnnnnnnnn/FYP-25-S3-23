@@ -345,6 +345,49 @@
         }
       });
     });
+
+    // FAQ Toggle Functionality
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    
+    faqQuestions.forEach(question => {
+      question.addEventListener('click', function() {
+        const faqItem = this.parentElement;
+        const answer = faqItem.querySelector('.faq-answer');
+        const toggle = this.querySelector('.faq-toggle');
+        const isOpen = answer.style.display === 'block';
+        
+        // Close all other FAQ items
+        document.querySelectorAll('.faq-answer').forEach(item => {
+          if (item !== answer) {
+            item.style.display = 'none';
+          }
+        });
+        document.querySelectorAll('.faq-toggle').forEach(item => {
+          if (item !== toggle) {
+            item.textContent = '+';
+            item.style.transform = 'rotate(0deg)';
+          }
+        });
+        document.querySelectorAll('.faq-item').forEach(item => {
+          if (item !== faqItem) {
+            item.style.background = 'rgba(255, 255, 255, 0.05)';
+          }
+        });
+        
+        // Toggle current item
+        if (isOpen) {
+          answer.style.display = 'none';
+          toggle.textContent = '+';
+          toggle.style.transform = 'rotate(0deg)';
+          faqItem.style.background = 'rgba(255, 255, 255, 0.05)';
+        } else {
+          answer.style.display = 'block';
+          toggle.textContent = '−';
+          toggle.style.transform = 'rotate(180deg)';
+          faqItem.style.background = 'rgba(255, 255, 255, 0.08)';
+        }
+      });
+    });
   </script>
 </body>
 </html>
