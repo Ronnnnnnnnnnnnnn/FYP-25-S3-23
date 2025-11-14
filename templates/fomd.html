@@ -334,12 +334,12 @@
                 showStatus("📤 Preparing files...", "loading");
                 updateProgress(20);
                 
-                // Pass File objects directly - let Gradio client handle conversion
-                // The client will automatically handle upload and conversion during submit
+                // Pass File objects directly - exactly like makeittalk does
+                // The Gradio client should handle conversion automatically
                 const imageHandle = imageFile;
                 const videoHandle = videoFile;
                 
-                console.log('Passing File objects directly to Gradio:', {
+                console.log('Passing File objects directly (like makeittalk):', {
                     image: imageFile.name,
                     video: videoFile.name
                 });
