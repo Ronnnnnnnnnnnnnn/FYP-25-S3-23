@@ -94,9 +94,9 @@
             <input type="email" id="adminEmail" placeholder="Email Address" required style="padding: 12px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 14px;">
             <input type="password" id="adminPassword" placeholder="Password (min 6 characters)" required minlength="6" style="padding: 12px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 14px;">
             <input type="password" id="adminConfirmPassword" placeholder="Confirm Password" required style="padding: 12px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 14px;">
-            <div id="createAdminMessage" style="display: none; padding: 10px; border-radius: 5px; margin-top: 10px;"></div>
-            <button type="submit" class="btn btn-primary" id="createAdminBtn" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 600;">
-              Create Admin Account
+            <div id="createAdminMessage" style="display: none; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 14px; font-weight: 500;"></div>
+            <button type="submit" class="btn btn-primary" id="createAdminBtn" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+              <span id="createAdminBtnText">Create Admin Account</span>
             </button>
           </form>
         </div>
@@ -155,92 +155,133 @@
   <script>
     // Create Admin Account Handler
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('🔧 Initializing Create Admin functionality...');
+      
       const createAdminForm = document.getElementById('createAdminForm');
       const createAdminMessage = document.getElementById('createAdminMessage');
       const createAdminBtn = document.getElementById('createAdminBtn');
+      const createAdminBtnText = document.getElementById('createAdminBtnText');
       
-      if (createAdminForm) {
-        createAdminForm.addEventListener('submit', async function(e) {
-          e.preventDefault();
-          
-          const fullname = document.getElementById('adminFullname').value.trim();
-          const email = document.getElementById('adminEmail').value.trim();
-          const password = document.getElementById('adminPassword').value;
-          const confirmPassword = document.getElementById('adminConfirmPassword').value;
-          
-          // Validation
-          if (!fullname || !email || !password || !confirmPassword) {
-            showCreateAdminMessage('All fields are required', 'error');
-            return;
-          }
-          
-          if (password.length < 6) {
-            showCreateAdminMessage('Password must be at least 6 characters long', 'error');
-            return;
-          }
-          
-          if (password !== confirmPassword) {
-            showCreateAdminMessage('Passwords do not match', 'error');
-            return;
-          }
-          
-          // Disable button and show loading
-          createAdminBtn.disabled = true;
-          createAdminBtn.textContent = 'Creating...';
-          
-          try {
-            const response = await fetch('/api/admin/create-admin', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                fullname: fullname,
-                email: email,
-                password: password
-              })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-              showCreateAdminMessage('Admin account created successfully!', 'success');
-              // Clear form
-              createAdminForm.reset();
-              // Reload users list to show new admin
-              if (typeof loadUsers === 'function') {
-                loadUsers();
-              }
-            } else {
-              showCreateAdminMessage(data.message || 'Failed to create admin account', 'error');
-            }
-          } catch (error) {
-            console.error('Error creating admin:', error);
-            showCreateAdminMessage('Error creating admin account. Please try again.', 'error');
-          } finally {
-            createAdminBtn.disabled = false;
-            createAdminBtn.textContent = 'Create Admin Account';
-          }
-        });
+      if (!createAdminForm) {
+        console.error('❌ Create Admin Form not found!');
+        return;
       }
       
+      if (!createAdminBtn) {
+        console.error('❌ Create Admin Button not found!');
+        return;
+      }
+      
+      console.log('✅ Create Admin Form and Button found');
+      
+      // Handle form submission
+      createAdminForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        console.log('📝 Form submitted');
+        
+        const fullname = document.getElementById('adminFullname').value.trim();
+        const email = document.getElementById('adminEmail').value.trim();
+        const password = document.getElementById('adminPassword').value;
+        const confirmPassword = document.getElementById('adminConfirmPassword').value;
+        
+        console.log('Form data:', { fullname, email, passwordLength: password.length });
+        
+        // Validation
+        if (!fullname || !email || !password || !confirmPassword) {
+          showCreateAdminMessage('❌ All fields are required', 'error');
+          return;
+        }
+        
+        if (password.length < 6) {
+          showCreateAdminMessage('❌ Password must be at least 6 characters long', 'error');
+          return;
+        }
+        
+        if (password !== confirmPassword) {
+          showCreateAdminMessage('❌ Passwords do not match', 'error');
+          return;
+        }
+        
+        // Disable button and show loading
+        createAdminBtn.disabled = true;
+        createAdminBtn.style.opacity = '0.7';
+        createAdminBtn.style.cursor = 'not-allowed';
+        if (createAdminBtnText) {
+          createAdminBtnText.textContent = '⏳ Creating Admin...';
+        } else {
+          createAdminBtn.textContent = '⏳ Creating Admin...';
+        }
+        
+        try {
+          console.log('📤 Sending request to /api/admin/create-admin');
+          const response = await fetch('/api/admin/create-admin', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              fullname: fullname,
+              email: email,
+              password: password
+            })
+          });
+          
+          console.log('📥 Response status:', response.status);
+          const data = await response.json();
+          console.log('📥 Response data:', data);
+          
+          if (data.success) {
+            showCreateAdminMessage('✅ Admin account created successfully!', 'success');
+            // Clear form
+            createAdminForm.reset();
+            // Reload users list to show new admin
+            if (typeof loadUsers === 'function') {
+              console.log('🔄 Reloading users list...');
+              loadUsers();
+            }
+          } else {
+            showCreateAdminMessage('❌ ' + (data.message || 'Failed to create admin account'), 'error');
+          }
+        } catch (error) {
+          console.error('❌ Error creating admin:', error);
+          showCreateAdminMessage('❌ Error creating admin account. Please try again.', 'error');
+        } finally {
+          createAdminBtn.disabled = false;
+          createAdminBtn.style.opacity = '1';
+          createAdminBtn.style.cursor = 'pointer';
+          if (createAdminBtnText) {
+            createAdminBtnText.textContent = 'Create Admin Account';
+          } else {
+            createAdminBtn.textContent = 'Create Admin Account';
+          }
+        }
+      });
+      
       function showCreateAdminMessage(message, type) {
+        if (!createAdminMessage) {
+          console.error('❌ Message element not found!');
+          return;
+        }
+        
         createAdminMessage.textContent = message;
         createAdminMessage.style.display = 'block';
-        createAdminMessage.style.color = type === 'success' ? '#4caf50' : '#f44336';
+        createAdminMessage.style.color = type === 'success' ? '#10b981' : '#ef4444';
         createAdminMessage.style.background = type === 'success' 
-          ? 'rgba(76, 175, 80, 0.2)' 
-          : 'rgba(244, 67, 54, 0.2)';
-        createAdminMessage.style.border = `1px solid ${type === 'success' ? '#4caf50' : '#f44336'}`;
-        createAdminMessage.style.padding = '10px';
-        createAdminMessage.style.borderRadius = '5px';
+          ? 'rgba(16, 185, 129, 0.2)' 
+          : 'rgba(239, 68, 68, 0.2)';
+        createAdminMessage.style.border = `2px solid ${type === 'success' ? '#10b981' : '#ef4444'}`;
+        createAdminMessage.style.padding = '12px';
+        createAdminMessage.style.borderRadius = '8px';
         createAdminMessage.style.marginTop = '10px';
+        createAdminMessage.style.fontWeight = '500';
         
         // Hide message after 5 seconds
         setTimeout(() => {
           createAdminMessage.style.display = 'none';
         }, 5000);
       }
+      
+      console.log('✅ Create Admin handler initialized');
     });
   </script>
 </body>
