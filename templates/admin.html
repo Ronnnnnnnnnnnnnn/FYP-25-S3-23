@@ -231,85 +231,61 @@
           return;
         }
         
-        // Disable button and show loading
-        createAdminBtn.disabled = true;
-        createAdminBtn.style.opacity = '0.7';
-        createAdminBtn.style.cursor = 'not-allowed';
-        if (createAdminBtnText) {
-          createAdminBtnText.textContent = '⏳ Creating Admin...';
-        } else {
-          createAdminBtn.textContent = '⏳ Creating Admin...';
-        }
-        
-        try {
-          console.log('📤 Sending request to /api/admin/create-admin');
-          const response = await fetch('/api/admin/create-admin', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              fullname: fullname,
-              email: email,
-              password: password
-            })
-          });
+          // Disable button and show loading
+          btn.disabled = true;
+          btn.style.opacity = '0.7';
+          btn.style.cursor = 'not-allowed';
+          if (btnText) {
+            btnText.textContent = '⏳ Creating Admin...';
+          } else {
+            btn.textContent = '⏳ Creating Admin...';
+          }
           
-          console.log('📥 Response status:', response.status);
-          const data = await response.json();
-          console.log('📥 Response data:', data);
-          
-          if (data.success) {
-            showCreateAdminMessage('✅ Admin account created successfully!', 'success');
-            // Clear form
-            createAdminForm.reset();
-            // Reload users list to show new admin
-            if (typeof loadUsers === 'function') {
-              console.log('🔄 Reloading users list...');
-              loadUsers();
+          try {
+            console.log('📤 Sending request to /api/admin/create-admin');
+            const response = await fetch('/api/admin/create-admin', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fullname: fullname,
+                email: email,
+                password: password
+              })
+            });
+            
+            console.log('📥 Response status:', response.status);
+            const data = await response.json();
+            console.log('📥 Response data:', data);
+            
+            if (data.success) {
+              showCreateAdminMessage('✅ Admin account created successfully!', 'success');
+              // Clear form
+              form.reset();
+              // Reload users list to show new admin
+              if (typeof loadUsers === 'function') {
+                console.log('🔄 Reloading users list...');
+                loadUsers();
+              }
+            } else {
+              showCreateAdminMessage('❌ ' + (data.message || 'Failed to create admin account'), 'error');
             }
-          } else {
-            showCreateAdminMessage('❌ ' + (data.message || 'Failed to create admin account'), 'error');
+          } catch (error) {
+            console.error('❌ Error creating admin:', error);
+            showCreateAdminMessage('❌ Error creating admin account. Please try again.', 'error');
+          } finally {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            if (btnText) {
+              btnText.textContent = 'Create Admin Account';
+            } else {
+              btn.textContent = 'Create Admin Account';
+            }
           }
-        } catch (error) {
-          console.error('❌ Error creating admin:', error);
-          showCreateAdminMessage('❌ Error creating admin account. Please try again.', 'error');
-        } finally {
-          createAdminBtn.disabled = false;
-          createAdminBtn.style.opacity = '1';
-          createAdminBtn.style.cursor = 'pointer';
-          if (createAdminBtnText) {
-            createAdminBtnText.textContent = 'Create Admin Account';
-          } else {
-            createAdminBtn.textContent = 'Create Admin Account';
-          }
-        }
-      });
-      
-      function showCreateAdminMessage(message, type) {
-        if (!createAdminMessage) {
-          console.error('❌ Message element not found!');
-          return;
-        }
+        });
         
-        createAdminMessage.textContent = message;
-        createAdminMessage.style.display = 'block';
-        createAdminMessage.style.color = type === 'success' ? '#10b981' : '#ef4444';
-        createAdminMessage.style.background = type === 'success' 
-          ? 'rgba(16, 185, 129, 0.2)' 
-          : 'rgba(239, 68, 68, 0.2)';
-        createAdminMessage.style.border = `2px solid ${type === 'success' ? '#10b981' : '#ef4444'}`;
-        createAdminMessage.style.padding = '12px';
-        createAdminMessage.style.borderRadius = '8px';
-        createAdminMessage.style.marginTop = '10px';
-        createAdminMessage.style.fontWeight = '500';
-        
-        // Hide message after 5 seconds
-        setTimeout(() => {
-          createAdminMessage.style.display = 'none';
-        }, 5000);
-      }
-      
         return true;
       }
       
