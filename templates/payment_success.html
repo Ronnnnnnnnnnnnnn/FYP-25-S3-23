@@ -141,10 +141,21 @@
             .then(refreshData => {
               console.log('Session refreshed:', refreshData);
               
-              // Redirect based on role
-              const redirectUrl = (refreshData.role === 'subscriber' || refreshData.role === 'admin') 
-                ? '/subscriber' 
-                : '/user';
+              // Determine redirect URL based on role and subscription status
+              let redirectUrl = '/user'; // Default
+              
+              if (refreshData.role === 'subscriber' || refreshData.role === 'admin') {
+                if (refreshData.subscription_status === 'active') {
+                  redirectUrl = '/subscriber';
+                } else {
+                  redirectUrl = '/user';
+                }
+              } else if (data.role === 'subscriber' || data.role === 'admin') {
+                // Fallback to data from verify-session if refresh-session doesn't have it
+                redirectUrl = '/subscriber';
+              }
+              
+              console.log('Redirecting to:', redirectUrl);
               
               setTimeout(() => {
                 window.location.href = redirectUrl;
@@ -152,10 +163,12 @@
             })
             .catch(err => {
               console.error('Session refresh error:', err);
-              // Still redirect even if refresh fails
-              const redirectUrl = (data.role === 'subscriber' || data.role === 'admin') 
+              // Still redirect based on verify-session data
+              const redirectUrl = (data.role === 'subscriber' || data.role === 'admin') && data.subscription_status === 'active'
                 ? '/subscriber' 
                 : '/user';
+              
+              console.log('Redirecting to (fallback):', redirectUrl);
               
               setTimeout(() => {
                 window.location.href = redirectUrl;

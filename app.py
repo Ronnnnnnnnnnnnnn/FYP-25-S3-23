@@ -147,6 +147,39 @@ def check_account_status():
         cursor.close()
         db.close()
 
+def check_user_subscriber_access():
+    """Check if user is a subscriber or admin by querying database (not just session)"""
+    if 'user_id' not in session:
+        return False, None, None
+    
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT role, subscription_status FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        cursor.close()
+        db.close()
+        
+        if not user:
+            return False, None, None
+        
+        current_role = user.get('role', 'user')
+        current_status = user.get('subscription_status', 'inactive')
+        
+        # Update session if it's stale
+        if current_role != session.get('role'):
+            session['role'] = current_role
+        if current_status != session.get('subscription_status'):
+            session['subscription_status'] = current_status
+        
+        # Check if user has subscriber access (must be subscriber/admin AND status active)
+        has_access = (current_role in ['subscriber', 'admin']) and (current_status == 'active')
+        return has_access, current_role, current_status
+    except Exception as e:
+        print(f"Error checking subscriber access: {e}")
+        # Fallback to session check
+        return session.get('role') in ['subscriber', 'admin'], session.get('role'), session.get('subscription_status')
+
 def create_talking_animation(image_path, audio_path, output_path, api_url=None):
     """
     Stub function for MakeItTalk animation creation.
@@ -314,10 +347,39 @@ def makeittalk_page():
     status = check_account_status()
     if status == 'suspended':
         return redirect(url_for('login_page'))
-    # Check if user is a subscriber or admin
-    if session.get('role') not in ['subscriber', 'admin']:
-        return redirect(url_for('payment_page'))
-    return render_template('makeittalk.html', user_role=session.get('role'))
+    
+    # Check user role from database (not just session - session might be stale)
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT role, subscription_status FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        cursor.close()
+        db.close()
+        
+        if not user:
+            return redirect(url_for('login_page'))
+        
+        # Update session with current role
+        current_role = user.get('role', 'user')
+        current_status = user.get('subscription_status', 'inactive')
+        
+        if current_role != session.get('role'):
+            session['role'] = current_role
+        if current_status != session.get('subscription_status'):
+            session['subscription_status'] = current_status
+        
+        # Check if user is a subscriber or admin
+        if current_role not in ['subscriber', 'admin'] or current_status != 'active':
+            return redirect(url_for('payment_page'))
+        
+        return render_template('makeittalk.html', user_role=current_role)
+    except Exception as e:
+        print(f"Error checking user role for makeittalk: {e}")
+        # Fallback to session check
+        if session.get('role') not in ['subscriber', 'admin']:
+            return redirect(url_for('payment_page'))
+        return render_template('makeittalk.html', user_role=session.get('role'))
 
 @app.route('/fomd')
 def fomd_page():
@@ -327,10 +389,39 @@ def fomd_page():
     status = check_account_status()
     if status == 'suspended':
         return redirect(url_for('login_page'))
-    # Check if user is a subscriber or admin
-    if session.get('role') not in ['subscriber', 'admin']:
-        return redirect(url_for('payment_page'))
-    return render_template('fomd.html', user_role=session.get('role'))
+    
+    # Check user role from database (not just session - session might be stale)
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT role, subscription_status FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+        cursor.close()
+        db.close()
+        
+        if not user:
+            return redirect(url_for('login_page'))
+        
+        # Update session with current role
+        current_role = user.get('role', 'user')
+        current_status = user.get('subscription_status', 'inactive')
+        
+        if current_role != session.get('role'):
+            session['role'] = current_role
+        if current_status != session.get('subscription_status'):
+            session['subscription_status'] = current_status
+        
+        # Check if user is a subscriber or admin
+        if current_role not in ['subscriber', 'admin'] or current_status != 'active':
+            return redirect(url_for('payment_page'))
+        
+        return render_template('fomd.html', user_role=current_role)
+    except Exception as e:
+        print(f"Error checking user role for fomd: {e}")
+        # Fallback to session check
+        if session.get('role') not in ['subscriber', 'admin']:
+            return redirect(url_for('payment_page'))
+        return render_template('fomd.html', user_role=session.get('role'))
 
 @app.route('/faceswap')
 def faceswap_page():
@@ -868,47 +959,103 @@ def create_checkout_session():
 
 @app.route('/api/stripe/verify-session/<session_id>', methods=['GET'])
 def verify_session(session_id):
-    """Verify payment session and refresh user session"""
+    """Verify payment session and update user subscription immediately"""
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
     
+    db = None
+    cursor = None
     try:
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         
         if checkout_session.payment_status == 'paid':
-            # Refresh user session from database (role might have changed)
+            user_id = session['user_id']
+            plan_type = checkout_session.metadata.get('plan_type', 'monthly') if checkout_session.metadata else 'monthly'
+            
+            # Update user subscription in database IMMEDIATELY (don't wait for webhook)
             db = get_db()
             cursor = db.cursor(dictionary=True)
-            cursor.execute("SELECT role, subscription_status, subscription_plan FROM users WHERE user_id = %s", (session['user_id'],))
+            
+            # Calculate end date
+            start_date = datetime.now().date()
+            if plan_type == 'monthly':
+                end_date = start_date + timedelta(days=30)
+                amount = 9.99
+            else:
+                end_date = start_date + timedelta(days=365)
+                amount = 99.99
+            
+            # Update user to subscriber
+            cursor.execute(
+                """UPDATE users 
+                   SET role = 'subscriber', 
+                       subscription_status = 'active',
+                       stripe_subscription_id = %s,
+                       subscription_plan = %s,
+                       subscription_end_date = %s
+                   WHERE user_id = %s""",
+                (checkout_session.subscription, plan_type, end_date, user_id)
+            )
+            
+            # Check if subscription record exists, if not create it
+            cursor.execute(
+                "SELECT subscription_id FROM subscriptions WHERE user_id = %s AND stripe_subscription_id = %s",
+                (user_id, checkout_session.subscription)
+            )
+            existing_sub = cursor.fetchone()
+            
+            if not existing_sub:
+                # Create subscription record if it doesn't exist
+                cursor.execute(
+                    """INSERT INTO subscriptions 
+                       (user_id, plan_type, start_date, end_date, payment_status, amount, stripe_subscription_id)
+                       VALUES (%s, %s, %s, %s, 'completed', %s, %s)""",
+                    (user_id, plan_type, start_date, end_date, amount, checkout_session.subscription)
+                )
+            
+            db.commit()
+            print(f'✅ Subscription activated immediately for user {user_id} (plan: {plan_type})')
+            
+            # Refresh session with updated role
+            cursor.execute("SELECT role, subscription_status, subscription_plan FROM users WHERE user_id = %s", (user_id,))
             user = cursor.fetchone()
-            cursor.close()
-            db.close()
             
             if user:
-                # Update session with current role and subscription status
                 session['role'] = user.get('role', 'user')
                 session['subscription_status'] = user.get('subscription_status', 'inactive')
+            
+            cursor.close()
+            db.close()
             
             return jsonify({
                 'success': True,
                 'status': checkout_session.payment_status,
                 'subscription_id': checkout_session.subscription,
                 'customer_id': checkout_session.customer,
-                'role': user.get('role', 'user') if user else session.get('role', 'user'),
-                'subscription_status': user.get('subscription_status', 'inactive') if user else 'inactive'
+                'role': user.get('role', 'user') if user else 'user',
+                'subscription_status': user.get('subscription_status', 'inactive') if user else 'inactive',
+                'plan_type': plan_type,
+                'message': 'Subscription activated successfully!'
             })
         else:
             return jsonify({
                 'success': False,
-                'status': checkout_session.payment_status
+                'status': checkout_session.payment_status,
+                'message': 'Payment not yet processed'
             })
     except stripe.error.StripeError as e:
+        print(f"Stripe error in verify-session: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
     except Exception as e:
-        print(f"Error refreshing session: {e}")
+        print(f"Error in verify-session: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if db:
+            db.close()
 
 
 @app.route('/api/user/refresh-session', methods=['POST'])
@@ -1215,8 +1362,9 @@ def makeittalk_animate():
     status = check_account_status()
     if status == 'suspended':
         return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
-    # Check if user is a subscriber or admin
-    if session.get('role') not in ['subscriber', 'admin']:
+    # Check if user is a subscriber or admin (check database, not just session)
+    has_access, role, sub_status = check_user_subscriber_access()
+    if not has_access:
         return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
     
     if 'image' not in request.files or 'audio' not in request.files:
@@ -1403,8 +1551,9 @@ def makeittalk_save():
     if status == 'suspended':
         return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
     
-    # Check if user is a subscriber or admin
-    if session.get('role') not in ['subscriber', 'admin']:
+    # Check if user is a subscriber or admin (check database, not just session)
+    has_access, role, sub_status = check_user_subscriber_access()
+    if not has_access:
         return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
     
     try:
@@ -1567,8 +1716,9 @@ def fomd_save():
     if status == 'suspended':
         return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
     
-    # Check if user is a subscriber or admin
-    if session.get('role') not in ['subscriber', 'admin']:
+    # Check if user is a subscriber or admin (check database, not just session)
+    has_access, role, sub_status = check_user_subscriber_access()
+    if not has_access:
         return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
     
     try:
