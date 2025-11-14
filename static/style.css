@@ -1275,6 +1275,32 @@ textarea:focus {
   white-space: nowrap;
 }
 
+/* Logout button styling - ensure consistency across all pages */
+.navbar a.nav-btn.btn.btn-primary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, #111439 0%, #1a1d4a 100%);
+  color: white !important;
+  padding: 0.75rem 1.5rem !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  box-shadow: 0 10px 30px rgba(17, 20, 57, 0.4);
+  border-radius: 50px;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  text-decoration: none;
+  margin: 0;
+  vertical-align: middle;
+  font-family: 'Inter', sans-serif;
+}
+
+.navbar a.nav-btn.btn.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(17, 20, 57, 0.6);
+}
+
 .nav-link::before {
   content: '';
   position: absolute;
