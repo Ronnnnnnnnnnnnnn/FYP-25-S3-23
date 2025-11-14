@@ -249,6 +249,7 @@
       line-height: 1.6;
     }
   </style>
+  <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
   <!-- Animated Background -->
@@ -331,66 +332,25 @@
 
       <!-- Payment Form -->
       <div class="payment-form-section">
-        <h2>Payment Information</h2>
+        <h2>Secure Checkout</h2>
         
         <div id="alertMessage" class="alert"></div>
 
         <form id="paymentForm">
-          <div class="form-group">
-            <label>Payment Method</label>
-            <div class="payment-methods">
-              <div class="payment-method selected" data-method="card" onclick="selectPaymentMethod('card')">
-                <div style="font-size: 24px; margin-bottom: 5px;">💳</div>
-                <div>Credit/Debit Card</div>
-              </div>
-              <div class="payment-method" data-method="paypal" onclick="selectPaymentMethod('paypal')">
-                <div style="font-size: 24px; margin-bottom: 5px;">🅿️</div>
-                <div>PayPal</div>
-              </div>
-            </div>
+          <div class="info-box" style="margin-bottom: 30px;">
+            <h4>🔒 Secure Payment</h4>
+            <p>
+              Click "Subscribe Now" to be redirected to Stripe's secure checkout page. 
+              Your payment information will be processed securely by Stripe. We never store your card details.
+            </p>
           </div>
 
-          <div id="cardForm">
-            <div class="form-group">
-              <label for="cardNumber">Card Number</label>
-              <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" required>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="expiryDate">Expiry Date</label>
-                <input type="text" id="expiryDate" placeholder="MM/YY" maxlength="5" required>
-              </div>
-              <div class="form-group">
-                <label for="cvv">CVV</label>
-                <input type="text" id="cvv" placeholder="123" maxlength="4" required>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="cardName">Cardholder Name</label>
-              <input type="text" id="cardName" placeholder="John Doe" required>
-            </div>
-          </div>
-
-          <div id="paypalForm" style="display: none;">
-            <div class="form-group">
-              <label for="paypalEmail">PayPal Email</label>
-              <input type="email" id="paypalEmail" placeholder="your.email@example.com" required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="billingAddress">Billing Address</label>
-            <input type="text" id="billingAddress" placeholder="123 Main St, City, State, ZIP" required>
-          </div>
-
-          <button type="submit" class="btn btn-primary" id="subscribeBtn">
+          <button type="submit" class="btn btn-primary" id="subscribeBtn" style="width: 100%; padding: 18px; font-size: 1.2rem;">
             Subscribe Now
           </button>
 
-          <div class="security-badge">
-            Your payment information is secure and encrypted
+          <div class="security-badge" style="margin-top: 20px;">
+            🔒 Secured by Stripe - Your payment information is encrypted and secure
           </div>
         </form>
       </div>
@@ -435,7 +395,6 @@
     // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
       let selectedPlan = 'yearly';
-      let selectedPaymentMethod = 'card';
 
       function selectPlan(plan) {
         selectedPlan = plan;
@@ -448,63 +407,12 @@
         }
       }
 
-      function selectPaymentMethod(method) {
-        selectedPaymentMethod = method;
-        document.querySelectorAll('.payment-method').forEach(m => {
-          m.classList.remove('selected');
-        });
-        const methodEl = document.querySelector(`[data-method="${method}"]`);
-        if (methodEl) {
-          methodEl.classList.add('selected');
-        }
-        
-        const cardForm = document.getElementById('cardForm');
-        const paypalForm = document.getElementById('paypalForm');
-        
-        if (method === 'card') {
-          if (cardForm) cardForm.style.display = 'block';
-          if (paypalForm) paypalForm.style.display = 'none';
-        } else {
-          if (cardForm) cardForm.style.display = 'none';
-          if (paypalForm) paypalForm.style.display = 'block';
-        }
-      }
-
-      // Make functions globally available
+      // Make function globally available
       window.selectPlan = selectPlan;
-      window.selectPaymentMethod = selectPaymentMethod;
 
-      // Format card number
-      const cardNumberInput = document.getElementById('cardNumber');
-      if (cardNumberInput) {
-        cardNumberInput.addEventListener('input', function(e) {
-          let value = e.target.value.replace(/\s/g, '');
-          let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-          e.target.value = formattedValue;
-        });
-      }
+      // Note: Card input fields removed - Stripe Checkout handles payment securely
 
-      // Format expiry date
-      const expiryDateInput = document.getElementById('expiryDate');
-      if (expiryDateInput) {
-        expiryDateInput.addEventListener('input', function(e) {
-          let value = e.target.value.replace(/\D/g, '');
-          if (value.length >= 2) {
-            value = value.substring(0, 2) + '/' + value.substring(2, 4);
-          }
-          e.target.value = value;
-        });
-      }
-
-      // Only allow numbers for CVV
-      const cvvInput = document.getElementById('cvv');
-      if (cvvInput) {
-        cvvInput.addEventListener('input', function(e) {
-          e.target.value = e.target.value.replace(/\D/g, '');
-        });
-      }
-
-      // Handle form submission
+      // Handle form submission - Create Stripe checkout session
       const paymentForm = document.getElementById('paymentForm');
       if (!paymentForm) {
         console.error('Payment form not found!');
@@ -513,7 +421,7 @@
 
       paymentForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        console.log('Form submission triggered');
+        console.log('Form submission triggered - Creating Stripe checkout session');
         
         const btn = document.getElementById('subscribeBtn');
         const alertDiv = document.getElementById('alertMessage');
@@ -528,111 +436,80 @@
           return;
         }
         
-        console.log('Selected payment method:', selectedPaymentMethod);
-        console.log('Selected plan:', selectedPlan);
-        
-        // Validate form fields
-        if (selectedPaymentMethod === 'card') {
-          const cardNumber = document.getElementById('cardNumber').value.trim();
-          const expiryDate = document.getElementById('expiryDate').value.trim();
-          const cvv = document.getElementById('cvv').value.trim();
-          const cardName = document.getElementById('cardName').value.trim();
-          
-          if (!cardNumber || !expiryDate || !cvv || !cardName) {
-            console.log('Validation failed: Missing card details');
-            alertDiv.className = 'alert error';
-            alertDiv.textContent = '❌ Please fill in all card details';
-            alertDiv.style.display = 'block';
-            return;
-          }
-          
-          console.log('Card details validated:', {
-            cardNumber: cardNumber.substring(0, 4) + '****',
-            expiryDate: expiryDate,
-            cvv: '***',
-            cardName: cardName
-          });
-        } else {
-          // PayPal validation
-          const paypalEmail = document.getElementById('paypalEmail').value.trim();
-          if (!paypalEmail) {
-            alertDiv.className = 'alert error';
-            alertDiv.textContent = '❌ Please enter your PayPal email';
-            alertDiv.style.display = 'block';
-            return;
-          }
-        }
-        
         btn.disabled = true;
-        btn.textContent = 'Validating Card...';
+        btn.textContent = 'Processing...';
         alertDiv.style.display = 'none';
 
-      try {
-        // Prepare request data
-        const requestData = {
-          plan: selectedPlan
-        };
-        
-        // Add card details if card payment method is selected
-        if (selectedPaymentMethod === 'card') {
-          requestData.card_number = document.getElementById('cardNumber').value.trim();
-          requestData.expiry_date = document.getElementById('expiryDate').value.trim();
-          requestData.cvv = document.getElementById('cvv').value.trim();
-          requestData.card_name = document.getElementById('cardName').value.trim();
-        } else {
-          // For PayPal, we'll just validate email format (you can add PayPal validation later)
+        try {
+          // Create Stripe checkout session
+          const response = await fetch('/api/stripe/create-checkout-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              plan: selectedPlan  // 'monthly' or 'yearly'
+            })
+          });
+
+          const data = await response.json();
+          console.log('Checkout session response:', data);
+
+          if (data.success && data.sessionId) {
+            // Redirect to Stripe Checkout
+            // Stripe will handle payment securely on their servers
+            alertDiv.className = 'alert success';
+            alertDiv.textContent = '✅ Redirecting to secure checkout...';
+            alertDiv.style.display = 'block';
+            
+            // Load Stripe.js and redirect to checkout
+            if (!window.Stripe) {
+              const script = document.createElement('script');
+              script.src = 'https://js.stripe.com/v3/';
+              script.onload = function() {
+                const stripe = window.Stripe(data.publishableKey);
+                stripe.redirectToCheckout({
+                  sessionId: data.sessionId
+                }).then(function(result) {
+                  if (result.error) {
+                    alertDiv.className = 'alert error';
+                    alertDiv.textContent = '❌ ' + result.error.message;
+                    alertDiv.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Subscribe Now';
+                  }
+                });
+              };
+              document.head.appendChild(script);
+            } else {
+              const stripe = window.Stripe(data.publishableKey || '{{ stripe_publishable_key }}');
+              stripe.redirectToCheckout({
+                sessionId: data.sessionId
+              }).then(function(result) {
+                if (result.error) {
+                  alertDiv.className = 'alert error';
+                  alertDiv.textContent = '❌ ' + result.error.message;
+                  alertDiv.style.display = 'block';
+                  btn.disabled = false;
+                  btn.textContent = 'Subscribe Now';
+                }
+              });
+            }
+          } else {
+            alertDiv.className = 'alert error';
+            alertDiv.textContent = '❌ ' + (data.message || 'Failed to create checkout session. Please try again.');
+            alertDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Subscribe Now';
+          }
+        } catch (error) {
+          console.error('Payment error:', error);
           alertDiv.className = 'alert error';
-          alertDiv.textContent = '❌ Card payment is required for subscription. Please use a credit/debit card.';
+          alertDiv.textContent = '❌ An error occurred. Please try again.';
           alertDiv.style.display = 'block';
           btn.disabled = false;
           btn.textContent = 'Subscribe Now';
-          return;
         }
-
-        console.log('Sending request to API:', {
-          plan: requestData.plan,
-          hasCardNumber: !!requestData.card_number,
-          hasExpiryDate: !!requestData.expiry_date,
-          hasCVV: !!requestData.cvv,
-          hasCardName: !!requestData.card_name
-        });
-
-        const response = await fetch('/api/subscription/update', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestData)
-        });
-
-        console.log('Response status:', response.status);
-        const data = await response.json();
-        console.log('Response data:', data);
-
-        if (data.success) {
-          alertDiv.className = 'alert success';
-          alertDiv.textContent = '✅ ' + (data.message || 'Card validated successfully! Subscription upgraded to Premium. Redirecting...');
-          alertDiv.style.display = 'block';
-          
-          // Redirect after 2 seconds
-          setTimeout(() => {
-            window.location.href = '/subscriber';
-          }, 2000);
-        } else {
-          alertDiv.className = 'alert error';
-          alertDiv.textContent = '❌ ' + (data.message || 'Card validation failed. Please check your card details and try again.');
-          alertDiv.style.display = 'block';
-          btn.disabled = false;
-          btn.textContent = 'Subscribe Now';
-        }
-      } catch (error) {
-        console.error('Payment error:', error);
-        alertDiv.className = 'alert error';
-        alertDiv.textContent = '❌ An error occurred. Please try again.';
-        alertDiv.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = 'Subscribe Now';
-      }
       });
     }); // End of DOMContentLoaded
   </script>

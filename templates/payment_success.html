@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Successful - FirstMod-AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .success-container {
+      max-width: 600px;
+      margin: 100px auto;
+      padding: 60px 40px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .success-icon {
+      font-size: 5rem;
+      margin-bottom: 20px;
+      animation: bounceIn 0.6s ease;
+    }
+
+    @keyframes bounceIn {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .success-container h1 {
+      color: white;
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+      background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .success-container p {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      padding: 15px 40px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+
+    .loading {
+      display: inline-block;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Animated Background -->
+  <div class="animated-background"></div>
+
+  <!-- Particles -->
+  <div class="particles" id="particles"></div>
+
+  <!-- Floating Shapes -->
+  <div class="shapes">
+    <div class="shape" style="width: 300px; height: 300px; background: rgba(17, 20, 57, 0.2); top: 10%; left: 5%;"></div>
+    <div class="shape" style="width: 200px; height: 200px; background: rgba(248, 248, 249, 0.3); top: 50%; right: 10%;"></div>
+    <div class="shape" style="width: 250px; height: 250px; background: rgba(26, 29, 74, 0.2); bottom: 10%; left: 15%;"></div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="success-container">
+      <div class="success-icon">🎉</div>
+      <h1>Payment Successful!</h1>
+      <p id="statusMessage">Thank you for subscribing to FirstMod-AI Premium. Your account has been activated.</p>
+      <div id="loadingMessage" style="display: none;">
+        <p>Verifying your payment...</p>
+      </div>
+      <a href="/subscriber" class="btn-primary" id="continueBtn" style="display: none;">
+        Go to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Verify payment session
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const statusMessage = document.getElementById('statusMessage');
+    const loadingMessage = document.getElementById('loadingMessage');
+    const continueBtn = document.getElementById('continueBtn');
+
+    if (sessionId) {
+      // Show loading
+      statusMessage.style.display = 'none';
+      loadingMessage.style.display = 'block';
+
+      // Verify session
+      fetch(`/api/stripe/verify-session/${sessionId}`)
+        .then(res => res.json())
+        .then(data => {
+          loadingMessage.style.display = 'none';
+          
+          if (data.success) {
+            statusMessage.textContent = 'Payment verified! Your subscription is now active. You can now access all premium features.';
+            statusMessage.style.display = 'block';
+            continueBtn.style.display = 'inline-block';
+            
+            // Update session if needed
+            setTimeout(() => {
+              window.location.href = '/subscriber';
+            }, 3000);
+          } else {
+            statusMessage.textContent = 'Payment verification pending. Please wait a moment or contact support if this persists.';
+            statusMessage.style.display = 'block';
+            continueBtn.style.display = 'inline-block';
+            continueBtn.textContent = 'Go to Dashboard';
+          }
+        })
+        .catch(err => {
+          console.error('Verification error:', err);
+          loadingMessage.style.display = 'none';
+          statusMessage.textContent = 'Payment received! Redirecting to dashboard...';
+          statusMessage.style.display = 'block';
+          continueBtn.style.display = 'inline-block';
+          
+          setTimeout(() => {
+            window.location.href = '/subscriber';
+          }, 2000);
+        });
+    } else {
+      // No session ID, just show success and redirect
+      setTimeout(() => {
+        window.location.href = '/subscriber';
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
+

@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('user', 'subscriber', 'admin') DEFAULT 'user',
     subscription_status ENUM('active', 'inactive', 'suspended') DEFAULT 'inactive',
     profile_picture VARCHAR(500) NULL,
+    stripe_customer_id VARCHAR(255) NULL,
+    stripe_subscription_id VARCHAR(255) NULL,
+    subscription_plan VARCHAR(50) NULL,
+    subscription_end_date DATE NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -35,8 +39,10 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     plan_type ENUM('monthly', 'yearly') NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    payment_status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+    payment_status ENUM('pending', 'completed', 'failed', 'canceled') DEFAULT 'pending',
     amount DECIMAL(10, 2) NOT NULL,
+    stripe_subscription_id VARCHAR(255) NULL,
+    stripe_price_id VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

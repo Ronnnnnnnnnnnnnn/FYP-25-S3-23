@@ -3,9 +3,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from db_config import DatabaseConnection
 from mysql.connector import Error as MySQLError
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import os
+import stripe
 
 app = Flask(__name__, 
             static_folder='static',
@@ -17,6 +18,21 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ANIMATIONS_FOLDER'] = 'static/animations'
 app.config['PROFILE_PICTURES_FOLDER'] = 'static/uploads/profile_pictures'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Stripe configuration
+stripe.api_key = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+# Stripe Price IDs - Set these in Railway environment variables
+# You'll get these from Stripe Dashboard after creating products
+PRICE_IDS = {
+    'monthly': os.getenv('STRIPE_PRICE_ID_MONTHLY', ''),  # $9.99/month
+    'yearly': os.getenv('STRIPE_PRICE_ID_YEARLY', '')     # $99.99/year
+}
+
+# Frontend URL for redirects
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5000')
 
 
 # Ensure upload directories exist
@@ -259,7 +275,17 @@ def payment_page():
     # If user is already a subscriber, redirect to subscriber dashboard
     if session.get('role') in ['subscriber', 'admin']:
         return redirect(url_for('subscriber_dashboard'))
-    return render_template('payment.html')
+    return render_template('payment.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
+
+
+@app.route('/payment-success')
+def payment_success():
+    """Payment success page"""
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    
+    session_id = request.args.get('session_id')
+    return render_template('payment_success.html', session_id=session_id)
 
 @app.route('/makeittalk')
 def makeittalk_page():
@@ -732,60 +758,284 @@ def api_upload_profile_picture():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/subscription/update', methods=['POST'])
-def update_subscription():
+@app.route('/api/stripe/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    """Create Stripe checkout session for subscription"""
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
     # Check if account is suspended
     status = check_account_status()
     if status == 'suspended':
         return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
     
     data = request.get_json()
-    plan = data.get('plan')
+    plan_type = data.get('plan', 'monthly')  # 'monthly' or 'yearly'
     
-    # Get card details for validation
-    card_number = data.get('card_number', '').strip()
-    expiry_date = data.get('expiry_date', '').strip()
-    cvv = data.get('cvv', '').strip()
-    card_name = data.get('card_name', '').strip()
+    if plan_type not in ['monthly', 'yearly']:
+        return jsonify({'success': False, 'message': 'Invalid plan type'}), 400
     
-    # Validate card details
-    if not all([card_number, expiry_date, cvv, card_name]):
-        return jsonify({'success': False, 'message': 'All card details are required'}), 400
+    price_id = PRICE_IDS.get(plan_type)
+    if not price_id:
+        return jsonify({'success': False, 'message': 'Price ID not configured. Please set STRIPE_PRICE_ID_MONTHLY and STRIPE_PRICE_ID_YEARLY in environment variables.'}), 500
     
-    is_valid, error_message = validate_card(card_number, expiry_date, cvv, card_name)
-    
-    if not is_valid:
-        return jsonify({'success': False, 'message': error_message}), 400
-    
-    # Card is valid, proceed with subscription upgrade
-    db = get_db()
-    cursor = db.cursor()
-    
+    db = None
+    cursor = None
     try:
-        # Update user role to subscriber and subscription status to active
-        cursor.execute(
-            "UPDATE users SET role = %s, subscription_status = %s WHERE user_id = %s",
-            ('subscriber', 'active', session['user_id'])
-        )
-        db.commit()
+        # Get user info
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT email, fullname, stripe_customer_id FROM users WHERE user_id = %s", (session['user_id'],))
+        user = cursor.fetchone()
         
-        # Update session
-        session['role'] = 'subscriber'
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        # Create or get Stripe customer
+        if user['stripe_customer_id']:
+            customer_id = user['stripe_customer_id']
+        else:
+            customer = stripe.Customer.create(
+                email=user['email'],
+                name=user['fullname'],
+                metadata={'user_id': str(session['user_id'])}
+            )
+            customer_id = customer.id
+            
+            # Save customer ID to database
+            cursor.execute(
+                "UPDATE users SET stripe_customer_id = %s WHERE user_id = %s",
+                (customer_id, session['user_id'])
+            )
+            db.commit()
+        
+        # Create checkout session
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price': price_id,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=f'{FRONTEND_URL}/payment-success?session_id={{CHECKOUT_SESSION_ID}}',
+            cancel_url=f'{FRONTEND_URL}/payment',
+            metadata={
+                'user_id': str(session['user_id']),
+                'plan_type': plan_type
+            }
+        )
         
         return jsonify({
-            'success': True, 
-            'message': 'Card validated successfully. Subscription upgraded to Premium!'
+            'success': True,
+            'sessionId': checkout_session.id,
+            'publishableKey': STRIPE_PUBLISHABLE_KEY
         })
     
+    except stripe.error.StripeError as e:
+        print(f"Stripe error: {e}")
+        return jsonify({'success': False, 'message': f'Stripe error: {str(e)}'}), 500
     except Exception as e:
-        print(f"Update subscription error: {e}")
+        print(f"Create checkout session error: {e}")
         import traceback
         traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
         if db:
-            db.rollback()
-        return jsonify({'success': False, 'message': f'Failed to update subscription: {str(e)}'}), 500
+            db.close()
+
+
+@app.route('/api/stripe/verify-session/<session_id>', methods=['GET'])
+def verify_session(session_id):
+    """Verify payment session"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    try:
+        checkout_session = stripe.checkout.Session.retrieve(session_id)
+        
+        if checkout_session.payment_status == 'paid':
+            return jsonify({
+                'success': True,
+                'status': checkout_session.payment_status,
+                'subscription_id': checkout_session.subscription,
+                'customer_id': checkout_session.customer
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'status': checkout_session.payment_status
+            })
+    except stripe.error.StripeError as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/stripe/webhook', methods=['POST'])
+def stripe_webhook():
+    """Handle Stripe webhooks"""
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get('Stripe-Signature')
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        print('Invalid payload')
+        return jsonify({'error': 'Invalid payload'}), 400
+    except stripe.error.SignatureVerificationError:
+        print('Invalid signature')
+        return jsonify({'error': 'Invalid signature'}), 400
+    
+    # Handle the event
+    db = None
+    cursor = None
+    try:
+        if event['type'] == 'checkout.session.completed':
+            session = event['data']['object']
+            user_id = int(session['metadata'].get('user_id', 0))
+            plan_type = session['metadata'].get('plan_type', 'monthly')
+            
+            # Update user subscription
+            db = get_db()
+            cursor = db.cursor(dictionary=True)
+            
+            # Calculate end date
+            start_date = datetime.now().date()
+            if plan_type == 'monthly':
+                end_date = start_date + timedelta(days=30)
+                amount = 9.99
+            else:
+                end_date = start_date + timedelta(days=365)
+                amount = 99.99
+            
+            # Update user
+            cursor.execute(
+                """UPDATE users 
+                   SET role = 'subscriber', 
+                       subscription_status = 'active',
+                       stripe_subscription_id = %s,
+                       subscription_plan = %s,
+                       subscription_end_date = %s
+                   WHERE user_id = %s""",
+                (session['subscription'], plan_type, end_date, user_id)
+            )
+            
+            # Create subscription record
+            cursor.execute(
+                """INSERT INTO subscriptions 
+                   (user_id, plan_type, start_date, end_date, payment_status, amount, stripe_subscription_id)
+                   VALUES (%s, %s, %s, %s, 'completed', %s, %s)""",
+                (user_id, plan_type, start_date, end_date, amount, session['subscription'])
+            )
+            
+            db.commit()
+            print(f'Subscription activated for user {user_id}')
+        
+        elif event['type'] == 'customer.subscription.updated':
+            subscription = event['data']['object']
+            subscription_id = subscription['id']
+            
+            db = get_db()
+            cursor = db.cursor(dictionary=True)
+            
+            # Find user by subscription ID
+            cursor.execute(
+                "SELECT user_id FROM users WHERE stripe_subscription_id = %s",
+                (subscription_id,)
+            )
+            user = cursor.fetchone()
+            
+            if user:
+                if subscription['status'] == 'active':
+                    # Update subscription end date
+                    end_date = datetime.fromtimestamp(subscription['current_period_end']).date()
+                    cursor.execute(
+                        "UPDATE users SET subscription_status = 'active', subscription_end_date = %s WHERE user_id = %s",
+                        (end_date, user['user_id'])
+                    )
+                    db.commit()
+                    print(f'Subscription updated for user {user["user_id"]}')
+        
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            subscription_id = subscription['id']
+            
+            db = get_db()
+            cursor = db.cursor()
+            
+            # Find user by subscription ID
+            cursor.execute(
+                "SELECT user_id FROM users WHERE stripe_subscription_id = %s",
+                (subscription_id,)
+            )
+            user = cursor.fetchone()
+            
+            if user:
+                # Revoke subscription
+                cursor.execute(
+                    "UPDATE users SET role = 'user', subscription_status = 'inactive', subscription_plan = NULL, subscription_end_date = NULL WHERE user_id = %s",
+                    (user[0],)
+                )
+                cursor.execute(
+                    "UPDATE subscriptions SET payment_status = 'canceled' WHERE stripe_subscription_id = %s",
+                    (subscription_id,)
+                )
+                db.commit()
+                print(f'Subscription canceled for user {user[0]}')
+        
+        return jsonify({'received': True})
+    
+    except Exception as e:
+        print(f'Webhook error: {e}')
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if db:
+            db.close()
+
+
+@app.route('/api/stripe/cancel-subscription', methods=['POST'])
+def cancel_subscription():
+    """Cancel user subscription"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    db = None
+    cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT stripe_subscription_id FROM users WHERE user_id = %s",
+            (session['user_id'],)
+        )
+        user = cursor.fetchone()
+        
+        if not user or not user['stripe_subscription_id']:
+            return jsonify({'success': False, 'message': 'No active subscription found'}), 404
+        
+        # Cancel subscription at period end
+        subscription = stripe.Subscription.modify(
+            user['stripe_subscription_id'],
+            cancel_at_period_end=True
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Subscription will be canceled at the end of the current period'
+        })
+    
+    except stripe.error.StripeError as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    except Exception as e:
+        print(f'Cancel subscription error: {e}')
+        return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         if cursor:
             cursor.close()

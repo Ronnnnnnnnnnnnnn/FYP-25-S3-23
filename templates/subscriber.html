@@ -245,6 +245,54 @@
     // Make deleteAnimation available globally
     window.deleteAnimation = deleteAnimation;
     
+    // Cancel subscription handler
+    document.addEventListener('DOMContentLoaded', function() {
+      const cancelBtn = document.getElementById('cancelSubscriptionBtn');
+      const updateBtn = document.getElementById('updateSubscriptionBtn');
+      
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', async function() {
+          if (!confirm('Are you sure you want to cancel your subscription? Your subscription will remain active until the end of the current billing period.')) {
+            return;
+          }
+          
+          cancelBtn.disabled = true;
+          cancelBtn.textContent = 'Processing...';
+          
+          try {
+            const response = await fetch('/api/stripe/cancel-subscription', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              alert('Subscription canceled. Your subscription will remain active until the end of the current billing period.');
+              window.location.reload();
+            } else {
+              alert('Failed to cancel subscription: ' + (data.message || 'Unknown error'));
+              cancelBtn.disabled = false;
+              cancelBtn.textContent = 'Cancel Subscription';
+            }
+          } catch (error) {
+            console.error('Error canceling subscription:', error);
+            alert('Error canceling subscription. Please try again.');
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = 'Cancel Subscription';
+          }
+        });
+      }
+      
+      if (updateBtn) {
+        updateBtn.addEventListener('click', function() {
+          window.location.href = '/payment';
+        });
+      }
+    });
+    
     // Load items when page loads
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', loadGeneratedItems);
