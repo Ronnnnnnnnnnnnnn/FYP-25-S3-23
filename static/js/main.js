@@ -1215,7 +1215,7 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
         </td>
         <td style="padding: 10px; border: 1px solid #ddd;">${new Date(user.created_at).toLocaleDateString()}</td>
         <td style="padding: 10px; border: 1px solid #ddd;">
-          <button class="btn small-btn" onclick="window.editUser(${user.user_id}, ${JSON.stringify(user.fullname)}, ${JSON.stringify(user.email)})" style="margin: 2px;">Edit</button>
+          <button class="btn small-btn edit-user-btn" data-user-id="${user.user_id}" data-fullname="${user.fullname.replace(/"/g, '&quot;')}" data-email="${user.email.replace(/"/g, '&quot;')}" style="margin: 2px;">Edit</button>
           ${user.subscription_status === 'suspended' 
             ? `<button class="btn small-btn" onclick="activateUser(${user.user_id})" style="margin: 2px;">Activate</button>`
             : `<button class="btn small-btn danger-btn" onclick="suspendUser(${user.user_id})" style="margin: 2px;">Suspend</button>`
