@@ -195,6 +195,17 @@
             display: block;
             border-radius: 10px;
         }
+        
+        .debug-log {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -243,6 +254,8 @@
                 <button onclick="downloadVideo()" class="file-label">📥 Download Video</button>
             </div>
         </div>
+        
+        <div class="debug-log" id="debugLog"></div>
     </div>
 
     <script type="module">
@@ -256,6 +269,13 @@
         let videoFile = null;
         let resultBlob = null;
         let app = null;
+        
+        function log(msg) {
+            const debugLog = document.getElementById('debugLog');
+            debugLog.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(msg);
+        }
         
         window.previewImage = function(input) {
             const preview = document.getElementById('imagePreview');
@@ -328,47 +348,90 @@
             updateProgress(0);
             
             try {
+                log('Connecting to ' + SPACE_URL);
                 showStatus("Connecting...", "loading");
                 updateProgress(10);
                 
                 if (!app) {
                     app = await Client.connect(SPACE_URL);
+                    log('Connected successfully');
                 }
+                
+                // Inspect the app to find available endpoints
+                log('Checking available endpoints...');
+                console.log('App view_api:', app.view_api);
                 
                 showStatus("📤 Uploading files...", "loading");
                 updateProgress(20);
                 
-                // Use handle_file for Gradio Client
                 const imageHandle = await app.handle_blob(imageFile);
+                log('Image uploaded');
                 updateProgress(40);
                 
                 const videoHandle = await app.handle_blob(videoFile);
+                log('Video uploaded');
                 updateProgress(60);
                 
                 showStatus("🎬 Creating animation...", "loading");
                 
-                const result = await app.predict("/predict", [imageHandle, videoHandle]);
+                // Try different endpoint patterns
+                let result;
+                const endpointsToTry = [
+                    { name: 0, params: [imageHandle, videoHandle] },
+                    { name: "/predict", params: [imageHandle, videoHandle] },
+                    { name: "predict", params: [imageHandle, videoHandle] },
+                    { name: "/animate_image", params: [imageHandle, videoHandle] },
+                    { name: "animate_image", params: [imageHandle, videoHandle] },
+                ];
+                
+                let success = false;
+                for (const endpoint of endpointsToTry) {
+                    try {
+                        log(`Trying endpoint: ${endpoint.name}`);
+                        result = await app.predict(endpoint.name, endpoint.params);
+                        log(`✅ Success with endpoint: ${endpoint.name}`);
+                        success = true;
+                        break;
+                    } catch (e) {
+                        log(`❌ Failed with ${endpoint.name}: ${e.message}`);
+                    }
+                }
+                
+                if (!success) {
+                    throw new Error('All endpoints failed. Check your HuggingFace space configuration.');
+                }
                 
                 updateProgress(90);
                 showStatus("📥 Processing result...", "loading");
                 
-                // Extract video URL
+                log('Result: ' + JSON.stringify(result));
+                
+                // Extract video URL - try multiple patterns
                 let videoUrl = null;
-                if (result?.data?.[0]?.video) {
+                
+                if (result?.data?.[0]?.video?.url) {
                     videoUrl = result.data[0].video.url;
                 } else if (result?.data?.[0]?.url) {
                     videoUrl = result.data[0].url;
                 } else if (result?.data?.[0]) {
-                    videoUrl = result.data[0];
+                    const data = result.data[0];
+                    if (typeof data === 'string') {
+                        videoUrl = data;
+                    } else if (data.path) {
+                        videoUrl = data.path;
+                    }
                 }
                 
                 if (!videoUrl) {
+                    log('Cannot find video URL in result');
                     throw new Error('No video URL in result');
                 }
                 
+                log('Video URL: ' + videoUrl);
+                
                 // Make absolute URL
                 if (!videoUrl.startsWith('http')) {
-                    videoUrl = new URL(videoUrl, `https://huggingface.co/spaces/${SPACE_URL}`).href;
+                    videoUrl = `https://huggingface.co/spaces/${SPACE_URL}/resolve/main${videoUrl}`;
                 }
                 
                 const response = await fetch(videoUrl);
@@ -386,6 +449,7 @@
                 resultSection.scrollIntoView({ behavior: 'smooth' });
                 
             } catch (error) {
+                log('ERROR: ' + error.message);
                 console.error("Error:", error);
                 showStatus("❌ Error: " + error.message, "error");
             } finally {
