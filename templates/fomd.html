@@ -1100,19 +1100,10 @@
             showStatus("Initializing...", "loading");
             
             try {
-                // Step 1: Connect to Gradio
-                console.log('Step 1: Connecting to Gradio');
-                await initClient();
-                
-                if (!window.app) {
-                    throw new Error("Failed to connect to Gradio API. Please refresh.");
-                }
-                
+                // Step 1: Prepare files for upload
+                console.log('Step 1: Preparing files for upload');
+                showStatus("📤 Uploading files...", "loading");
                 updateProgress(10);
-                
-                // Step 2: Prepare files for upload
-                console.log('Step 2: Preparing files');
-                showStatus("📤 Preparing files...", "loading");
                 
                 console.log('Image file details:', {
                     name: imageFile.name,
@@ -1126,68 +1117,46 @@
                     size: videoFile.size
                 });
                 
+                // Step 2: Upload files and process via backend API
+                console.log('Step 2: Calling backend API');
+                showStatus("🎬 Creating animation... This may take 1-3 minutes", "loading");
                 updateProgress(30);
                 
-                // Step 3: Call the animation function (Gradio client handles file upload automatically)
-                console.log('Step 3: Calling Gradio predict function');
-                console.log('Sending parameters:', {
-                    source_image: imageFile,
-                    driving_video: videoFile
-                });
-                showStatus("🎬 Creating animation... This may take 1-3 minutes", "loading");
+                // Create FormData for file upload
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                formData.append('video', videoFile);
                 
-                // Pass File objects directly - Gradio client handles upload automatically
-                // Try named parameters first, fallback to positional if needed
-                let result;
-                try {
-                    result = await window.app.predict("/predict", {
-                        source_image: imageFile,
-                        driving_video: videoFile
-                    });
-                } catch (error) {
-                    // Fallback to positional arguments if named parameters don't work
-                    console.log('Named parameters failed, trying positional:', error.message);
-                    result = await window.app.predict("/predict", [
-                        imageFile,  // source_image
-                        videoFile   // driving_video
-                    ]);
+                // Call backend API
+                const response = await fetch('/api/fomd/animate', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                updateProgress(70);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to create animation');
                 }
                 
-                console.log('✅ Predict completed:', result);
+                const result = await response.json();
+                console.log('✅ Animation created:', result);
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'Animation creation failed');
+                }
+                
+                // Step 3: Display result
+                showStatus("📥 Loading result...", "loading");
                 updateProgress(90);
                 
-                // Step 5: Extract video URL from result
-                showStatus("📥 Downloading result...", "loading");
+                const videoUrl = result.video_url;
+                console.log('✅ Video URL:', videoUrl);
                 
-                let videoUrl = null;
-                if (result && result.data && result.data[0]) {
-                    videoUrl = result.data[0];
-                } else if (result && result.data && result.data.video) {
-                    videoUrl = result.data.video;
-                } else if (typeof result === 'object' && result.url) {
-                    videoUrl = result.url;
-                } else if (result && result[0]) {
-                    videoUrl = result[0];
-                } else if (typeof result === 'string') {
-                    videoUrl = result;
-                }
-                
-                if (!videoUrl) {
-                    console.log('❌ No video URL found in result');
-                    throw new Error('No video URL found in result');
-                }
-                
-                console.log('✅ Video URL extracted:', videoUrl);
-                
-                // Make URL absolute if needed
-                if (!videoUrl.startsWith('http')) {
-                    videoUrl = new URL(videoUrl, `https://huggingface.co/spaces/${SPACE_URL}`).href;
-                    console.log('Converted to absolute URL:', videoUrl);
-                }
-                
-                // Step 6: Fetch and display result
-                const response = await fetch(videoUrl);
-                resultBlob = await response.blob();
+                // Fetch and display the video
+                const videoResponse = await fetch(videoUrl);
+                resultBlob = await videoResponse.blob();
                 
                 const resultUrl = URL.createObjectURL(resultBlob);
                 const video = document.getElementById('resultVideo');
@@ -1200,8 +1169,8 @@
                 resultSection.classList.add('show');
                 resultSection.scrollIntoView({ behavior: 'smooth' });
                 
-                // Automatically save to server
-                saveFOMDToServer(resultBlob);
+                // Video is already saved to server by the backend, just show success
+                showStatus('✅ Animation saved to your dashboard!', 'success');
                 
                 // Hide status after 3 seconds
                 setTimeout(() => {

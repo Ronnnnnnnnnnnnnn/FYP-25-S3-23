@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import uuid
 import os
 import stripe
+import requests
+import time
 
 app = Flask(__name__, 
             static_folder='static',
@@ -196,6 +198,160 @@ def create_talking_animation(image_path, audio_path, output_path, api_url=None):
         return {
             'status': 'error',
             'message': f'Animation creation failed: {str(e)}'
+        }
+
+def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None):
+    """
+    Create FOMD animation using HuggingFace Gradio API.
+    Uses the Gradio Python client to call the HuggingFace space.
+    """
+    try:
+        # Try using Gradio Python client if available
+        try:
+            from gradio_client import Client
+            
+            # Extract space name from URL (e.g., "Tc12345/fomd" from "https://Tc12345-fomd.hf.space")
+            if hf_space_url:
+                # Handle different URL formats
+                if 'hf.space' in hf_space_url:
+                    # Extract username and space name from URL
+                    # Format: https://username-spacename.hf.space
+                    url_parts = hf_space_url.replace('https://', '').replace('http://', '').split('.')[0]
+                    if '-' in url_parts:
+                        username, space_name = url_parts.split('-', 1)
+                        space_path = f"{username}/{space_name}"
+                    else:
+                        space_path = "Tc12345/fomd"  # Default fallback
+                else:
+                    space_path = hf_space_url
+            else:
+                space_path = "Tc12345/fomd"
+            
+            print(f"Connecting to Gradio space: {space_path}")
+            client = Client(space_path)
+            
+            # Call the predict function with image and video files
+            print(f"Processing FOMD animation with image: {image_path}, video: {video_path}")
+            result = client.predict(
+                source_image=image_path,
+                driving_video=video_path,
+                api_name="/predict"
+            )
+            
+            # Result should be a video file path or URL
+            if result:
+                # Download the result video
+                if isinstance(result, (list, tuple)) and len(result) > 0:
+                    video_url = result[0]
+                elif isinstance(result, str):
+                    video_url = result
+                else:
+                    video_url = str(result)
+                
+                # If it's a URL, download it
+                if video_url.startswith('http'):
+                    print(f"Downloading video from: {video_url}")
+                    response = requests.get(video_url, timeout=300)  # 5 minute timeout
+                    response.raise_for_status()
+                    
+                    # Save to output path
+                    with open(output_path, 'wb') as f:
+                        f.write(response.content)
+                else:
+                    # It's a local path, copy it
+                    import shutil
+                    shutil.copy2(video_url, output_path)
+                
+                print(f"FOMD animation saved to: {output_path}")
+                return {
+                    'status': 'success',
+                    'message': 'Animation created successfully'
+                }
+            else:
+                return {
+                    'status': 'error',
+                    'message': 'No result returned from FOMD API'
+                }
+                
+        except ImportError:
+            # Gradio client not available, try direct HTTP API
+            print("Gradio client not available, trying direct HTTP API")
+            return create_fomd_animation_http(image_path, video_path, output_path, hf_space_url)
+        except Exception as e:
+            print(f"Gradio client error: {e}")
+            # Fallback to HTTP API
+            return create_fomd_animation_http(image_path, video_path, output_path, hf_space_url)
+            
+    except Exception as e:
+        print(f"FOMD animation creation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'status': 'error',
+            'message': f'Animation creation failed: {str(e)}'
+        }
+
+def create_fomd_animation_http(image_path, video_path, output_path, hf_space_url=None):
+    """
+    Fallback method: Use HTTP API to call HuggingFace space.
+    This is a simpler approach that uploads files and polls for results.
+    """
+    try:
+        if not hf_space_url:
+            hf_space_url = "https://Tc12345-fomd.hf.space"
+        
+        # Upload files and get prediction
+        api_url = f"{hf_space_url}/api/predict"
+        
+        # Prepare files for upload
+        with open(image_path, 'rb') as img_file, open(video_path, 'rb') as vid_file:
+            files = {
+                'source_image': (os.path.basename(image_path), img_file, 'image/jpeg'),
+                'driving_video': (os.path.basename(video_path), vid_file, 'video/mp4')
+            }
+            
+            # Make prediction request
+            print(f"Calling FOMD API: {api_url}")
+            response = requests.post(api_url, files=files, timeout=300)
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            # Extract video URL from result
+            if 'data' in result and len(result['data']) > 0:
+                video_url = result['data'][0]
+                
+                # Download the video
+                if video_url.startswith('http'):
+                    print(f"Downloading video from: {video_url}")
+                    video_response = requests.get(video_url, timeout=300)
+                    video_response.raise_for_status()
+                    
+                    with open(output_path, 'wb') as f:
+                        f.write(video_response.content)
+                    
+                    return {
+                        'status': 'success',
+                        'message': 'Animation created successfully'
+                    }
+                else:
+                    return {
+                        'status': 'error',
+                        'message': f'Invalid video URL returned: {video_url}'
+                    }
+            else:
+                return {
+                    'status': 'error',
+                    'message': 'No video data in API response'
+                }
+                
+    except Exception as e:
+        print(f"HTTP API error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'status': 'error',
+            'message': f'HTTP API call failed: {str(e)}'
         }
 
 # ============================================
@@ -1891,6 +2047,100 @@ def delete_animation(animation_id):
 # ============================================
 # FOMD API ENDPOINTS
 # ============================================
+@app.route('/api/fomd/animate', methods=['POST'])
+def fomd_animate():
+    """Process FOMD animation with image and video files"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    
+    # Check if account is suspended
+    status = check_account_status()
+    if status == 'suspended':
+        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+    
+    # Check if user is a subscriber or admin (check database, not just session)
+    has_access, role, sub_status = check_user_subscriber_access()
+    if not has_access:
+        return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
+    
+    if 'image' not in request.files or 'video' not in request.files:
+        return jsonify({'success': False, 'message': 'Image and video files required'}), 400
+    
+    image_file = request.files['image']
+    video_file = request.files['video']
+    
+    if image_file.filename == '' or video_file.filename == '':
+        return jsonify({'success': False, 'message': 'No files selected'}), 400
+    
+    try:
+        # Save uploaded files temporarily
+        image_filename = secure_filename(f"{uuid.uuid4()}_{image_file.filename}")
+        video_filename = secure_filename(f"{uuid.uuid4()}_{video_file.filename}")
+        
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_filename)
+        
+        image_file.save(image_path)
+        video_file.save(video_path)
+        
+        # Generate output filename
+        output_filename = f"fomd_{uuid.uuid4()}.mp4"
+        output_path = os.path.join(app.config['ANIMATIONS_FOLDER'], 'fomd', output_filename)
+        
+        # Get HuggingFace space URL from environment or use default
+        hf_space_url = os.environ.get('FOMD_HF_SPACE_URL', 'https://Tc12345-fomd.hf.space')
+        
+        # Process with FOMD via HuggingFace API
+        result = create_fomd_animation(
+            image_path=image_path,
+            video_path=video_path,
+            output_path=output_path,
+            hf_space_url=hf_space_url
+        )
+        
+        # Clean up temporary files
+        try:
+            if os.path.exists(image_path):
+                os.remove(image_path)
+            if os.path.exists(video_path):
+                os.remove(video_path)
+        except:
+            pass
+        
+        if result['status'] == 'success':
+            # Save to database
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                "INSERT INTO animations (user_id, tool_type, animation_path, status) VALUES (%s, %s, %s, %s)",
+                (session['user_id'], 'fomd', f'animations/fomd/{output_filename}', 'completed')
+            )
+            db.commit()
+            
+            animation_id = cursor.lastrowid
+            
+            cursor.close()
+            db.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Animation created successfully',
+                'animation_id': animation_id,
+                'video_url': f'/static/animations/fomd/{output_filename}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': result.get('message', 'Animation generation failed')
+            }), 500
+    
+    except Exception as e:
+        print(f"FOMD animate error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/api/fomd/save', methods=['POST'])
 def fomd_save():
     """Save FOMD animation result to database and server"""

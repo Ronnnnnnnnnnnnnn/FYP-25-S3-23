@@ -3,4 +3,5 @@ mysql-connector-python
 gunicorn
 requests
 stripe
+gradio_client
 
