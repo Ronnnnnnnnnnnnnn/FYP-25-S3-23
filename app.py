@@ -219,10 +219,12 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
         print("Using direct HTTP API calls to Gradio space")
         
         # Determine the base URL
+        # Use hf.space URL directly if provided, otherwise construct from space path
         if hf_space_url and 'hf.space' in hf_space_url:
             base_url = hf_space_url.rstrip('/')
+            print(f"Using provided hf.space URL: {base_url}")
         else:
-            # Extract space path
+            # Extract space path and construct URL
             if hf_space_url:
                 if 'hf.space' in hf_space_url:
                     url_parts = hf_space_url.replace('https://', '').replace('http://', '').split('.')[0]
@@ -235,78 +237,151 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
                     space_path = hf_space_url
             else:
                 space_path = "Tc12345/fomd"
+            # Try both URL formats
             base_url = f"https://huggingface.co/spaces/{space_path}"
+            print(f"Constructed base URL: {base_url}")
         
         print(f"Base URL: {base_url}")
         
         # Gradio spaces accept files directly in the predict API call
         # We don't need to upload separately - send files as multipart/form-data
         print("Calling predict API with files directly...")
-        predict_url = f"{base_url}/api/predict"
+        
+        # Try different endpoint formats - Gradio API endpoints vary
+        # Also try with the hf.space URL format if we're using spaces URL
+        predict_endpoints = []
+        
+        # If using hf.space URL, try that format first
+        if 'hf.space' in base_url:
+            predict_endpoints.extend([
+                f"{base_url}/api/predict",
+                f"{base_url}/predict",
+                f"{base_url}/run/predict"
+            ])
+        
+        # Also try the spaces URL format
+        if 'hf.space' in str(hf_space_url) if hf_space_url else False:
+            url_parts = hf_space_url.replace('https://', '').replace('http://', '').split('.')[0]
+            if '-' in url_parts:
+                username, space_name = url_parts.split('-', 1)
+                spaces_url = f"https://huggingface.co/spaces/{username}/{space_name}"
+                predict_endpoints.extend([
+                    f"{spaces_url}/api/predict",
+                    f"{spaces_url}/predict",
+                    f"{spaces_url}/run/predict"
+                ])
+        
+        # Fallback endpoints
+        if not predict_endpoints:
+            predict_endpoints = [
+                f"{base_url}/api/predict",
+                f"{base_url}/predict",
+                f"{base_url}/run/predict"
+            ]
         
         # Prepare files for multipart/form-data upload
         # Gradio expects files in the 'data' field as a list
         print(f"Preparing files: Image={image_path}, Video={video_path}")
         
-        # Open files and prepare for upload
-        with open(image_path, 'rb') as img_file, open(video_path, 'rb') as vid_file:
-            # Gradio API expects files in a specific format
-            # Try sending as multipart/form-data with files
-            files = {
-                'data[0]': (os.path.basename(image_path), img_file, 'image/jpeg'),
-                'data[1]': (os.path.basename(video_path), vid_file, 'video/mp4')
-            }
-            
-            print(f"Calling predict API: {predict_url}")
-            
-            # Send request with files
-            response = requests.post(predict_url, files=files, timeout=300)
-            
-            if response.status_code == 200:
-                result = response.json()
-                print(f"Predict API response: {result}")
+        # Try different endpoint formats and file formats
+        response = None
+        last_error = None
+        
+        # Open files once - we'll need to reopen for each attempt
+        for predict_url in predict_endpoints:
+            try:
+                print(f"Trying endpoint: {predict_url}")
                 
-                # Extract video URL from result
-                if 'data' in result and len(result['data']) > 0:
-                    video_url = result['data'][0]
+                # Open files for this attempt
+                with open(image_path, 'rb') as img_file, open(video_path, 'rb') as vid_file:
+                    # Try different file field formats
+                    file_formats = [
+                        # Format 1: data[0] and data[1]
+                        {
+                            'data[0]': (os.path.basename(image_path), img_file, 'image/jpeg'),
+                            'data[1]': (os.path.basename(video_path), vid_file, 'video/mp4')
+                        },
+                        # Format 2: data as JSON with file paths (will need to reopen files)
+                        None  # We'll handle this separately
+                    ]
                     
-                    # Download the video
-                    if video_url.startswith('http'):
-                        print(f"Downloading video from: {video_url}")
-                        video_response = requests.get(video_url, timeout=300)
-                        video_response.raise_for_status()
-                        
-                        with open(output_path, 'wb') as f:
-                            f.write(video_response.content)
-                        
-                        return {
-                            'status': 'success',
-                            'message': 'Animation created successfully'
+                    # Try Format 1 first
+                    files = file_formats[0]
+                    response = requests.post(predict_url, files=files, timeout=300)
+                    
+                    if response.status_code == 200:
+                        print(f"✅ Success with endpoint: {predict_url}")
+                        break
+                    elif response.status_code != 404:
+                        # If it's not 404, the endpoint exists but format might be wrong
+                        print(f"Endpoint exists but returned {response.status_code}: {response.text[:200]}")
+                        # Try JSON format
+                        img_file.seek(0)
+                        vid_file.seek(0)
+                        data = {
+                            "data": [
+                                img_file.read(),
+                                vid_file.read()
+                            ]
                         }
-                    else:
-                        # If it's a relative path, make it absolute
-                        video_url = f"{base_url}{video_url}" if video_url.startswith('/') else f"{base_url}/{video_url}"
-                        print(f"Converted to absolute URL: {video_url}")
-                        video_response = requests.get(video_url, timeout=300)
-                        video_response.raise_for_status()
-                        with open(output_path, 'wb') as f:
-                            f.write(video_response.content)
-                        return {
-                            'status': 'success',
-                            'message': 'Animation created successfully'
-                        }
-                else:
+                        response = requests.post(predict_url, json=data, timeout=300)
+                        if response.status_code == 200:
+                            print(f"✅ Success with JSON format on endpoint: {predict_url}")
+                            break
+            except Exception as e:
+                last_error = e
+                print(f"Endpoint {predict_url} failed: {e}")
+                continue
+        
+        if response is None:
+            raise Exception(f"All predict endpoints failed. Last error: {last_error}")
+        
+        # Process successful response
+        if response.status_code == 200:
+            result = response.json()
+            print(f"Predict API response: {result}")
+            
+            # Extract video URL from result
+            if 'data' in result and len(result['data']) > 0:
+                video_url = result['data'][0]
+                
+                # Download the video
+                if video_url.startswith('http'):
+                    print(f"Downloading video from: {video_url}")
+                    video_response = requests.get(video_url, timeout=300)
+                    video_response.raise_for_status()
+                    
+                    with open(output_path, 'wb') as f:
+                        f.write(video_response.content)
+                    
                     return {
-                        'status': 'error',
-                        'message': 'No video data in API response'
+                        'status': 'success',
+                        'message': 'Animation created successfully'
+                    }
+                else:
+                    # If it's a relative path, make it absolute
+                    video_url = f"{base_url}{video_url}" if video_url.startswith('/') else f"{base_url}/{video_url}"
+                    print(f"Converted to absolute URL: {video_url}")
+                    video_response = requests.get(video_url, timeout=300)
+                    video_response.raise_for_status()
+                    with open(output_path, 'wb') as f:
+                        f.write(video_response.content)
+                    return {
+                        'status': 'success',
+                        'message': 'Animation created successfully'
                     }
             else:
-                error_text = response.text[:500] if response.text else 'No error message'
-                print(f"Predict API failed: Status {response.status_code}, Response: {error_text}")
                 return {
                     'status': 'error',
-                    'message': f'Predict API failed with status {response.status_code}: {error_text}'
+                    'message': 'No video data in API response'
                 }
+        else:
+            error_text = response.text[:500] if response.text else 'No error message'
+            print(f"Predict API failed: Status {response.status_code}, Response: {error_text}")
+            return {
+                'status': 'error',
+                'message': f'Predict API failed with status {response.status_code}: {error_text}'
+            }
             
     except Exception as e:
         print(f"FOMD animation creation error: {e}")
