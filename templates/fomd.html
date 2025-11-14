@@ -329,141 +329,77 @@
                 
                 if (!app) {
                     app = await Client.connect(SPACE_URL);
-                    console.log('Connected to Gradio');
                 }
                 
                 showStatus("📤 Uploading files...", "loading");
                 updateProgress(20);
                 
-                // Pass File objects directly (like makeittalk does)
-                // Gradio client will handle the upload automatically
-                const imageHandle = imageFile;
-                const videoHandle = videoFile;
-                console.log('Using File objects directly:', {
-                    image: imageFile.name,
-                    video: videoFile.name
-                });
+                // Upload files
+                const imageHandle = await app.handle_blob(imageFile);
+                updateProgress(40);
+                
+                const videoHandle = await app.handle_blob(videoFile);
                 updateProgress(60);
                 
                 showStatus("🎬 Creating animation... (1-3 minutes)", "loading");
                 
-                // Call predict with the blob handles
-                // Try different methods: index 0 first, then "/predict" as fallback
-                console.log('Calling predict with handles...');
-                let result;
-                try {
-                    // Try with function index 0 (most common)
-                    console.log('Trying predict with index 0...');
-                    result = await app.predict(0, [imageHandle, videoHandle]);
-                    console.log('Result with index 0:', result);
-                } catch (e1) {
-                    console.log('Index 0 failed, trying submit with index 0...');
-                    try {
-                        // Try submit method with index 0
-                        result = await app.submit(0, [imageHandle, videoHandle]);
-                        console.log('Result with submit index 0:', result);
-                    } catch (e2) {
-                        console.log('Submit index 0 failed, trying /predict...');
-                        try {
-                            // Fallback to "/predict" string
-                            result = await app.predict("/predict", [imageHandle, videoHandle]);
-                            console.log('Result with /predict:', result);
-                        } catch (e3) {
-                            console.log('All methods failed, trying index 1...');
-                            // Try index 1
-                            result = await app.predict(1, [imageHandle, videoHandle]);
-                            console.log('Result with index 1:', result);
-                        }
-                    }
-                }
+                // For gr.Blocks, the endpoint is typically the first one (index 0)
+                // Use submit which handles async generators better
+                const job = app.submit(0, [imageHandle, videoHandle]);
                 
-                console.log('Final result:', result);
-                
-                // Handle async generator result if needed
-                let finalResult = result;
-                if (result && typeof result.next === 'function') {
-                    console.log('Result is an async generator, iterating...');
-                    let lastChunk = null;
-                    let chunkCount = 0;
-                    
-                    while (true) {
-                        const { value, done } = await result.next();
-                        if (done) {
-                            console.log('Generator completed');
-                            break;
+                // Handle streaming results
+                for await (const msg of job) {
+                    if (msg.type === "data") {
+                        // Got the final result
+                        const resultData = msg.data;
+                        console.log('Result data:', resultData);
+                        
+                        updateProgress(90);
+                        showStatus("📥 Processing result...", "loading");
+                        
+                        // Extract video URL
+                        let videoUrl = null;
+                        if (Array.isArray(resultData) && resultData[0]) {
+                            const videoData = resultData[0];
+                            if (videoData?.url) {
+                                videoUrl = videoData.url;
+                            } else if (videoData?.path) {
+                                videoUrl = videoData.path;
+                            } else if (typeof videoData === 'string') {
+                                videoUrl = videoData;
+                            }
                         }
                         
-                        chunkCount++;
-                        lastChunk = value;
-                        console.log(`Generator chunk ${chunkCount}:`, value);
+                        if (!videoUrl) {
+                            throw new Error('No video URL in result');
+                        }
                         
-                        if (value && value.data) {
-                            finalResult = value.data;
-                        } else if (value) {
-                            finalResult = value;
+                        console.log('Video URL:', videoUrl);
+                        
+                        // Fetch the video
+                        const response = await fetch(videoUrl);
+                        resultBlob = await response.blob();
+                        
+                        const resultUrl = URL.createObjectURL(resultBlob);
+                        const video = document.getElementById('resultVideo');
+                        video.src = resultUrl;
+                        video.load();
+                        
+                        updateProgress(100);
+                        showStatus("✅ Complete!", "success");
+                        
+                        resultSection.classList.add('show');
+                        resultSection.scrollIntoView({ behavior: 'smooth' });
+                        
+                    } else if (msg.type === "status") {
+                        console.log('Status:', msg.stage);
+                        if (msg.stage === "pending") {
+                            showStatus("⏳ In queue...", "loading");
+                        } else if (msg.stage === "generating") {
+                            showStatus("🎬 Creating animation...", "loading");
                         }
                     }
-                    
-                    // Use last chunk if we didn't get a result
-                    if (finalResult === result && lastChunk) {
-                        if (lastChunk.data) {
-                            finalResult = lastChunk.data;
-                        } else {
-                            finalResult = lastChunk;
-                        }
-                    }
                 }
-                
-                updateProgress(90);
-                showStatus("📥 Processing result...", "loading");
-                
-                // Extract video URL from result
-                let videoUrl = null;
-                if (finalResult?.data?.[0]?.url) {
-                    videoUrl = finalResult.data[0].url;
-                } else if (finalResult?.data?.[0]?.path) {
-                    videoUrl = finalResult.data[0].path;
-                } else if (finalResult?.data?.[0]) {
-                    videoUrl = finalResult.data[0];
-                } else if (Array.isArray(finalResult) && finalResult[0]) {
-                    // If result is directly an array
-                    if (typeof finalResult[0] === 'string') {
-                        videoUrl = finalResult[0];
-                    } else if (finalResult[0].url) {
-                        videoUrl = finalResult[0].url;
-                    } else if (finalResult[0].path) {
-                        videoUrl = finalResult[0].path;
-                    }
-                } else if (typeof finalResult === 'string') {
-                    videoUrl = finalResult;
-                }
-                
-                if (!videoUrl) {
-                    console.error('No video URL found in result:', finalResult);
-                    throw new Error('No video URL in result. Check console for details.');
-                }
-                
-                console.log('Video URL:', videoUrl);
-                
-                // Make absolute URL if needed
-                if (!videoUrl.startsWith('http')) {
-                    videoUrl = `https://${YOUR_USERNAME}-${SPACE_NAME}.hf.space/file=${videoUrl}`;
-                }
-                
-                console.log('Fetching video from:', videoUrl);
-                const response = await fetch(videoUrl);
-                resultBlob = await response.blob();
-                
-                const resultUrl = URL.createObjectURL(resultBlob);
-                const video = document.getElementById('resultVideo');
-                video.src = resultUrl;
-                video.load();
-                
-                updateProgress(100);
-                showStatus("✅ Complete!", "success");
-                
-                resultSection.classList.add('show');
-                resultSection.scrollIntoView({ behavior: 'smooth' });
                 
             } catch (error) {
                 console.error("Error:", error);
