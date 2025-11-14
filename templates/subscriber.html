@@ -286,9 +286,29 @@
     // Make deleteAnimation available globally
     window.deleteAnimation = deleteAnimation;
     
-    // Cancel subscription handler
+    // Cancel subscription handler and change plan handler
     document.addEventListener('DOMContentLoaded', function() {
       const cancelBtn = document.getElementById('cancelSubscriptionBtn');
+      const changePlanBtn = document.getElementById('changePlanBtn');
+      
+      // Change plan handler
+      if (changePlanBtn) {
+        changePlanBtn.addEventListener('click', function() {
+          const newPlan = changePlanBtn.getAttribute('data-new-plan');
+          const currentPlanEnd = changePlanBtn.getAttribute('data-current-plan-end');
+          const planName = newPlan === 'monthly' ? 'Monthly Plan ($9.99/month)' : 'Yearly Plan ($99.99/year)';
+          const planPrice = newPlan === 'monthly' ? '$9.99' : '$99.99';
+          
+          const confirmMessage = `Are you sure you want to change to ${planName}?\n\n` +
+            `Your current plan will remain active until ${currentPlanEnd}.\n\n` +
+            `You will be charged ${planPrice} for the new plan now. Do you want to proceed?`;
+          
+          if (confirm(confirmMessage)) {
+            // Redirect to payment page with the new plan selected
+            window.location.href = `/payment?plan=${newPlan}&change=true`;
+          }
+        });
+      }
       
       if (cancelBtn) {
         cancelBtn.addEventListener('click', async function() {
