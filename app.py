@@ -218,65 +218,43 @@ def create_fomd_animation(image_path, video_path, output_path, hf_space_url=None
         # This gives us more control over file uploads
         print("Using direct HTTP API calls to Gradio space")
         
-        # Determine the base URL
-        # Use hf.space URL directly if provided, otherwise construct from space path
-        if hf_space_url and 'hf.space' in hf_space_url:
-            base_url = hf_space_url.rstrip('/')
-            print(f"Using provided hf.space URL: {base_url}")
-        else:
-            # Extract space path and construct URL
-            if hf_space_url:
-                if 'hf.space' in hf_space_url:
-                    url_parts = hf_space_url.replace('https://', '').replace('http://', '').split('.')[0]
-                    if '-' in url_parts:
-                        username, space_name = url_parts.split('-', 1)
-                        space_path = f"{username}/{space_name}"
-                    else:
-                        space_path = "Tc12345/fomd"
-                else:
-                    space_path = hf_space_url
-            else:
-                space_path = "Tc12345/fomd"
-            # Try both URL formats
-            base_url = f"https://huggingface.co/spaces/{space_path}"
-            print(f"Constructed base URL: {base_url}")
+        # Use hf.space URL directly - this is the correct format for Gradio API
+        if not hf_space_url:
+            hf_space_url = "https://Tc12345-fomd.hf.space"
         
-        print(f"Base URL: {base_url}")
+        # Ensure we have the hf.space URL format
+        if 'hf.space' not in hf_space_url:
+            # Convert space path to hf.space URL
+            if '/' in hf_space_url:
+                username, space_name = hf_space_url.split('/')
+                hf_space_url = f"https://{username}-{space_name}.hf.space"
+            else:
+                hf_space_url = "https://Tc12345-fomd.hf.space"
+        
+        base_url = hf_space_url.rstrip('/')
+        print(f"Using hf.space URL: {base_url}")
         
         # Gradio spaces accept files directly in the predict API call
         # We don't need to upload separately - send files as multipart/form-data
         print("Calling predict API with files directly...")
         
-        # Try different endpoint formats - Gradio API endpoints vary
-        # Also try with the hf.space URL format if we're using spaces URL
+        # Gradio API endpoint format
+        # For hf.space URLs, the API is typically at /api/predict
+        # But we need to make sure we're using the correct base URL
         predict_endpoints = []
         
-        # If using hf.space URL, try that format first
-        if 'hf.space' in base_url:
-            predict_endpoints.extend([
-                f"{base_url}/api/predict",
-                f"{base_url}/predict",
-                f"{base_url}/run/predict"
-            ])
-        
-        # Also try the spaces URL format
-        if 'hf.space' in str(hf_space_url) if hf_space_url else False:
-            url_parts = hf_space_url.replace('https://', '').replace('http://', '').split('.')[0]
-            if '-' in url_parts:
-                username, space_name = url_parts.split('-', 1)
-                spaces_url = f"https://huggingface.co/spaces/{username}/{space_name}"
-                predict_endpoints.extend([
-                    f"{spaces_url}/api/predict",
-                    f"{spaces_url}/predict",
-                    f"{spaces_url}/run/predict"
-                ])
-        
-        # Fallback endpoints
-        if not predict_endpoints:
+        # Use hf.space URL directly (this is the correct format)
+        if hf_space_url and 'hf.space' in hf_space_url:
+            hf_space_base = hf_space_url.rstrip('/')
+            predict_endpoints = [
+                f"{hf_space_base}/api/predict",  # Most common format
+                f"{hf_space_base}/api/queue/push",  # Alternative queue API
+            ]
+        else:
+            # Fallback to constructed URL
             predict_endpoints = [
                 f"{base_url}/api/predict",
-                f"{base_url}/predict",
-                f"{base_url}/run/predict"
+                f"{base_url}/api/queue/push",
             ]
         
         # Prepare files for multipart/form-data upload
