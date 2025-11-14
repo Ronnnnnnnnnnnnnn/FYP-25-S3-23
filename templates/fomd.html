@@ -244,11 +244,14 @@
             </div>
         </div>
     </div>
+
     <script type="module">
         const YOUR_USERNAME = "Tc12345";
         const SPACE_NAME = "fomd";
         const SPACE_URL = `${YOUR_USERNAME}/${SPACE_NAME}`;
+
         import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+
         let imageFile = null;
         let videoFile = null;
         let resultBlob = null;
@@ -313,6 +316,7 @@
                 showStatus('❌ Please upload both files', 'error');
                 return;
             }
+
             const btn = document.getElementById('submitBtn');
             const progressContainer = document.getElementById('progressContainer');
             const resultSection = document.getElementById('resultSection');
@@ -331,125 +335,20 @@
                     app = await Client.connect(SPACE_URL);
                 }
                 
-                showStatus("📤 Preparing files...", "loading");
+                showStatus("📤 Uploading files...", "loading");
                 updateProgress(20);
                 
-                // The issue: gr.Video expects VideoData with 'video' field
-                // but client converts File -> FileData with 'path' field
-                // Solution: Upload files first, then construct VideoData manually
-                let imageHandle, videoHandle;
+                // Upload files
+                const imageHandle = await app.handle_blob(imageFile);
+                updateProgress(40);
                 
-                try {
-                    // Upload files using client's upload_file
-                    console.log('Uploading files via client upload_file...');
-                    
-                    const imageUploadResult = await app.upload_file(imageFile);
-                    console.log('Image upload result:', imageUploadResult);
-                    
-                    // Extract path for image (gr.Image type="filepath" expects string)
-                    imageHandle = typeof imageUploadResult === 'string' 
-                        ? imageUploadResult 
-                        : (imageUploadResult?.path || imageFile);
-                    
-                    const videoUploadResult = await app.upload_file(videoFile);
-                    console.log('Video upload result:', videoUploadResult);
-                    
-                    // Extract path and construct VideoData format
-                    const videoPath = typeof videoUploadResult === 'string'
-                        ? videoUploadResult
-                        : (videoUploadResult?.path || null);
-                    
-                    if (videoPath) {
-                        // Construct VideoData: {video: path, orig_name: name, is_file: true, ...}
-                        // Try to match what gr.Video expects
-                        videoHandle = {
-                            video: videoPath,
-                            orig_name: videoFile.name,
-                            is_file: true
-                        };
-                    } else {
-                        // Fallback: just use the file
-                        videoHandle = videoFile;
-                    }
-                    
-                    console.log('Handles prepared:', { image: imageHandle, video: videoHandle });
-                    updateProgress(60);
-                } catch (uploadError) {
-                    console.error('Upload error, using files directly:', uploadError);
-                    imageHandle = imageFile;
-                    videoHandle = videoFile;
-                    updateProgress(60);
-                }
+                const videoHandle = await app.handle_blob(videoFile);
+                updateProgress(60);
                 
                 showStatus("🎬 Creating animation... (1-3 minutes)", "loading");
                 
-                // Try predict first (like makeittalk) - it handles File objects differently
-                // If that fails, fall back to submit
-                let result;
-                try {
-                    console.log('Trying predict with File objects...');
-                    result = await app.predict(0, [imageHandle, videoHandle]);
-                    console.log('Predict result:', result);
-                    
-                    // If predict returns a value (not generator), handle it directly
-                    if (result && typeof result.next !== 'function') {
-                        // Process result directly
-                        updateProgress(90);
-                        showStatus("📥 Processing result...", "loading");
-                        
-                        // Extract video URL
-                        let videoUrl = null;
-                        if (Array.isArray(result) && result[0]) {
-                            const videoData = result[0];
-                            if (videoData?.url) {
-                                videoUrl = videoData.url;
-                            } else if (videoData?.path) {
-                                videoUrl = videoData.path;
-                            } else if (typeof videoData === 'string') {
-                                videoUrl = videoData;
-                            }
-                        } else if (result?.url) {
-                            videoUrl = result.url;
-                        } else if (result?.path) {
-                            videoUrl = result.path;
-                        } else if (typeof result === 'string') {
-                            videoUrl = result;
-                        }
-                        
-                        if (!videoUrl) {
-                            throw new Error('No video URL in result');
-                        }
-                        
-                        console.log('Video URL:', videoUrl);
-                        
-                        // Make absolute URL if needed
-                        if (!videoUrl.startsWith('http')) {
-                            videoUrl = `https://${YOUR_USERNAME}-${SPACE_NAME}.hf.space/file=${videoUrl}`;
-                        }
-                        
-                        // Fetch the video
-                        const response = await fetch(videoUrl);
-                        resultBlob = await response.blob();
-                        
-                        const resultUrl = URL.createObjectURL(resultBlob);
-                        const video = document.getElementById('resultVideo');
-                        video.src = resultUrl;
-                        video.load();
-                        
-                        updateProgress(100);
-                        showStatus("✅ Complete!", "success");
-                        
-                        resultSection.classList.add('show');
-                        resultSection.scrollIntoView({ behavior: 'smooth' });
-                        
-                        return; // Exit early if predict worked
-                    }
-                } catch (predictError) {
-                    console.log('Predict failed, trying submit...', predictError);
-                }
-                
-                // If predict didn't work or returned a generator, use submit
-                console.log('Using submit with File objects...');
+                // For gr.Blocks, the endpoint is typically the first one (index 0)
+                // Use submit which handles async generators better
                 const job = app.submit(0, [imageHandle, videoHandle]);
                 
                 // Handle streaming results
