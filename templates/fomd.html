@@ -1096,12 +1096,12 @@
             progressFill.style.width = '0%';
             progressFill.textContent = '0%';
             if (progressPercent) progressPercent.textContent = '0%';
-            progressText.textContent = 'Uploading files...';
-            showStatus("Uploading files...", "loading");
-            updateProgress(5);
+            progressText.textContent = 'Initializing...';
+            showStatus("Initializing...", "loading");
             
             try {
-                // Initialize client
+                // Step 1: Connect to Gradio
+                console.log('Step 1: Connecting to Gradio');
                 await initClient();
                 
                 if (!window.app) {
@@ -1109,485 +1109,106 @@
                 }
                 
                 updateProgress(10);
-                showStatus("Processing image...", "loading");
                 
-                // Upload files to Gradio if upload method is available
-                let imageHandle = imageFile;
-                let videoHandle = videoFile;
+                // Step 2: Upload image file
+                console.log('Step 2: Uploading image file');
+                showStatus("📤 Uploading image...", "loading");
                 
+                let imageHandle;
                 try {
-                    // Try different upload methods
-                    if (window.app && typeof window.app.upload === 'function') {
-                        console.log('📤 Uploading files via app.upload()...');
-                        const uploadedFiles = await window.app.upload([imageFile, videoFile]);
-                        if (uploadedFiles && uploadedFiles.length >= 2) {
-                            imageHandle = uploadedFiles[0];
-                            videoHandle = uploadedFiles[1];
-                            console.log('✅ Files uploaded via app.upload()');
-                        }
-                    } else if (window.app && typeof window.app.upload_file === 'function') {
-                        console.log('📤 Uploading image file...');
-                        imageHandle = await window.app.upload_file(imageFile);
-                        console.log('✅ Image uploaded:', imageHandle);
-                        
-                        updateProgress(15);
-                        console.log('📤 Uploading video file...');
-                        videoHandle = await window.app.upload_file(videoFile);
-                        console.log('✅ Video uploaded:', videoHandle);
-                    } else if (window.gradioClient && typeof window.gradioClient.upload === 'function') {
-                        console.log('📤 Uploading files via gradioClient.upload()...');
-                        const uploadedFiles = await window.gradioClient.upload([imageFile, videoFile]);
-                        if (uploadedFiles && uploadedFiles.length >= 2) {
-                            imageHandle = uploadedFiles[0];
-                            videoHandle = uploadedFiles[1];
-                            console.log('✅ Files uploaded via gradioClient.upload()');
-                        }
-                    } else if (window.gradioClient && typeof window.gradioClient.upload_file === 'function') {
-                        console.log('📤 Uploading files via gradioClient.upload_file()...');
-                        imageHandle = await window.gradioClient.upload_file(imageFile);
-                        videoHandle = await window.gradioClient.upload_file(videoFile);
-                        console.log('✅ Files uploaded via gradioClient.upload_file()');
-                    } else {
-                        console.log('⚠️ No upload method found, using files directly');
-                        console.log('Available methods on app:', Object.keys(window.app || {}));
-                        console.log('Available methods on gradioClient:', Object.keys(window.gradioClient || {}));
-                    }
-                } catch (uploadError) {
-                    console.log('⚠️ File upload failed, using files directly:', uploadError.message);
-                    console.error('Upload error details:', uploadError);
-                    // Continue with direct file objects
+                    console.log('Image file details:', {
+                        name: imageFile.name,
+                        type: imageFile.type,
+                        size: imageFile.size
+                    });
+                    
+                    imageHandle = await window.app.upload_file(imageFile);
+                    console.log('✅ Image uploaded successfully:', imageHandle);
+                } catch (error) {
+                    console.log('❌ Image upload failed:', error.message);
+                    throw new Error('Failed to upload image: ' + error.message);
                 }
-                
-                updateProgress(20);
-                showStatus("Processing video...", "loading");
                 
                 updateProgress(30);
-                showStatus("Generating animation... This may take 1-3 minutes", "loading");
                 
-                console.log('📤 Sending files to Gradio API...');
-                console.log('Image file:', imageFile.name, imageFile.type, imageFile.size);
-                console.log('Video file:', videoFile.name, videoFile.type, videoFile.size);
+                // Step 3: Upload video file
+                console.log('Step 3: Uploading video file');
+                showStatus("📤 Uploading video...", "loading");
                 
-                // Validate and fix video file type if needed
-                const videoMimeTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'];
-                const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'];
-                const fileExt = videoFile.name.split('.').pop()?.toLowerCase();
-                const isVideoFile = videoMimeTypes.includes(videoFile.type) || videoExtensions.includes(fileExt);
-                
-                if (!isVideoFile) {
-                    console.warn('⚠️ Video file type might not be recognized:', videoFile.type);
-                    console.warn('⚠️ File extension:', fileExt);
-                } else {
-                    console.log('✅ Video file type validated:', videoFile.type || `extension: .${fileExt}`);
-                }
-                
-                // Ensure video file has correct MIME type
-                if (!videoFile.type || !videoMimeTypes.includes(videoFile.type)) {
-                    // Try to set correct MIME type based on extension
-                    let correctMimeType = 'video/mp4'; // Default
-                    if (fileExt === 'webm') correctMimeType = 'video/webm';
-                    else if (fileExt === 'ogg') correctMimeType = 'video/ogg';
-                    else if (fileExt === 'mov') correctMimeType = 'video/quicktime';
-                    else if (fileExt === 'avi') correctMimeType = 'video/x-msvideo';
+                let videoHandle;
+                try {
+                    console.log('Video file details:', {
+                        name: videoFile.name,
+                        type: videoFile.type,
+                        size: videoFile.size
+                    });
                     
-                    console.log(`🔄 Creating new File object with MIME type: ${correctMimeType}`);
-                    videoHandle = new File([videoFile], videoFile.name, { type: correctMimeType });
-                    console.log('✅ Video file recreated with type:', videoHandle.type);
+                    videoHandle = await window.app.upload_file(videoFile);
+                    console.log('✅ Video uploaded successfully:', videoHandle);
+                } catch (error) {
+                    console.log('❌ Video upload failed:', error.message);
+                    throw new Error('Failed to upload video: ' + error.message);
                 }
                 
-                // Log the handles we're using
-                console.log('📤 Image handle type:', typeof imageHandle, imageHandle);
-                console.log('📤 Video handle type:', typeof videoHandle, videoHandle);
-                if (imageHandle instanceof File) {
-                    console.log('📤 Image handle - name:', imageHandle.name, 'type:', imageHandle.type);
-                }
-                if (videoHandle instanceof File) {
-                    console.log('📤 Video handle - name:', videoHandle.name, 'type:', videoHandle.type);
-                }
+                updateProgress(50);
                 
-                // Inspect app structure to find available endpoints and component types
-                let availableFunctions = [];
-                let inputComponentTypes = [];
-                if (window.app && window.app.config) {
-                    console.log('App config:', window.app.config);
-                    
-                    // Check component types to understand expected input format
-                    if (window.app.config.components) {
-                        console.log('Total components:', window.app.config.components.length);
-                        inputComponentTypes = window.app.config.components
-                            .filter(c => c.props && c.props.visible !== false)
-                            .map(c => ({
-                                id: c.id,
-                                type: c.type,
-                                component: c.component,
-                                label: c.props?.label || 'unnamed',
-                                props: c.props
-                            }));
-                        console.log('Input components:', inputComponentTypes);
-                    }
-                    
-                    if (window.app.config.dependencies) {
-                        console.log('Total dependencies:', window.app.config.dependencies.length);
-                        availableFunctions = window.app.config.dependencies.map((dep, idx) => {
-                            const info = {
-                                index: idx,
-                                inputs: dep.inputs?.length || 0,
-                                outputs: dep.outputs?.length || 0,
-                                fn: dep.fn?.name || 'unnamed',
-                                api_name: dep.api_name || null
-                            };
-                            console.log(`Function ${idx}:`, info);
-                            return info;
-                        });
-                    }
-                }
+                // Step 4: Call the animation function
+                console.log('Step 4: Calling Gradio predict function');
+                console.log('Sending parameters:', {
+                    source_image: imageHandle,
+                    driving_video: videoHandle
+                });
+                showStatus("🎬 Creating animation... This may take 1-3 minutes", "loading");
                 
-                // Find function with 2 inputs (image + video) - this should be the animate_image function
-                let targetFunctionIndex = null;
-                if (availableFunctions.length > 0) {
-                    // Look for function with exactly 2 inputs (image + video)
-                    const twoInputFunction = availableFunctions.find(f => f.inputs === 2);
-                    if (twoInputFunction) {
-                        targetFunctionIndex = twoInputFunction.index;
-                        console.log(`✅ Found function with 2 inputs at index ${targetFunctionIndex}`);
-                    } else {
-                        // Try to find any function with 2+ inputs
-                        const multiInputFunction = availableFunctions.find(f => f.inputs >= 2);
-                        if (multiInputFunction) {
-                            targetFunctionIndex = multiInputFunction.index;
-                            console.log(`⚠️ Using function with ${multiInputFunction.inputs} inputs at index ${targetFunctionIndex}`);
-                        }
-                    }
-                }
+                // THE KEY FIX: Use named parameters as an object
+                const result = await window.app.predict("/predict", {
+                    source_image: imageHandle,
+                    driving_video: videoHandle
+                });
                 
-                // Try different API call methods
-                let result;
-                let lastError = null;
-                let success = false;
-                
-                // Method 1: Try submit first (more reliable for async operations and file handling)
-                if (targetFunctionIndex !== null) {
-                    try {
-                        console.log(`Attempt 1: Using app.submit(${targetFunctionIndex}, [image, video])`);
-                        result = await window.app.submit(targetFunctionIndex, [
-                            imageHandle,
-                            videoHandle
-                        ]);
-                        console.log("✅ Submit with discovered function index succeeded");
-                        success = true;
-                    } catch (e1) {
-                        lastError = e1;
-                        console.log("Attempt 1 (submit) failed:", e1.message);
-                        
-                        // Try predict as fallback
-                        try {
-                            console.log(`Attempt 1b: Using app.predict(${targetFunctionIndex}, [image, video])`);
-                            result = await window.app.predict(targetFunctionIndex, [
-                                imageHandle,
-                                videoHandle
-                            ]);
-                            console.log("✅ Predict with discovered function index succeeded");
-                            success = true;
-                        } catch (e1b) {
-                            lastError = e1b;
-                            console.log("Attempt 1b (predict) failed:", e1b.message);
-                        }
-                    }
-                }
-                
-                // Method 2: Try all available function indices with submit first
-                if (!success && availableFunctions.length > 0) {
-                    for (let i = 0; i < availableFunctions.length; i++) {
-                        try {
-                            console.log(`Attempt 2.${i}: Trying app.submit(${i}, [image, video])`);
-                            result = await window.app.submit(i, [
-                                imageHandle,
-                                videoHandle
-                            ]);
-                            console.log(`✅ Submit with index ${i} succeeded`);
-                            success = true;
-                            break;
-                        } catch (e) {
-                            console.log(`Submit index ${i} failed:`, e.message);
-                            lastError = e;
-                        }
-                    }
-                }
-                
-                // Method 3: Try predict with all function indices if submit failed
-                if (!success && availableFunctions.length > 0) {
-                    for (let i = 0; i < availableFunctions.length; i++) {
-                        try {
-                            console.log(`Attempt 3.${i}: Trying app.predict(${i}, [image, video])`);
-                            result = await window.app.predict(i, [
-                                imageHandle,
-                                videoHandle
-                            ]);
-                            console.log(`✅ Predict with index ${i} succeeded`);
-                            success = true;
-                            break;
-                        } catch (e) {
-                            console.log(`Predict index ${i} failed:`, e.message);
-                            lastError = e;
-                        }
-                    }
-                }
-                
-                // Method 4: Try common patterns if no functions discovered
-                if (!success) {
-                    try {
-                        console.log("Attempt 4: Trying app.predict('/predict', [image, video])");
-                        result = await window.app.predict("/predict", [
-                            imageHandle,
-                            videoHandle
-                        ]);
-                        console.log("✅ Predict with /predict succeeded");
-                        success = true;
-                    } catch (e) {
-                        lastError = e;
-                        console.log("Attempt 4 failed:", e.message);
-                    }
-                }
-                
-                // Method 5: Try index 0 as last resort
-                if (!success) {
-                    try {
-                        console.log("Attempt 5: Trying app.predict(0, [image, video])");
-                        result = await window.app.predict(0, [
-                            imageHandle,
-                            videoHandle
-                        ]);
-                        console.log("✅ Predict with index 0 succeeded");
-                        success = true;
-                    } catch (e) {
-                        lastError = e;
-                        console.log("Attempt 5 failed:", e.message);
-                    }
-                }
-                
-                if (!success) {
-                    const errorMsg = lastError ? lastError.message : 'Unknown error';
-                    let detailedError = `Failed to call Gradio API. Tried all available methods.\n` +
-                        `Last error: ${errorMsg}\n\n`;
-                    
-                    // Check if it's a file type validation error
-                    if (errorMsg.includes('Invalid file type') || errorMsg.includes('formats:') || errorMsg.includes('video')) {
-                        detailedError += `⚠️ File type validation error detected.\n` +
-                            `The Gradio space is rejecting the video file format.\n\n` +
-                            `Possible solutions:\n` +
-                            `1. Ensure your video file is a valid video format (MP4, WebM, etc.)\n` +
-                            `2. Try uploading a different video file\n` +
-                            `3. Check if the Hugging Face space backend needs to be updated\n\n` +
-                            `File info:\n` +
-                            `- Video file: ${videoFile.name}\n` +
-                            `- Video type: ${videoFile.type || 'unknown'}\n` +
-                            `- Video size: ${(videoFile.size / 1024 / 1024).toFixed(2)} MB\n\n`;
-                    }
-                    
-                    // Check if it's a VideoData validation error
-                    if (errorMsg.includes('VideoData') || errorMsg.includes('Field required')) {
-                        detailedError += `⚠️ This appears to be a Gradio version/format mismatch issue.\n` +
-                            `The space expects VideoData format but receives FileData.\n\n` +
-                            `This might require a fix on the Hugging Face space side:\n` +
-                            `1. Update the space's Gradio version\n` +
-                            `2. Or modify the Python code to handle FileData format\n` +
-                            `3. Check if extract_file_path function handles all formats correctly\n\n`;
-                    }
-                    
-                    detailedError += `Available functions: ${availableFunctions.length > 0 ? JSON.stringify(availableFunctions, null, 2) : 'Could not discover'}\n\n` +
-                        `Please check:\n` +
-                        `1. The space is running: https://huggingface.co/spaces/${SPACE_URL}\n` +
-                        `2. The space has a function with image and video inputs\n` +
-                        `3. Check browser console for detailed error messages`;
-                    
-                    throw new Error(detailedError);
-                }
-                
-                // Handle async generator result if needed (same as makeittalk)
-                let finalResult = result;
-                if (result && typeof result.next === 'function') {
-                    console.log('📦 Result is an async generator, iterating...');
-                    let lastValue = null;
-                    let lastDataValue = null;
-                    let iterationCount = 0;
-                    const maxIterations = 1000;
-                    const timeoutMs = 5 * 60 * 1000;
-                    const startTime = Date.now();
-                    
-                    while (iterationCount < maxIterations) {
-                        if (Date.now() - startTime > timeoutMs) {
-                            console.error('Generator iteration timeout after 5 minutes');
-                            throw new Error('Processing timeout - the operation took too long. Please try again.');
-                        }
-                        
-                        const nextPromise = result.next();
-                        const timeoutPromise = new Promise((_, reject) => 
-                            setTimeout(() => reject(new Error('Generator step timeout')), 60000)
-                        );
-                        
-                        let generatorResult;
-                        try {
-                            generatorResult = await Promise.race([nextPromise, timeoutPromise]);
-                        } catch (stepError) {
-                            console.error(`Error at generator step ${iterationCount + 1}:`, stepError);
-                            if (lastDataValue || lastValue) {
-                                console.warn('Using last available data due to error');
-                                finalResult = lastDataValue || lastValue;
-                                break;
-                            }
-                            throw stepError;
-                        }
-                        
-                        iterationCount++;
-                        
-                        if (generatorResult.done) {
-                            console.log('✅ Generator completed');
-                            finalResult = generatorResult.value || lastDataValue || lastValue;
-                            break;
-                        } else {
-                            const value = generatorResult.value;
-                            
-                            if (value && typeof value === 'object') {
-                                if (value.progress !== undefined) {
-                                    const progress = value.progress;
-                                    if (progressFill && progressText) {
-                                        progressFill.style.width = (progress * 100) + '%';
-                                        progressFill.textContent = Math.round(progress * 100) + '%';
-                                        if (progressPercent) progressPercent.textContent = Math.round(progress * 100) + '%';
-                                        progressText.textContent = `Processing... ${Math.round(progress * 100)}%`;
-                                    }
-                                }
-                                
-                                if (value.type === 'status') {
-                                    if (value.stage && progressText) {
-                                        progressText.textContent = value.stage || 'Processing...';
-                                    }
-                                    continue;
-                                }
-                                
-                                if (value.data !== undefined) {
-                                    lastDataValue = value;
-                                }
-                                
-                                if (Array.isArray(value) && value.length > 0) {
-                                    lastDataValue = value;
-                                }
-                                
-                                if (value.url || value.file || (value.path && !value.type)) {
-                                    lastDataValue = value;
-                                }
-                            } else if (value !== null && value !== undefined) {
-                                lastValue = value;
-                            }
-                        }
-                    }
-                    
-                    if (iterationCount >= maxIterations) {
-                        console.warn('⚠️ Reached max iterations, using last value');
-                        finalResult = lastDataValue || lastValue;
-                    }
-                    
-                    if (!finalResult && lastDataValue) {
-                        finalResult = lastDataValue;
-                    }
-                    if (!finalResult && lastValue) {
-                        finalResult = lastValue;
-                    }
-                }
-                
+                console.log('✅ Predict completed:', result);
                 updateProgress(90);
-                showStatus("Almost done...", "loading");
                 
-                console.log('✅ Result received:', finalResult);
-                console.log('Result structure:', JSON.stringify(finalResult, null, 2));
+                // Step 5: Extract video URL from result
+                showStatus("📥 Downloading result...", "loading");
                 
-                // Get video URL from result - handle different result structures (same as makeittalk)
                 let videoUrl = null;
-                
-                // Handle result structure: {video: {...}, subtitles: null}
-                if (finalResult.video) {
-                    const videoObj = finalResult.video;
-                    if (typeof videoObj === 'string') {
-                        videoUrl = videoObj;
-                    } else if (videoObj.url) {
-                        videoUrl = videoObj.url;
-                    } else if (videoObj.file) {
-                        videoUrl = videoObj.file;
-                    } else if (videoObj[0]) {
-                        videoUrl = videoObj[0];
-                    } else if (typeof videoObj === 'object' && Object.keys(videoObj).length > 0) {
-                        const firstKey = Object.keys(videoObj)[0];
-                            videoUrl = videoObj[firstKey];
-                        }
-                    }
-                // Try different possible result structures
-                else if (finalResult.data && finalResult.data[0]) {
-                    videoUrl = finalResult.data[0];
-                } else if (finalResult[0]) {
-                    videoUrl = finalResult[0];
-                } else if (typeof finalResult === 'string') {
-                    videoUrl = finalResult;
-                } else if (finalResult.url) {
-                    videoUrl = finalResult.url;
-                } else if (finalResult.file) {
-                    videoUrl = finalResult.file;
+                if (result && result.data && result.data[0]) {
+                    videoUrl = result.data[0];
+                } else if (result && result.data && result.data.video) {
+                    videoUrl = result.data.video;
+                } else if (typeof result === 'object' && result.url) {
+                    videoUrl = result.url;
+                } else if (result && result[0]) {
+                    videoUrl = result[0];
+                } else if (typeof result === 'string') {
+                    videoUrl = result;
                 }
                 
-                // If videoUrl is still an object, try to extract URL from it
-                if (videoUrl && typeof videoUrl === 'object') {
-                    if (videoUrl.url) {
-                        videoUrl = videoUrl.url;
-                    } else if (videoUrl.file) {
-                        videoUrl = videoUrl.file;
-                    } else if (videoUrl[0]) {
-                        videoUrl = videoUrl[0];
-                    } else if (typeof videoUrl === 'object' && Object.keys(videoUrl).length > 0) {
-                        const firstKey = Object.keys(videoUrl)[0];
-                        videoUrl = videoUrl[firstKey];
-                        if (videoUrl && typeof videoUrl === 'object' && videoUrl.url) {
-                            videoUrl = videoUrl.url;
-                        }
-                    }
+                if (!videoUrl) {
+                    console.log('❌ No video URL found in result');
+                    throw new Error('No video URL found in result');
                 }
                 
-                if (!videoUrl || typeof videoUrl !== 'string') {
-                    console.error('Video URL is not a string:', videoUrl);
-                    console.error('Full result:', finalResult);
-                    throw new Error('No valid video URL found in result. Got: ' + typeof videoUrl);
-                }
+                console.log('✅ Video URL extracted:', videoUrl);
                 
                 // Make URL absolute if needed
                 if (!videoUrl.startsWith('http')) {
-                    videoUrl = new URL(videoUrl, 'https://huggingface.co/spaces/' + SPACE_URL).href;
+                    videoUrl = new URL(videoUrl, `https://huggingface.co/spaces/${SPACE_URL}`).href;
+                    console.log('Converted to absolute URL:', videoUrl);
                 }
                 
-                updateProgress(100);
-                showStatus("✅ Animation complete!", "success");
-                
-                // Fetch and display result
+                // Step 6: Fetch and display result
                 const response = await fetch(videoUrl);
                 resultBlob = await response.blob();
-                savedVideoUrl = videoUrl;
-                
-                // Generate filename from image name
-                const imageName = imageFile.name.split('.')[0];
-                videoFilename = `${imageName}_fomd_animation.mp4`;
                 
                 const resultUrl = URL.createObjectURL(resultBlob);
                 const video = document.getElementById('resultVideo');
-                
-                // Add error handler for video
-                video.onerror = function() {
-                    console.error('Video load error');
-                    showStatus('❌ Error loading video. The video URL may be invalid or expired.', 'error');
-                };
-                
-                video.onloadeddata = function() {
-                    console.log('✅ Video loaded successfully');
-                };
-                
                 video.src = resultUrl;
                 video.load();
+                
+                updateProgress(100);
+                showStatus("✅ Animation complete!", "success");
                 
                 resultSection.classList.add('show');
                 resultSection.scrollIntoView({ behavior: 'smooth' });
@@ -1600,9 +1221,12 @@
                     const status = document.getElementById('status');
                     if (status) status.classList.remove('show');
                 }, 3000);
-
+                
+                console.log('✅ All steps completed successfully!');
+                
             } catch (error) {
-                console.error("❌ Error:", error);
+                console.log('❌ Error occurred:', error.message);
+                console.error("Full error:", error);
                 showStatus("❌ Error: " + error.message, "error");
             } finally {
                 btn.disabled = false;
