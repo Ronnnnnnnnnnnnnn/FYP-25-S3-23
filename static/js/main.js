@@ -1215,6 +1215,7 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
         </td>
         <td style="padding: 10px; border: 1px solid #ddd;">${new Date(user.created_at).toLocaleDateString()}</td>
         <td style="padding: 10px; border: 1px solid #ddd;">
+          <button class="btn small-btn" onclick="editUser(${user.user_id}, ${JSON.stringify(user.fullname)}, ${JSON.stringify(user.email)})" style="margin: 2px;">Edit</button>
           ${user.subscription_status === 'suspended' 
             ? `<button class="btn small-btn" onclick="activateUser(${user.user_id})" style="margin: 2px;">Activate</button>`
             : `<button class="btn small-btn danger-btn" onclick="suspendUser(${user.user_id})" style="margin: 2px;">Suspend</button>`
@@ -1331,6 +1332,55 @@ if (window.location.pathname.includes('admin.html') || window.location.pathname 
       showMessage('Action failed: ' + error.message, 'error');
     }
   };
+  
+  // Edit user (fullname and email only)
+  window.editUser = (userId, currentFullname, currentEmail) => {
+    const newFullname = prompt('Enter new full name:', currentFullname);
+    if (newFullname === null) return;
+    
+    const newEmail = prompt('Enter new email:', currentEmail);
+    if (newEmail === null) return;
+    
+    if (!newFullname.trim() || !newEmail.trim()) {
+      showMessage('Full name and email are required', 'error');
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail.trim())) {
+      showMessage('Please enter a valid email address', 'error');
+      return;
+    }
+    
+    updateUser(userId, newFullname.trim(), newEmail.trim());
+  };
+  
+  async function updateUser(userId, fullname, email) {
+    try {
+      const response = await fetch(`/api/admin/user/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          action: 'edit',
+          fullname: fullname,
+          email: email
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        showMessage(data.message, 'success');
+        loadUsers();
+      } else {
+        showMessage(data.message || 'Failed to update user', 'error');
+      }
+    } catch (error) {
+      showMessage('Update failed: ' + error.message, 'error');
+    }
+  }
   
   // Delete user
   window.deleteUser = async (userId) => {
