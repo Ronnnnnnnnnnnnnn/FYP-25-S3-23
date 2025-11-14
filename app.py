@@ -2158,29 +2158,37 @@ def delete_animation(animation_id):
 @app.route('/api/fomd/animate', methods=['POST'])
 def fomd_animate():
     """Process FOMD animation with image and video files"""
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-    
-    # Check if account is suspended
-    status = check_account_status()
-    if status == 'suspended':
-        return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
-    
-    # Check if user is a subscriber or admin (check database, not just session)
-    has_access, role, sub_status = check_user_subscriber_access()
-    if not has_access:
-        return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
-    
-    if 'image' not in request.files or 'video' not in request.files:
-        return jsonify({'success': False, 'message': 'Image and video files required'}), 400
-    
-    image_file = request.files['image']
-    video_file = request.files['video']
-    
-    if image_file.filename == '' or video_file.filename == '':
-        return jsonify({'success': False, 'message': 'No files selected'}), 400
-    
     try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+        
+        # Check if account is suspended
+        try:
+            status = check_account_status()
+            if status == 'suspended':
+                return jsonify({'success': False, 'message': 'Your account has been suspended. Please contact an administrator.'}), 403
+        except Exception as status_err:
+            print(f"Error checking account status: {status_err}")
+            # Continue anyway - don't block on status check errors
+        
+        # Check if user is a subscriber or admin (check database, not just session)
+        try:
+            has_access, role, sub_status = check_user_subscriber_access()
+            if not has_access:
+                return jsonify({'success': False, 'message': 'Subscription required. Please upgrade to access this feature.'}), 403
+        except Exception as access_err:
+            print(f"Error checking subscriber access: {access_err}")
+            return jsonify({'success': False, 'message': 'Error checking access permissions. Please try again.'}), 500
+        
+        if 'image' not in request.files or 'video' not in request.files:
+            return jsonify({'success': False, 'message': 'Image and video files required'}), 400
+        
+        image_file = request.files['image']
+        video_file = request.files['video']
+        
+        if image_file.filename == '' or video_file.filename == '':
+            return jsonify({'success': False, 'message': 'No files selected'}), 400
+        
         # Save uploaded files temporarily
         image_filename = secure_filename(f"{uuid.uuid4()}_{image_file.filename}")
         video_filename = secure_filename(f"{uuid.uuid4()}_{video_file.filename}")
@@ -2246,8 +2254,17 @@ def fomd_animate():
     except Exception as e:
         print(f"FOMD animate error: {e}")
         import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        error_trace = traceback.format_exc()
+        print(error_trace)
+        # Always return JSON, even on errors
+        error_message = str(e) if str(e) else 'An unexpected error occurred'
+        # Truncate very long error messages
+        if len(error_message) > 500:
+            error_message = error_message[:500] + "..."
+        return jsonify({
+            'success': False, 
+            'message': f'FOMD animation failed: {error_message}'
+        }), 500
 
 @app.route('/api/fomd/save', methods=['POST'])
 def fomd_save():
