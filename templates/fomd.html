@@ -334,17 +334,65 @@
                 showStatus("📤 Uploading files...", "loading");
                 updateProgress(20);
                 
-                // Pass File objects directly - Gradio client will handle conversion
-                // For gr.Image(type="filepath"), Gradio will extract path automatically
-                // For gr.Video, Gradio will convert File to VideoData automatically
-                const imageHandle = imageFile;
-                const videoHandle = videoFile;
+                // Upload files and construct proper format
+                // gr.Image(type="filepath") needs string path
+                // gr.Video needs VideoData with 'video' field, not FileData with 'path'
+                let imageHandle, videoHandle;
                 
-                console.log('Using File objects directly:', {
-                    image: imageFile.name,
-                    video: videoFile.name
-                });
-                updateProgress(60);
+                try {
+                    // Upload files first to get paths
+                    if (app && typeof app.upload_file === 'function') {
+                        console.log('Uploading image using upload_file...');
+                        const imageUploadResult = await app.upload_file(imageFile);
+                        console.log('Image upload result:', imageUploadResult);
+                        
+                        // Extract path string for gr.Image(type="filepath")
+                        if (typeof imageUploadResult === 'string') {
+                            imageHandle = imageUploadResult;
+                        } else if (imageUploadResult && imageUploadResult.path) {
+                            imageHandle = imageUploadResult.path;
+                        } else {
+                            imageHandle = imageUploadResult;
+                        }
+                        console.log('Image handle (path):', imageHandle);
+                        updateProgress(40);
+                        
+                        console.log('Uploading video using upload_file...');
+                        const videoUploadResult = await app.upload_file(videoFile);
+                        console.log('Video upload result:', videoUploadResult);
+                        
+                        // Extract path from FileData and construct VideoData
+                        let videoPath = null;
+                        if (typeof videoUploadResult === 'string') {
+                            videoPath = videoUploadResult;
+                        } else if (videoUploadResult && videoUploadResult.path) {
+                            videoPath = videoUploadResult.path;
+                        }
+                        
+                        // Construct VideoData format: {video: path}
+                        // This matches what gr.Video expects
+                        if (videoPath) {
+                            videoHandle = { video: videoPath };
+                        } else {
+                            // Fallback: use original FileData
+                            videoHandle = videoUploadResult;
+                        }
+                        console.log('Video handle (VideoData):', videoHandle);
+                        updateProgress(60);
+                    } else {
+                        // Fallback: use files directly
+                        console.log('upload_file not available, using files directly');
+                        imageHandle = imageFile;
+                        videoHandle = videoFile;
+                        updateProgress(60);
+                    }
+                } catch (uploadError) {
+                    console.error('Upload error:', uploadError);
+                    // Fallback: use files directly
+                    imageHandle = imageFile;
+                    videoHandle = videoFile;
+                    updateProgress(60);
+                }
                 
                 showStatus("🎬 Creating animation... (1-3 minutes)", "loading");
                 
