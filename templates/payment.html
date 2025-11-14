@@ -394,7 +394,25 @@
 
     // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
-      let selectedPlan = 'yearly';
+      // Get default plan from server or default to 'yearly'
+      let selectedPlan = '{{ default_plan|default("yearly") }}';
+      
+      // Auto-select the plan on page load if default_plan is provided
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          if (selectedPlan === 'monthly') {
+            selectPlan('monthly');
+          } else {
+            selectPlan('yearly');
+          }
+        });
+      } else {
+        if (selectedPlan === 'monthly') {
+          selectPlan('monthly');
+        } else {
+          selectPlan('yearly');
+        }
+      }
 
       function selectPlan(plan) {
         selectedPlan = plan;

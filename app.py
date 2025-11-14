@@ -365,10 +365,19 @@ def payment_page():
     status = check_account_status()
     if status == 'suspended':
         return redirect(url_for('login_page'))
-    # If user is already a subscriber, redirect to subscriber dashboard
-    if session.get('role') in ['subscriber', 'admin']:
+    
+    # Get plan from query parameter (for plan changes)
+    requested_plan = request.args.get('plan', 'monthly')  # 'monthly' or 'yearly'
+    is_plan_change = request.args.get('change') == 'true'
+    
+    # If user is already a subscriber and not changing plan, redirect to subscriber dashboard
+    if session.get('role') in ['subscriber', 'admin'] and not is_plan_change:
         return redirect(url_for('subscriber_dashboard'))
-    return render_template('payment.html', stripe_publishable_key=STRIPE_PUBLISHABLE_KEY)
+    
+    return render_template('payment.html', 
+                         stripe_publishable_key=STRIPE_PUBLISHABLE_KEY,
+                         default_plan=requested_plan,
+                         is_plan_change=is_plan_change)
 
 
 @app.route('/payment-success')

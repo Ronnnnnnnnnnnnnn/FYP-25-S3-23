@@ -58,25 +58,11 @@ INSERT INTO users (fullname, email, password, role, subscription_status, subscri
 ('Bob Williams', 'subscriber2@example.com', 'scrypt:32768:8:1$UY7p2V0jCvkD0uOq$072803b783157d3d9d60dd3f91114cc2b8f70947496efbdf862e3954fffe9cf5e9c331b2ce0a547958d198f50dbfea3ebc6652edc2a36c7ab1b7f0b623304edd', 'subscriber', 'active', 'yearly', DATE_ADD(CURDATE(), INTERVAL 365 DAY));
 
 -- Insert subscription records for subscribers
-INSERT INTO subscriptions (user_id, plan_type, start_date, end_date, payment_status, amount) 
-SELECT 
-    u.user_id,
-    CASE 
-        WHEN u.email = 'subscriber1@example.com' THEN 'monthly'
-        WHEN u.email = 'subscriber2@example.com' THEN 'yearly'
-    END as plan_type,
-    CURDATE() as start_date,
-    CASE 
-        WHEN u.email = 'subscriber1@example.com' THEN DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-        WHEN u.email = 'subscriber2@example.com' THEN DATE_ADD(CURDATE(), INTERVAL 365 DAY)
-    END as end_date,
-    'completed' as payment_status,
-    CASE 
-        WHEN u.email = 'subscriber1@example.com' THEN 9.99
-        WHEN u.email = 'subscriber2@example.com' THEN 99.99
-    END as amount
-FROM users u
-WHERE u.email IN ('subscriber1@example.com', 'subscriber2@example.com');
+-- Note: user_id values will be auto-incremented (typically 3 and 4 if users table is empty)
+-- Adjust user_id values if needed based on your actual user IDs
+INSERT INTO subscriptions (user_id, plan_type, start_date, end_date, payment_status, amount) VALUES
+(3, 'monthly', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'completed', 9.99),
+(4, 'yearly', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 365 DAY), 'completed', 99.99);
 
 -- Insert 2 additional admins (password: password123)
 INSERT INTO users (fullname, email, password, role, subscription_status) VALUES

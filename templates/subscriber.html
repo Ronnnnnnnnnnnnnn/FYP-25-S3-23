@@ -122,14 +122,14 @@
               {% if subscription_info.start_date %}
                 <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 10px;">
                   <strong style="color: white;">Billing Start Date:</strong> 
-                  {{ subscription_info.start_date.strftime('%B %d, %Y') }}
+                  {{ subscription_info.start_date.strftime('%d %B %Y') }}
                 </p>
               {% endif %}
               
               {% if subscription_info.end_date %}
                 <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 10px;">
                   <strong style="color: white;">Billing End Date:</strong> 
-                  {{ subscription_info.end_date.strftime('%B %d, %Y') }}
+                  {{ subscription_info.end_date.strftime('%d %B %Y') }}
                 </p>
               {% endif %}
               
@@ -143,6 +143,17 @@
               <p style="color: rgba(255, 255, 255, 0.8); font-size: 14px; margin-bottom: 20px;">
                 <strong>Benefits:</strong> Unlimited animations, MP4 download, MakeItTalk audio, FOMD animations
               </p>
+              
+              {% if subscription_info.plan_type == 'monthly' %}
+                <button type="button" class="btn btn-primary" id="changePlanBtn" style="width: 100%; margin-bottom: 10px;" data-new-plan="yearly" data-current-plan-end="{{ subscription_info.end_date.strftime('%d %B %Y') if subscription_info.end_date else 'N/A' }}">
+                  Change to Yearly Plan ($99.99/year)
+                </button>
+              {% else %}
+                <button type="button" class="btn btn-primary" id="changePlanBtn" style="width: 100%; margin-bottom: 10px;" data-new-plan="monthly" data-current-plan-end="{{ subscription_info.end_date.strftime('%d %B %Y') if subscription_info.end_date else 'N/A' }}">
+                  Change to Monthly Plan ($9.99/month)
+                </button>
+              {% endif %}
+              
               <button type="button" class="btn danger-btn" id="cancelSubscriptionBtn" style="width: 100%;">
                 Cancel Subscription
               </button>
