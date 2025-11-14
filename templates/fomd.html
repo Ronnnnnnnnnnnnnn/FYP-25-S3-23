@@ -331,108 +331,19 @@
                     app = await Client.connect(SPACE_URL);
                 }
                 
-                showStatus("📤 Uploading files...", "loading");
+                showStatus("📤 Preparing files...", "loading");
                 updateProgress(20);
                 
-                // Upload files directly via Gradio's file upload API
-                // This ensures we get proper VideoData/FileData objects
-                let imageHandle, videoHandle;
+                // Pass File objects directly - let Gradio client handle conversion
+                // The client will automatically handle upload and conversion during submit
+                const imageHandle = imageFile;
+                const videoHandle = videoFile;
                 
-                try {
-                    // Get the base URL for file uploads
-                    const baseUrl = `https://${YOUR_USERNAME}-${SPACE_NAME}.hf.space`;
-                    
-                    // Upload image file
-                    console.log('Uploading image via API...');
-                    const imageFormData = new FormData();
-                    imageFormData.append('file', imageFile);
-                    
-                    const imageUploadResponse = await fetch(`${baseUrl}/upload`, {
-                        method: 'POST',
-                        body: imageFormData
-                    });
-                    
-                    if (!imageUploadResponse.ok) {
-                        throw new Error('Image upload failed');
-                    }
-                    
-                    const imageUploadData = await imageUploadResponse.json();
-                    console.log('Image upload result:', imageUploadData);
-                    
-                    // Extract path - gr.Image(type="filepath") expects string
-                    if (Array.isArray(imageUploadData) && imageUploadData.length > 0) {
-                        imageHandle = imageUploadData[0];
-                    } else if (imageUploadData.path) {
-                        imageHandle = imageUploadData.path;
-                    } else if (typeof imageUploadData === 'string') {
-                        imageHandle = imageUploadData;
-                    } else {
-                        imageHandle = imageFile; // Fallback
-                    }
-                    console.log('Image handle:', imageHandle);
-                    updateProgress(40);
-                    
-                    // Upload video file
-                    console.log('Uploading video via API...');
-                    const videoFormData = new FormData();
-                    videoFormData.append('file', videoFile);
-                    
-                    const videoUploadResponse = await fetch(`${baseUrl}/upload`, {
-                        method: 'POST',
-                        body: videoFormData
-                    });
-                    
-                    if (!videoUploadResponse.ok) {
-                        throw new Error('Video upload failed');
-                    }
-                    
-                    const videoUploadData = await videoUploadResponse.json();
-                    console.log('Video upload result:', videoUploadData);
-                    
-                    // Extract video path - construct VideoData: {video: path}
-                    let videoPath = null;
-                    if (Array.isArray(videoUploadData) && videoUploadData.length > 0) {
-                        videoPath = videoUploadData[0];
-                    } else if (videoUploadData.path) {
-                        videoPath = videoUploadData.path;
-                    } else if (typeof videoUploadData === 'string') {
-                        videoPath = videoUploadData;
-                    }
-                    
-                    // Construct VideoData format with video field
-                    if (videoPath) {
-                        videoHandle = { video: videoPath };
-                    } else {
-                        videoHandle = { video: videoFile }; // Fallback
-                    }
-                    console.log('Video handle:', videoHandle);
-                    updateProgress(60);
-                    
-                } catch (uploadError) {
-                    console.error('Direct upload error:', uploadError);
-                    console.log('Falling back to client upload_file method...');
-                    
-                    // Fallback to client's upload_file
-                    try {
-                        if (app && typeof app.upload_file === 'function') {
-                            const imageResult = await app.upload_file(imageFile);
-                            imageHandle = typeof imageResult === 'string' ? imageResult : (imageResult?.path || imageFile);
-                            
-                            const videoResult = await app.upload_file(videoFile);
-                            const vPath = typeof videoResult === 'string' ? videoResult : (videoResult?.path || null);
-                            videoHandle = vPath ? { video: vPath } : { video: videoFile };
-                        } else {
-                            // Final fallback: use files directly
-                            imageHandle = imageFile;
-                            videoHandle = videoFile;
-                        }
-                    } catch (fallbackError) {
-                        console.error('Fallback upload error:', fallbackError);
-                        imageHandle = imageFile;
-                        videoHandle = videoFile;
-                    }
-                    updateProgress(60);
-                }
+                console.log('Passing File objects directly to Gradio:', {
+                    image: imageFile.name,
+                    video: videoFile.name
+                });
+                updateProgress(60);
                 
                 showStatus("🎬 Creating animation... (1-3 minutes)", "loading");
                 
