@@ -1,0 +1,39 @@
+# LOAD ALL USERS SEQUENCE DIAGRAM FOR SEQUENCEDIAGRAM.ORG
+# Copy everything below the line and paste into https://sequencediagram.org
+
+# ==================================================================================
+# COPY FROM HERE ↓
+# ==================================================================================
+
+title Load All Users\nUser Story: US-A-007 - As an admin, I want to load all users
+
+participant Admin
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+note over Admin, Database: Load User List
+
+Admin->Browser: 1. Navigate to /admin
+Browser->Frontend: 2. Load admin dashboard
+Frontend->API: 3. GET /api/admin/users
+
+API->API: 4. Verify admin role\n(session['role'] == 'admin')
+
+alt Not admin
+    API-->Frontend: Error: Unauthorized
+    Frontend-->Admin: Access denied
+end
+
+API->Database: 5. SELECT user_id, fullname, email, role,\nsubscription_status, created_at\nFROM users
+Database-->API: 6. All users list
+
+API->Frontend: 7. Response: success=true\nusers array
+Frontend->Frontend: 8. Format user data
+Frontend->Admin: 9. Display user table\nwith all user information
+
+# ==================================================================================
+# COPY UNTIL HERE ↑
+# ==================================================================================
+

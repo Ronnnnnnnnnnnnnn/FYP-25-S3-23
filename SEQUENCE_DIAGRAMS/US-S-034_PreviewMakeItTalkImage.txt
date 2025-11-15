@@ -1,0 +1,29 @@
+# PREVIEW MAKEITTALK IMAGE SEQUENCE DIAGRAM FOR SEQUENCEDIAGRAM.ORG
+# Copy everything below the line and paste into https://sequencediagram.org
+
+# ==================================================================================
+# COPY FROM HERE ↓
+# ==================================================================================
+
+title Preview Source Image for MakeItTalk\nUser Story: US-S-034 - As a subscriber, I want to preview the source image for MakeItTalk
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+note over Subscriber, Frontend: Image Preview
+
+Subscriber->Browser: 1. Select portrait image
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file using FileReader
+Frontend->Frontend: 4. Validate image\n(JPG, PNG)
+Frontend->Frontend: 5. Create object URL\n(URL.createObjectURL)
+Frontend->Subscriber: 6. Display image preview\nin preview container
+Subscriber->Subscriber: 7. View preview image
+
+note over Subscriber: Image verified before processing
+
+# ==================================================================================
+# COPY UNTIL HERE ↑
+# ==================================================================================
+

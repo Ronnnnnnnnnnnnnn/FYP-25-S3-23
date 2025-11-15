@@ -1,0 +1,50 @@
+# EDIT PROFILE PICTURE SEQUENCE DIAGRAM FOR SEQUENCEDIAGRAM.ORG
+# Copy everything below the line and paste into https://sequencediagram.org
+
+# ==================================================================================
+# COPY FROM HERE ↓
+# ==================================================================================
+
+title Edit Profile Picture\nUser Story: US-U-008 - As a user, I want to edit my profile picture
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+note over User, Database: Upload Profile Picture
+
+User->Browser: 1. Select profile picture file
+Browser->Frontend: 2. File selected
+Frontend->Frontend: 3. Validate file\n(PNG, JPG, JPEG, GIF, WEBP)
+
+alt Invalid file type
+    Frontend-->User: Error: Invalid file type
+end
+
+User->Frontend: 4. Submit profile picture
+Frontend->API: 5. POST /api/profile-picture\n(FormData with file)
+
+API->API: 6. Validate file
+API->API: 7. Generate unique filename\n(user_id_timestamp.extension)
+API->Storage: 8. Save file\nstatic/uploads/profile_pictures/filename
+Storage-->API: 9. File saved
+
+API->Database: 10. SELECT profile_picture\nFROM users WHERE user_id = %s
+Database-->API: 11. Old profile picture path
+
+API->Storage: 12. Delete old profile picture\n(if exists)
+Storage-->API: 13. Old file deleted
+
+API->Database: 14. UPDATE users\nSET profile_picture = %s\nWHERE user_id = %s
+Database-->API: 15. Profile picture updated
+
+API->Frontend: 16. Response: success=true\nprofile_picture path
+Frontend->User: 17. Display updated profile picture\nSuccess message
+
+# ==================================================================================
+# COPY UNTIL HERE ↑
+# ==================================================================================
+

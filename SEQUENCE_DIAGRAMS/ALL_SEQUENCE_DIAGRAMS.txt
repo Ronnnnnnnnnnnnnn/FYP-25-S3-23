@@ -1,0 +1,1819 @@
+# ==================================================================================
+# ALL SEQUENCE DIAGRAMS FOR FIRSTMOD-AI
+# Copy each diagram section and paste into https://sequencediagram.org
+# ==================================================================================
+
+# ==================================================================================
+# GUEST USER STORIES
+# ==================================================================================
+
+# ==================================================================================
+# US-G-001: Sign Up
+# ==================================================================================
+# COPY FROM HERE ↓
+title Sign Up - Create New Account\nUser Story: US-G-001
+
+participant Guest
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+Guest->Browser: 1. Navigate to /signup
+Browser->Frontend: 2. Load signup page
+Frontend->Guest: 3. Display signup form
+
+Guest->Frontend: 4. Enter fullname, email, password
+Frontend->Frontend: 5. Validate form fields
+
+Guest->Frontend: 6. Submit signup form
+Frontend->API: 7. POST /api/signup
+
+API->Database: 8. Check if email exists
+Database-->API: 9. Email check result
+
+alt Email already exists
+    API-->Frontend: Error: Email already exists
+    Frontend-->Guest: Error message
+end
+
+API->API: 10. Hash password
+API->Database: 11. INSERT INTO users\n(role='user', subscription_status='inactive')
+Database-->API: 12. User created
+
+API->Frontend: 13. Response: success=true
+Frontend->Guest: 14. Show success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-G-002: View Sample Animations
+# ==================================================================================
+# COPY FROM HERE ↓
+title View Sample Animations\nUser Story: US-G-002
+
+participant Guest
+participant Browser
+participant Frontend
+participant Storage
+
+Guest->Browser: 1. Navigate to homepage (/)
+Browser->Frontend: 2. Load index.html
+Frontend->Storage: 3. Load sample videos
+Storage-->Frontend: 4. Video files
+Frontend->Guest: 5. Display sample animations
+Guest->Guest: 6. Watch sample animations
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-G-003: Login
+# ==================================================================================
+# COPY FROM HERE ↓
+title Login - Authenticate User\nUser Story: US-G-003
+
+participant Guest
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+Guest->Browser: 1. Navigate to /login
+Browser->Frontend: 2. Load login page
+Frontend->Guest: 3. Display login form
+
+Guest->Frontend: 4. Enter email and password
+Guest->Frontend: 5. Submit login form
+Frontend->API: 6. POST /api/login
+
+API->Database: 7. SELECT * FROM users\nWHERE email = %s
+Database-->API: 8. User record
+
+alt Invalid credentials
+    API-->Frontend: Error: Invalid credentials
+    Frontend-->Guest: Error message
+end
+
+alt Account suspended
+    API-->Frontend: Error: Account suspended
+    Frontend-->Guest: Suspension message
+end
+
+API->API: 9. Verify password
+API->API: 10. Create session
+API->Frontend: 11. Response: success=true, role, redirect URL
+
+Frontend->Browser: 12. Redirect to dashboard
+Browser->Guest: 13. Display user dashboard
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-G-004: View FAQ Page
+# ==================================================================================
+# COPY FROM HERE ↓
+title View FAQ Page\nUser Story: US-G-004
+
+participant Guest
+participant Browser
+participant Frontend
+
+Guest->Browser: 1. Navigate to FAQ page
+Browser->Frontend: 2. Load FAQ page
+Frontend->Guest: 3. Display FAQ content
+Guest->Guest: 4. Read FAQ answers
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-G-005: View Pricing Page
+# ==================================================================================
+# COPY FROM HERE ↓
+title View Pricing Page\nUser Story: US-G-005
+
+participant Guest
+participant Browser
+participant Frontend
+
+Guest->Browser: 1. Navigate to pricing page
+Browser->Frontend: 2. Load pricing page
+Frontend->Guest: 3. Display subscription plans
+Guest->Guest: 4. View pricing information
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# USER (FREE) STORIES
+# ==================================================================================
+
+# ==================================================================================
+# US-U-001: Login (User)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Login - User Account\nUser Story: US-U-001
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+User->Browser: 1. Navigate to /login
+Browser->Frontend: 2. Load login page
+User->Frontend: 3. Enter email and password
+Frontend->API: 4. POST /api/login
+
+API->Database: 5. SELECT * FROM users\nWHERE email = %s
+Database-->API: 6. User record
+
+API->API: 7. Verify password
+API->API: 8. Create session (role='user')
+API->Frontend: 9. Response: success=true, redirect='/user'
+
+Frontend->Browser: 10. Redirect to /user
+Browser->User: 11. Display user dashboard
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-002: Logout
+# ==================================================================================
+# COPY FROM HERE ↓
+title Logout - End User Session\nUser Story: US-U-002
+
+participant User
+participant Browser
+participant Frontend
+participant API
+
+User->Frontend: 1. Click logout button
+Frontend->API: 2. POST /api/logout
+API->API: 3. Clear session
+API->Frontend: 4. Response: success=true
+Frontend->Browser: 5. Redirect to homepage (/)
+Browser->User: 6. Display homepage
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-003: Use Face Swap Feature (TECHNICAL)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Face Swap - Swap Faces Between Images\nUser Story: US-U-003
+
+participant User
+participant Browser
+participant Frontend
+participant GradioClient
+participant HuggingFaceAPI
+participant FaceDetector
+participant FaceSwapper
+participant API
+participant Storage
+participant Database
+
+User->Browser: 1. Select source image
+Browser->Frontend: 2. Display image preview
+Frontend->Frontend: 3. Validate image
+
+User->Browser: 4. Select target image
+Browser->Frontend: 5. Display image preview
+Frontend->Frontend: 6. Validate image
+
+User->Frontend: 7. Click "Swap Faces"
+Frontend->GradioClient: 8. Connect to Gradio API\n(Tc12345/faceswap)
+
+GradioClient->HuggingFaceAPI: 9. Initialize connection
+HuggingFaceAPI-->GradioClient: 10. Connection established
+
+GradioClient->HuggingFaceAPI: 11. Upload source and target images
+HuggingFaceAPI->FaceDetector: 12. Detect faces in source image
+FaceDetector-->HuggingFaceAPI: 13. Source face(s) detected
+
+alt No face in source
+    HuggingFaceAPI-->Frontend: Error: No face detected
+    Frontend-->User: Error message
+end
+
+HuggingFaceAPI->FaceDetector: 14. Detect faces in target image
+FaceDetector-->HuggingFaceAPI: 15. Target face(s) detected
+
+alt No face in target
+    HuggingFaceAPI-->Frontend: Error: No face in target
+    Frontend-->User: Error message
+end
+
+HuggingFaceAPI->FaceSwapper: 16. Swap faces
+FaceSwapper->FaceSwapper: 17. Extract source face features
+FaceSwapper->FaceSwapper: 18. Match skin tone
+FaceSwapper->FaceSwapper: 19. Adjust lighting
+FaceSwapper->FaceSwapper: 20. Blend naturally
+
+FaceSwapper-->HuggingFaceAPI: 21. Swapped result image
+HuggingFaceAPI-->GradioClient: 22. Result image URL
+GradioClient->Frontend: 23. Result image URL
+Frontend->User: 24. Show swapped result
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-004: Choose Source Image for Face Swap
+# ==================================================================================
+# COPY FROM HERE ↓
+title Choose Source Image for Face Swap\nUser Story: US-U-004
+
+participant User
+participant Browser
+participant Frontend
+
+User->Browser: 1. Click source image upload area
+Browser->Frontend: 2. Open file picker
+User->Browser: 3. Select image file
+Browser->Frontend: 4. File selected
+Frontend->Frontend: 5. Validate file type
+Frontend->User: 6. Display image preview
+User->User: 7. Source image ready
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-005: Choose Target Image for Face Swap
+# ==================================================================================
+# COPY FROM HERE ↓
+title Choose Target Image for Face Swap\nUser Story: US-U-005
+
+participant User
+participant Browser
+participant Frontend
+
+User->Browser: 1. Click target image upload area
+Browser->Frontend: 2. Open file picker
+User->Browser: 3. Select image file
+Browser->Frontend: 4. File selected
+Frontend->Frontend: 5. Validate file type
+Frontend->User: 6. Display image preview
+User->User: 7. Target image ready
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-006: Save Face Swap Result
+# ==================================================================================
+# COPY FROM HERE ↓
+title Save Face Swap Result to Dashboard\nUser Story: US-U-006
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+User->Frontend: 1. Click "Save to Dashboard"
+Frontend->Frontend: 2. Convert image URL to base64
+Frontend->API: 3. POST /api/faceswap/save\n(image_data: base64)
+
+API->API: 4. Decode base64 image
+API->Storage: 5. Save result PNG file
+Storage-->API: 6. File saved
+
+API->Database: 7. INSERT INTO animations\n(tool_type='faceswap')
+Database-->API: 8. Animation ID
+
+API->Frontend: 9. Response: success=true
+Frontend->User: 10. Success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-007: Download Face Swapped Image
+# ==================================================================================
+# COPY FROM HERE ↓
+title Download Face Swapped Image\nUser Story: US-U-007
+
+participant User
+participant Browser
+participant Frontend
+
+User->Frontend: 1. Click "Download" button
+Frontend->Browser: 2. Create download link
+Browser->User: 3. Download image file
+User->User: 4. File saved to device
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-008: Edit Profile Picture
+# ==================================================================================
+# COPY FROM HERE ↓
+title Edit Profile Picture\nUser Story: US-U-008
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+User->Browser: 1. Select profile picture file
+Browser->Frontend: 2. File selected
+Frontend->Frontend: 3. Validate file
+
+User->Frontend: 4. Submit profile picture
+Frontend->API: 5. POST /api/profile-picture
+
+API->API: 6. Generate unique filename
+API->Storage: 7. Save file
+Storage-->API: 8. File saved
+
+API->Database: 9. Get old profile picture
+API->Storage: 10. Delete old profile picture
+API->Database: 11. UPDATE users SET profile_picture
+
+API->Frontend: 12. Response: success=true
+Frontend->User: 13. Display updated profile picture
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-009: Update Profile Information
+# ==================================================================================
+# COPY FROM HERE ↓
+title Update Profile Information\nUser Story: US-U-009
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+User->Browser: 1. Navigate to profile settings
+Frontend->API: 2. GET /api/profile
+API->Database: 3. SELECT user data
+Database-->API: 4. User data
+Frontend->User: 5. Display current profile info
+
+User->Frontend: 6. Edit fullname and/or email
+User->Frontend: 7. Submit profile update
+Frontend->API: 8. PUT /api/profile
+
+API->Database: 9. UPDATE users\nSET fullname, email
+Database-->API: 10. Profile updated
+
+API->API: 11. Update session
+API->Frontend: 12. Response: success=true
+Frontend->User: 13. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-010: Change Password
+# ==================================================================================
+# COPY FROM HERE ↓
+title Change Password\nUser Story: US-U-010
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+User->Browser: 1. Navigate to change password
+User->Frontend: 2. Enter current password,\nnew password, confirm password
+User->Frontend: 3. Submit password change
+Frontend->API: 4. POST /api/change-password
+
+API->Database: 5. SELECT password FROM users
+Database-->API: 6. Current hashed password
+
+API->API: 7. Verify current password
+
+alt Invalid current password
+    API-->Frontend: Error: Current password incorrect
+    Frontend-->User: Error message
+end
+
+API->API: 8. Hash new password
+API->Database: 9. UPDATE users SET password
+Database-->API: 10. Password updated
+
+API->Frontend: 11. Response: success=true
+Frontend->User: 12. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-011: Delete Account
+# ==================================================================================
+# COPY FROM HERE ↓
+title Delete Account\nUser Story: US-U-011
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+User->Frontend: 1. Click "Delete Account"
+Frontend->Frontend: 2. Show confirmation dialog
+User->Frontend: 3. Confirm deletion
+Frontend->Frontend: 4. Show second confirmation
+User->Frontend: 5. Confirm final deletion
+
+Frontend->API: 6. POST /api/account/delete
+
+API->Database: 7. SELECT profile_picture, animations
+API->Storage: 8. Delete profile picture
+API->Storage: 9. Delete all animation files
+API->Database: 10. DELETE FROM users
+
+API->API: 11. Clear session
+API->Frontend: 12. Response: success=true
+Frontend->Browser: 13. Redirect to homepage
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-012: Pay for Subscription
+# ==================================================================================
+# COPY FROM HERE ↓
+title Pay for Subscription\nUser Story: US-U-012
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Stripe
+participant Database
+
+User->Browser: 1. Navigate to /payment
+Frontend->User: 2. Display subscription plans
+
+User->Frontend: 3. Select plan and click "Subscribe"
+Frontend->API: 4. POST /api/stripe/create-checkout-session
+
+API->Database: 5. SELECT user data
+API->Stripe: 6. Create or get Stripe customer
+API->Stripe: 7. Create checkout session
+Stripe-->API: 8. Checkout session URL
+
+API->Frontend: 9. Response: sessionId
+Frontend->Browser: 10. Redirect to Stripe checkout
+
+User->Stripe: 11. Enter payment details
+User->Stripe: 12. Submit payment
+Stripe->API: 13. Webhook: checkout.session.completed
+
+API->Database: 14. UPDATE users\nSET role='subscriber', subscription_status='active'
+Frontend->User: 15. Redirect to subscriber dashboard
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-013: Preview Source Image for Face Swap
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Source Image for Face Swap\nUser Story: US-U-013
+
+participant User
+participant Browser
+participant Frontend
+
+User->Browser: 1. Select source image file
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file using FileReader
+Frontend->Frontend: 4. Validate file type
+Frontend->Frontend: 5. Create object URL
+Frontend->User: 6. Display image preview
+User->User: 7. View preview image
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-014: Preview Target Image for Face Swap
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Target Image for Face Swap\nUser Story: US-U-014
+
+participant User
+participant Browser
+participant Frontend
+
+User->Browser: 1. Select target image file
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file using FileReader
+Frontend->Frontend: 4. Validate file type
+Frontend->Frontend: 5. Create object URL
+Frontend->User: 6. Display image preview
+User->User: 7. View preview image
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-015: See Progress Bar for Face Swap
+# ==================================================================================
+# COPY FROM HERE ↓
+title See Progress Bar for Face Swap\nUser Story: US-U-015
+
+participant User
+participant Frontend
+
+User->Frontend: 1. Click "Swap Faces"
+Frontend->Frontend: 2. Show progress bar (0%)
+Frontend->Frontend: 3. Update progress: 20% "Uploading..."
+Frontend->Frontend: 4. Update progress: 60% "Swapping faces..."
+Frontend->Frontend: 5. Update progress: 90% "Finalizing..."
+Frontend->Frontend: 6. Update progress: 100% "Complete!"
+User->User: 7. View progress updates
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-016: See Connection Status of Face Swap API
+# ==================================================================================
+# COPY FROM HERE ↓
+title See Connection Status of Face Swap API\nUser Story: US-U-016
+
+participant User
+participant Frontend
+participant GradioClient
+participant HuggingFaceAPI
+
+Frontend->GradioClient: 1. Check connection to API
+GradioClient->HuggingFaceAPI: 2. Test connection
+HuggingFaceAPI-->GradioClient: 3. Connection status
+
+alt Connected
+    GradioClient-->Frontend: Status: Online
+    Frontend->User: Display: "✅ API Connected"
+else Not connected
+    GradioClient-->Frontend: Status: Offline
+    Frontend->User: Display: "❌ API Offline"
+end
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-U-017: Preview Face Swap Result
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Face Swap Result\nUser Story: US-U-017
+
+participant User
+participant Frontend
+
+Frontend->Frontend: 1. Receive result image URL
+Frontend->Frontend: 2. Load result image
+Frontend->User: 3. Display result image
+User->User: 4. View swapped result
+User->User: 5. Review result before saving
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# SUBSCRIBER STORIES
+# ==================================================================================
+
+# ==================================================================================
+# US-S-001: Login (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Login - Subscriber Account\nUser Story: US-S-001
+
+participant Subscriber
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+Subscriber->Browser: 1. Navigate to /login
+Browser->Frontend: 2. Load login page
+Subscriber->Frontend: 3. Enter email and password
+Frontend->API: 4. POST /api/login
+
+API->Database: 5. SELECT * FROM users\nWHERE email = %s
+Database-->API: 6. User record
+
+API->API: 7. Verify password
+API->API: 8. Create session (role='subscriber')
+API->Frontend: 9. Response: success=true, redirect='/subscriber'
+
+Frontend->Browser: 10. Redirect to /subscriber
+Browser->Subscriber: 11. Display subscriber dashboard
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-002: Logout (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Logout - Subscriber Session\nUser Story: US-S-002
+
+participant Subscriber
+participant Browser
+participant Frontend
+participant API
+
+Subscriber->Frontend: 1. Click logout button
+Frontend->API: 2. POST /api/logout
+API->API: 3. Clear session
+API->Frontend: 4. Response: success=true
+Frontend->Browser: 5. Redirect to homepage (/)
+Browser->Subscriber: 6. Display homepage
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-003: Use Face Swap Feature (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Face Swap - Subscriber\nUser Story: US-S-003
+
+participant Subscriber
+participant Browser
+participant Frontend
+participant GradioClient
+participant HuggingFaceAPI
+participant FaceDetector
+participant FaceSwapper
+
+Subscriber->Browser: 1. Select source and target images
+Subscriber->Frontend: 2. Click "Swap Faces"
+Frontend->GradioClient: 3. Connect to Gradio API
+
+GradioClient->HuggingFaceAPI: 4. Upload images
+HuggingFaceAPI->FaceDetector: 5. Detect faces
+FaceDetector-->HuggingFaceAPI: 6. Faces detected
+
+HuggingFaceAPI->FaceSwapper: 7. Swap faces
+FaceSwapper->FaceSwapper: 8. Extract features, match skin, blend
+FaceSwapper-->HuggingFaceAPI: 9. Result image
+
+HuggingFaceAPI-->Frontend: 10. Result image URL
+Frontend->Subscriber: 11. Show swapped result
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-004: Choose Source Image (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Choose Source Image for Face Swap - Subscriber\nUser Story: US-S-004
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Click source image upload
+Browser->Frontend: 2. Open file picker
+Subscriber->Browser: 3. Select image file
+Frontend->Subscriber: 4. Display image preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-005: Choose Target Image (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Choose Target Image for Face Swap - Subscriber\nUser Story: US-S-005
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Click target image upload
+Browser->Frontend: 2. Open file picker
+Subscriber->Browser: 3. Select image file
+Frontend->Subscriber: 4. Display image preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-006: Save Face Swap Result (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Save Face Swap Result - Subscriber\nUser Story: US-S-006
+
+participant Subscriber
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+Subscriber->Frontend: 1. Click "Save to Dashboard"
+Frontend->API: 2. POST /api/faceswap/save
+API->Storage: 3. Save result file
+API->Database: 4. INSERT INTO animations
+API->Frontend: 5. Response: success=true
+Frontend->Subscriber: 6. Success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-007: Download Face Swapped Image (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Download Face Swapped Image - Subscriber\nUser Story: US-S-007
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Frontend: 1. Click "Download" button
+Frontend->Browser: 2. Create download link
+Browser->Subscriber: 3. Download image file
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-008: Use FOMD Feature (TECHNICAL)
+# ==================================================================================
+# COPY FROM HERE ↓
+title FOMD Animation Generation\nUser Story: US-S-008
+
+participant Subscriber
+participant Browser
+participant Frontend
+participant API
+participant HuggingFaceAPI
+participant FaceDetector
+participant FOMMModel
+participant Storage
+participant Database
+
+Subscriber->Browser: 1. Select image file
+Browser->Frontend: 2. Display image preview
+Frontend->Frontend: 3. Validate file
+
+Subscriber->Browser: 4. Select video file
+Browser->Frontend: 5. Display video preview
+Frontend->Frontend: 6. Validate file
+
+Subscriber->Frontend: 7. Click "Generate Animation"
+Frontend->API: 8. POST /api/fomd/animate
+
+API->API: 9. Check user role (subscriber/admin)
+API->Storage: 10. Save uploaded files temporarily
+
+API->HuggingFaceAPI: 11. Call FOMD API\n(https://Tc12345-fomd.hf.space)
+HuggingFaceAPI->FaceDetector: 12. Detect face in image
+FaceDetector-->HuggingFaceAPI: 13. Face coordinates
+
+alt No face in image
+    HuggingFaceAPI-->API: Error: No face detected
+    API-->Frontend: Error message
+    Frontend-->Subscriber: Error displayed
+end
+
+HuggingFaceAPI->FaceDetector: 14. Detect face in video frames
+FaceDetector-->HuggingFaceAPI: 15. Face keypoints per frame
+
+HuggingFaceAPI->FOMMModel: 16. Load source image (256x256)
+FOMMModel->FOMMModel: 17. Extract source keypoints
+FOMMModel-->HuggingFaceAPI: 18. Source keypoints extracted
+
+HuggingFaceAPI->FOMMModel: 19. Load driving video frames
+FOMMModel->FOMMModel: 20. Extract driving keypoints per frame
+FOMMModel-->HuggingFaceAPI: 21. Driving keypoints extracted
+
+HuggingFaceAPI->FOMMModel: 22. Generate animation frames
+FOMMModel->FOMMModel: 23. Dense motion generation
+FOMMModel->FOMMModel: 24. Frame synthesis
+FOMMModel->FOMMModel: 25. Apply motion to source image
+
+FOMMModel-->HuggingFaceAPI: 26. Animated frames (256x256, 30fps)
+HuggingFaceAPI->HuggingFaceAPI: 27. Combine frames into MP4 video
+HuggingFaceAPI-->API: 28. Video URL
+
+API->API: 29. Download video from HuggingFace
+API->Storage: 30. Save MP4 video
+API->Database: 31. INSERT INTO animations\n(tool_type='fomd')
+
+API->Frontend: 32. Response: video_url, success
+Frontend->Subscriber: 33. Auto-play animated video
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-009: Choose Picture for FOMD
+# ==================================================================================
+# COPY FROM HERE ↓
+title Choose Picture for FOMD\nUser Story: US-S-009
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Click image upload area
+Browser->Frontend: 2. Open file picker
+Subscriber->Browser: 3. Select image file
+Frontend->Subscriber: 4. Display image preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-010: Choose Driving Motion Video for FOMD
+# ==================================================================================
+# COPY FROM HERE ↓
+title Choose Driving Motion Video for FOMD\nUser Story: US-S-010
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Click video upload area
+Browser->Frontend: 2. Open file picker
+Subscriber->Browser: 3. Select video file
+Frontend->Subscriber: 4. Display video preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-011: Save FOMD Animation
+# ==================================================================================
+# COPY FROM HERE ↓
+title Save FOMD Animation to Dashboard\nUser Story: US-S-011
+
+participant Subscriber
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+Subscriber->Frontend: 1. Click "Save to Dashboard"
+Frontend->Frontend: 2. Convert video to base64
+Frontend->API: 3. POST /api/fomd/save
+
+API->API: 4. Decode base64 video
+API->Storage: 5. Save video file
+API->Database: 6. INSERT INTO animations\n(tool_type='fomd')
+
+API->Frontend: 7. Response: success=true
+Frontend->Subscriber: 8. Success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-012: Use MakeItTalk Feature (TECHNICAL)
+# ==================================================================================
+# COPY FROM HERE ↓
+title MakeItTalk - Talking Portrait Generation\nUser Story: US-S-012
+
+participant Subscriber
+participant Browser
+participant Frontend
+participant GradioClient
+participant HuggingFaceAPI
+participant FaceDetector
+participant AudioProcessor
+participant MakeItTalkModel
+participant API
+participant Storage
+participant Database
+
+Subscriber->Browser: 1. Select portrait image
+Browser->Frontend: 2. Display image preview
+Frontend->Frontend: 3. Validate image
+
+Subscriber->Browser: 4. Select audio file
+Browser->Frontend: 5. Display audio player
+Frontend->Frontend: 6. Validate audio
+
+Subscriber->Frontend: 7. Click "Generate Talking Portrait"
+Frontend->GradioClient: 8. Connect to Gradio API\n(Tc12345/MakeItTalk)
+
+GradioClient->HuggingFaceAPI: 9. Initialize connection
+HuggingFaceAPI-->GradioClient: 10. Connection established
+
+GradioClient->HuggingFaceAPI: 11. Upload image and audio files
+
+HuggingFaceAPI->FaceDetector: 12. Detect 68 facial landmarks
+FaceDetector->FaceDetector: 13. Extract face region
+FaceDetector-->HuggingFaceAPI: 14. Landmark coordinates
+
+alt No face detected
+    HuggingFaceAPI-->Frontend: Error: No face detected
+    Frontend-->Subscriber: Error message
+end
+
+HuggingFaceAPI->AudioProcessor: 15. Load audio (16kHz)
+AudioProcessor->AudioProcessor: 16. Extract audio features
+AudioProcessor->AudioProcessor: 17. Extract mel-spectrogram
+AudioProcessor-->HuggingFaceAPI: 18. Audio feature vectors
+
+HuggingFaceAPI->MakeItTalkModel: 19. Generate lip sync
+MakeItTalkModel->MakeItTalkModel: 20. Audio-visual alignment
+MakeItTalkModel->MakeItTalkModel: 21. Map audio features to lip movements
+MakeItTalkModel-->HuggingFaceAPI: 22. Lip movement coordinates
+
+HuggingFaceAPI->MakeItTalkModel: 23. Animate face with lip sync
+MakeItTalkModel->MakeItTalkModel: 24. Apply facial expressions
+MakeItTalkModel->MakeItTalkModel: 25. Generate frames (256x256)
+MakeItTalkModel->MakeItTalkModel: 26. Warp face mesh based on landmarks
+
+MakeItTalkModel-->HuggingFaceAPI: 27. Animation frames
+
+HuggingFaceAPI->HuggingFaceAPI: 28. Combine frames + audio
+HuggingFaceAPI->HuggingFaceAPI: 29. Encode MP4 video
+HuggingFaceAPI-->GradioClient: 30. Video URL
+
+GradioClient->Frontend: 31. Video URL received
+Frontend->Subscriber: 32. Auto-play talking portrait
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-013: Choose Picture for MakeItTalk
+# ==================================================================================
+# COPY FROM HERE ↓
+title Choose Picture for MakeItTalk\nUser Story: US-S-013
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Click image upload area
+Browser->Frontend: 2. Open file picker
+Subscriber->Browser: 3. Select portrait image
+Frontend->Subscriber: 4. Display image preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-014: Choose Audio File for MakeItTalk
+# ==================================================================================
+# COPY FROM HERE ↓
+title Choose Audio File for MakeItTalk\nUser Story: US-S-014
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Click audio upload area
+Browser->Frontend: 2. Open file picker
+Subscriber->Browser: 3. Select audio file
+Frontend->Subscriber: 4. Display audio player
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-015: Save MakeItTalk Animation
+# ==================================================================================
+# COPY FROM HERE ↓
+title Save MakeItTalk Animation to Dashboard\nUser Story: US-S-015
+
+participant Subscriber
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+Subscriber->Frontend: 1. Click "Save to Dashboard"
+Frontend->Frontend: 2. Fetch video from URL
+Frontend->Frontend: 3. Convert video to base64
+Frontend->API: 4. POST /api/makeittalk/save
+
+API->API: 5. Decode base64 video
+API->Storage: 6. Save MP4 video
+API->Database: 7. INSERT INTO animations\n(tool_type='makeittalk')
+
+API->Frontend: 8. Response: success=true
+Frontend->Subscriber: 9. Success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-016: Edit Profile Picture (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Edit Profile Picture - Subscriber\nUser Story: US-S-016
+
+participant Subscriber
+participant Browser
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+Subscriber->Browser: 1. Select profile picture file
+Frontend->API: 2. POST /api/profile-picture
+API->Storage: 3. Save file
+API->Database: 4. UPDATE users SET profile_picture
+API->Frontend: 5. Response: success=true
+Frontend->Subscriber: 6. Display updated profile picture
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-017: Update Profile Information (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Update Profile Information - Subscriber\nUser Story: US-S-017
+
+participant Subscriber
+participant Frontend
+participant API
+participant Database
+
+Subscriber->Frontend: 1. Edit fullname and/or email
+Subscriber->Frontend: 2. Submit profile update
+Frontend->API: 3. PUT /api/profile
+API->Database: 4. UPDATE users SET fullname, email
+API->Frontend: 5. Response: success=true
+Frontend->Subscriber: 6. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-018: Change Password (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Change Password - Subscriber\nUser Story: US-S-018
+
+participant Subscriber
+participant Frontend
+participant API
+participant Database
+
+Subscriber->Frontend: 1. Enter current password,\nnew password, confirm password
+Subscriber->Frontend: 2. Submit password change
+Frontend->API: 3. POST /api/change-password
+
+API->Database: 4. SELECT password FROM users
+API->API: 5. Verify current password
+API->API: 6. Hash new password
+API->Database: 7. UPDATE users SET password
+
+API->Frontend: 8. Response: success=true
+Frontend->Subscriber: 9. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-019: Delete Account (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Delete Account - Subscriber\nUser Story: US-S-019
+
+participant Subscriber
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+Subscriber->Frontend: 1. Click "Delete Account"
+Frontend->Frontend: 2. Show confirmation dialogs
+Subscriber->Frontend: 3. Confirm deletion
+
+Frontend->API: 4. POST /api/account/delete
+API->Storage: 5. Delete profile picture
+API->Storage: 6. Delete all animation files
+API->Database: 7. DELETE FROM users
+
+API->API: 8. Clear session
+API->Frontend: 9. Response: success=true
+Frontend->Browser: 10. Redirect to homepage
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-020: Pay for Subscription (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Pay for Subscription - Subscriber\nUser Story: US-S-020
+
+participant Subscriber
+participant Frontend
+participant API
+participant Stripe
+participant Database
+
+Subscriber->Frontend: 1. Select plan and click "Subscribe"
+Frontend->API: 2. POST /api/stripe/create-checkout-session
+API->Stripe: 3. Create checkout session
+Stripe-->API: 4. Checkout session URL
+Frontend->Browser: 5. Redirect to Stripe checkout
+
+Subscriber->Stripe: 6. Enter payment details and submit
+Stripe->API: 7. Webhook: checkout.session.completed
+API->Database: 8. UPDATE users\nSET subscription_status='active'
+Frontend->Subscriber: 9. Redirect to subscriber dashboard
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-021: Cancel Subscription
+# ==================================================================================
+# COPY FROM HERE ↓
+title Cancel Subscription\nUser Story: US-S-021
+
+participant Subscriber
+participant Frontend
+participant API
+participant Stripe
+participant Database
+
+Subscriber->Frontend: 1. Click "Cancel Subscription"
+Frontend->Frontend: 2. Show confirmation dialog
+Subscriber->Frontend: 3. Confirm cancellation
+
+Frontend->API: 4. POST /api/stripe/cancel-subscription
+API->Stripe: 5. Cancel subscription at period end
+Stripe-->API: 6. Subscription cancellation confirmed
+
+API->Frontend: 7. Response: success=true
+Frontend->Subscriber: 8. Display cancellation message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-022: Preview Source Image for Face Swap (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Source Image for Face Swap - Subscriber\nUser Story: US-S-022
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Select source image file
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file and validate
+Frontend->Subscriber: 4. Display image preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-023: Preview Target Image for Face Swap (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Target Image for Face Swap - Subscriber\nUser Story: US-S-023
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Select target image file
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file and validate
+Frontend->Subscriber: 4. Display image preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-024: See Progress Bar for Face Swap (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title See Progress Bar for Face Swap - Subscriber\nUser Story: US-S-024
+
+participant Subscriber
+participant Frontend
+
+Subscriber->Frontend: 1. Click "Swap Faces"
+Frontend->Frontend: 2. Show progress bar
+Frontend->Frontend: 3. Update progress: 20%, 60%, 90%, 100%
+Subscriber->Subscriber: 4. View progress updates
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-025: Preview Face Swap Result (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Face Swap Result - Subscriber\nUser Story: US-S-025
+
+participant Subscriber
+participant Frontend
+
+Frontend->Frontend: 1. Receive result image URL
+Frontend->Frontend: 2. Load result image
+Frontend->Subscriber: 3. Display result image
+Subscriber->Subscriber: 4. Review result before saving
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-026: See Connection Status of Face Swap API (Subscriber)
+# ==================================================================================
+# COPY FROM HERE ↓
+title See Connection Status of Face Swap API - Subscriber\nUser Story: US-S-026
+
+participant Subscriber
+participant Frontend
+participant GradioClient
+participant HuggingFaceAPI
+
+Frontend->GradioClient: 1. Check connection to API
+GradioClient->HuggingFaceAPI: 2. Test connection
+HuggingFaceAPI-->GradioClient: 3. Connection status
+
+alt Connected
+    Frontend->Subscriber: Display: "✅ API Connected"
+else Not connected
+    Frontend->Subscriber: Display: "❌ API Offline"
+end
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-027: Preview Source Image for FOMD
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Source Image for FOMD\nUser Story: US-S-027
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Select image file for FOMD
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file and validate
+Frontend->Subscriber: 4. Display image preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-028: Play Driving Video for FOMD
+# ==================================================================================
+# COPY FROM HERE ↓
+title Play Driving Video for FOMD\nUser Story: US-S-028
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Select video file for FOMD
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file and validate
+Frontend->Subscriber: 4. Display video preview
+Subscriber->Frontend: 5. Click play button
+Frontend->Subscriber: 6. Video plays
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-029: Play FOMD Result Video
+# ==================================================================================
+# COPY FROM HERE ↓
+title Play FOMD Result Video\nUser Story: US-S-029
+
+participant Subscriber
+participant Frontend
+
+Frontend->Frontend: 1. Receive result video URL
+Frontend->Frontend: 2. Load video player
+Frontend->Subscriber: 3. Auto-play animated video
+Subscriber->Subscriber: 4. Watch complete animation
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-030: See Progress Bar for FOMD
+# ==================================================================================
+# COPY FROM HERE ↓
+title See Progress Bar for FOMD\nUser Story: US-S-030
+
+participant Subscriber
+participant Frontend
+
+Subscriber->Frontend: 1. Click "Generate Animation"
+Frontend->Frontend: 2. Show progress bar (0%)
+Frontend->Frontend: 3. Update progress: 20% "Detecting faces..."
+Frontend->Frontend: 4. Update progress: 40% "Extracting keypoints..."
+Frontend->Frontend: 5. Update progress: 60% "Generating animation..."
+Frontend->Frontend: 6. Update progress: 80% "Finalizing video..."
+Frontend->Frontend: 7. Update progress: 100% "Complete!"
+Subscriber->Subscriber: 8. View progress updates
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-031: See Connection Status of FOMD API
+# ==================================================================================
+# COPY FROM HERE ↓
+title See Connection Status of FOMD API\nUser Story: US-S-031
+
+participant Subscriber
+participant Frontend
+participant HuggingFaceAPI
+
+Frontend->HuggingFaceAPI: 1. Check connection to FOMD API
+HuggingFaceAPI-->Frontend: 2. Connection status
+
+alt Connected
+    Frontend->Subscriber: Display: "✅ FOMD API Connected"
+else Not connected
+    Frontend->Subscriber: Display: "❌ FOMD API Offline"
+end
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-032: Preview FOMD Result
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview FOMD Result\nUser Story: US-S-032
+
+participant Subscriber
+participant Frontend
+
+Frontend->Frontend: 1. Receive result video URL
+Frontend->Frontend: 2. Load video player
+Frontend->Subscriber: 3. Display result video
+Subscriber->Subscriber: 4. Review result before saving
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-033: Play FOMD Result
+# ==================================================================================
+# COPY FROM HERE ↓
+title Play FOMD Result\nUser Story: US-S-033
+
+participant Subscriber
+participant Frontend
+
+Frontend->Frontend: 1. Load video player with result
+Frontend->Subscriber: 2. Auto-play animated video
+Subscriber->Frontend: 3. Click play button (if paused)
+Frontend->Subscriber: 4. Video plays
+Subscriber->Subscriber: 5. Watch complete animation
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-034: Preview Source Image for MakeItTalk
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Source Image for MakeItTalk\nUser Story: US-S-034
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Select portrait image
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file and validate
+Frontend->Subscriber: 4. Display image preview
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-035: Preview Audio File for MakeItTalk
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview Audio File for MakeItTalk\nUser Story: US-S-035
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+Subscriber->Browser: 1. Select audio file
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file and validate
+Frontend->Subscriber: 4. Display audio player
+Subscriber->Frontend: 5. Click play button
+Frontend->Subscriber: 6. Audio plays
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-036: Preview MakeItTalk Result
+# ==================================================================================
+# COPY FROM HERE ↓
+title Preview MakeItTalk Result\nUser Story: US-S-036
+
+participant Subscriber
+participant Frontend
+
+Frontend->Frontend: 1. Receive result video URL
+Frontend->Frontend: 2. Load video player
+Frontend->Subscriber: 3. Display result video
+Subscriber->Subscriber: 4. Review result before saving
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-037: See Progress Bar for MakeItTalk
+# ==================================================================================
+# COPY FROM HERE ↓
+title See Progress Bar for MakeItTalk\nUser Story: US-S-037
+
+participant Subscriber
+participant Frontend
+
+Subscriber->Frontend: 1. Click "Generate Talking Portrait"
+Frontend->Frontend: 2. Show progress bar (0%)
+Frontend->Frontend: 3. Update progress: 10% "Uploading files..."
+Frontend->Frontend: 4. Update progress: 20% "Detecting facial landmarks..."
+Frontend->Frontend: 5. Update progress: 30% "Processing audio..."
+Frontend->Frontend: 6. Update progress: 50% "Generating lip movements..."
+Frontend->Frontend: 7. Update progress: 70% "Creating animation frames..."
+Frontend->Frontend: 8. Update progress: 90% "Combining audio and video..."
+Frontend->Frontend: 9. Update progress: 100% "Complete!"
+Subscriber->Subscriber: 10. View progress updates
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-038: Play MakeItTalk Result
+# ==================================================================================
+# COPY FROM HERE ↓
+title Play MakeItTalk Result\nUser Story: US-S-038
+
+participant Subscriber
+participant Frontend
+
+Frontend->Frontend: 1. Load video player with result
+Frontend->Subscriber: 2. Auto-play talking portrait
+Subscriber->Subscriber: 3. Watch complete animation
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-S-039: See Connection Status of MakeItTalk API
+# ==================================================================================
+# COPY FROM HERE ↓
+title See Connection Status of MakeItTalk API\nUser Story: US-S-039
+
+participant Subscriber
+participant Frontend
+participant GradioClient
+participant HuggingFaceAPI
+
+Frontend->GradioClient: 1. Check connection to MakeItTalk API
+GradioClient->HuggingFaceAPI: 2. Test connection
+HuggingFaceAPI-->GradioClient: 3. Connection status
+
+alt Connected
+    Frontend->Subscriber: Display: "✅ MakeItTalk API Connected"
+else Not connected
+    Frontend->Subscriber: Display: "❌ MakeItTalk API Offline"
+end
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# ADMIN STORIES
+# ==================================================================================
+
+# ==================================================================================
+# US-A-001: Admin Login
+# ==================================================================================
+# COPY FROM HERE ↓
+title Admin Login\nUser Story: US-A-001
+
+participant Admin
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+Admin->Browser: 1. Navigate to /login
+Browser->Frontend: 2. Load login page
+Admin->Frontend: 3. Enter email and password
+Frontend->API: 4. POST /api/login
+
+API->Database: 5. SELECT * FROM users\nWHERE email = %s
+Database-->API: 6. User record
+
+API->API: 7. Verify password
+API->API: 8. Check role = 'admin'
+API->API: 9. Create session (role='admin')
+API->Frontend: 10. Response: success=true, redirect='/admin'
+
+Frontend->Browser: 11. Redirect to /admin
+Browser->Admin: 12. Display admin dashboard
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-002: Logout (Admin)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Logout - Admin Session\nUser Story: US-A-002
+
+participant Admin
+participant Browser
+participant Frontend
+participant API
+
+Admin->Frontend: 1. Click logout button
+Frontend->API: 2. POST /api/logout
+API->API: 3. Clear session
+API->Frontend: 4. Response: success=true
+Frontend->Browser: 5. Redirect to homepage (/)
+Browser->Admin: 6. Display homepage
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-003: Change Password (Admin)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Change Password - Admin\nUser Story: US-A-003
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Enter current password,\nnew password, confirm password
+Admin->Frontend: 2. Submit password change
+Frontend->API: 3. POST /api/change-password
+
+API->Database: 4. SELECT password FROM users
+API->API: 5. Verify current password
+API->API: 6. Hash new password
+API->Database: 7. UPDATE users SET password
+
+API->Frontend: 8. Response: success=true
+Frontend->Admin: 9. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-004: Update Profile Picture (Admin)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Update Profile Picture - Admin\nUser Story: US-A-004
+
+participant Admin
+participant Browser
+participant Frontend
+participant API
+participant Storage
+participant Database
+
+Admin->Browser: 1. Select profile picture file
+Frontend->API: 2. POST /api/profile-picture
+API->Storage: 3. Save file
+API->Database: 4. UPDATE users SET profile_picture
+API->Frontend: 5. Response: success=true
+Frontend->Admin: 6. Display updated profile picture
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-005: Update Username and Email (Admin)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Update Username and Email - Admin\nUser Story: US-A-005
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Edit username and/or email
+Admin->Frontend: 2. Submit profile update
+Frontend->API: 3. PUT /api/profile
+
+API->Database: 4. UPDATE users\nSET fullname, email
+Database-->API: 5. Profile updated
+
+API->API: 6. Update session
+API->Frontend: 7. Response: success=true
+Frontend->Admin: 8. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-006: Create Admin Account
+# ==================================================================================
+# COPY FROM HERE ↓
+title Create Admin Account\nUser Story: US-A-006
+
+participant Admin
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+Admin->Browser: 1. Navigate to create admin page
+Admin->Frontend: 2. Enter fullname, email, password
+Admin->Frontend: 3. Submit admin creation form
+Frontend->API: 4. POST /api/admin/create-admin
+
+API->API: 5. Verify admin role
+API->Database: 6. Check if email exists
+
+alt Email already exists
+    API-->Frontend: Error: Email already exists
+    Frontend->Admin: Error message
+end
+
+API->API: 7. Hash password
+API->Database: 8. INSERT INTO users\n(role='admin', subscription_status='active')
+Database-->API: 9. Admin created
+
+API->Frontend: 10. Response: success=true
+Frontend->Admin: 11. Show success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-007: Load All Users
+# ==================================================================================
+# COPY FROM HERE ↓
+title Load All Users\nUser Story: US-A-007
+
+participant Admin
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+Admin->Browser: 1. Navigate to /admin
+Frontend->API: 2. GET /api/admin/users
+
+API->API: 3. Verify admin role
+API->Database: 4. SELECT all users
+Database-->API: 5. All users list
+
+API->Frontend: 6. Response: success=true, users array
+Frontend->Admin: 7. Display user table
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-008: Search All Users
+# ==================================================================================
+# COPY FROM HERE ↓
+title Search All Users\nUser Story: US-A-008
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Enter search query
+Admin->Frontend: 2. Submit search
+Frontend->API: 3. GET /api/admin/users?search=query
+
+API->Database: 4. SELECT users WHERE\nfullname LIKE %query%\nOR email LIKE %query%
+Database-->API: 5. Filtered users list
+
+API->Frontend: 6. Response: success=true, users array
+Frontend->Admin: 7. Display filtered user table
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-009: Edit User Profile (Admin)
+# ==================================================================================
+# COPY FROM HERE ↓
+title Edit User Profile - Admin\nUser Story: US-A-009
+
+participant Admin
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+Admin->Browser: 1. Select user to edit
+Admin->Frontend: 2. Edit fullname and/or email
+Admin->Frontend: 3. Submit user update
+Frontend->API: 4. PUT /api/admin/user/<user_id>\n(action='edit')
+
+API->API: 5. Verify admin role
+API->Database: 6. Check if email already taken
+
+alt Email already taken
+    API-->Frontend: Error: Email already exists
+    Frontend->Admin: Error message
+end
+
+API->Database: 7. UPDATE users\nSET fullname, email
+Database-->API: 8. User profile updated
+
+API->Frontend: 9. Response: success=true
+Frontend->Admin: 10. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-010: Suspend User
+# ==================================================================================
+# COPY FROM HERE ↓
+title Suspend User\nUser Story: US-A-010
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Click suspend button
+Frontend->Frontend: 2. Confirm suspension action
+Admin->Frontend: 3. Confirm suspension
+
+Frontend->API: 4. PUT /api/admin/user/<user_id>\n(action='suspend')
+
+API->API: 5. Verify admin role
+API->Database: 6. UPDATE users\nSET subscription_status='suspended'
+Database-->API: 7. User suspended
+
+API->Frontend: 8. Response: success=true
+Frontend->Admin: 9. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-011: Suspend Subscriber
+# ==================================================================================
+# COPY FROM HERE ↓
+title Suspend Subscriber\nUser Story: US-A-011
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Select subscriber to suspend
+Admin->Frontend: 2. Click suspend button
+Frontend->Frontend: 3. Confirm suspension
+Admin->Frontend: 4. Confirm suspension
+
+Frontend->API: 5. PUT /api/admin/user/<user_id>\n(action='suspend')
+
+API->Database: 6. UPDATE users\nSET subscription_status='suspended'
+Database-->API: 7. Subscriber suspended
+
+API->Frontend: 8. Response: success=true
+Frontend->Admin: 9. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-012: Suspend Admin
+# ==================================================================================
+# COPY FROM HERE ↓
+title Suspend Admin\nUser Story: US-A-012
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Select admin to suspend
+Admin->Frontend: 2. Click suspend button
+Frontend->Frontend: 3. Confirm suspension
+Admin->Frontend: 4. Confirm suspension
+
+Frontend->API: 5. PUT /api/admin/user/<user_id>\n(action='suspend')
+
+API->Database: 6. UPDATE users\nSET subscription_status='suspended'
+Database-->API: 7. Admin suspended
+
+API->Frontend: 8. Response: success=true
+Frontend->Admin: 9. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-013: Activate User
+# ==================================================================================
+# COPY FROM HERE ↓
+title Activate User\nUser Story: US-A-013
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Click activate button
+Frontend->Frontend: 2. Confirm activation action
+Admin->Frontend: 3. Confirm activation
+
+Frontend->API: 4. PUT /api/admin/user/<user_id>\n(action='activate')
+
+API->API: 5. Verify admin role
+API->Database: 6. UPDATE users\nSET subscription_status='active'
+Database-->API: 7. User activated
+
+API->Frontend: 8. Response: success=true
+Frontend->Admin: 9. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-014: Activate Subscriber
+# ==================================================================================
+# COPY FROM HERE ↓
+title Activate Subscriber\nUser Story: US-A-014
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Select subscriber to activate
+Admin->Frontend: 2. Click activate button
+Frontend->Frontend: 3. Confirm activation
+Admin->Frontend: 4. Confirm activation
+
+Frontend->API: 5. PUT /api/admin/user/<user_id>\n(action='activate')
+
+API->Database: 6. UPDATE users\nSET subscription_status='active'
+Database-->API: 7. Subscriber activated
+
+API->Frontend: 8. Response: success=true
+Frontend->Admin: 9. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# US-A-015: Activate Admin
+# ==================================================================================
+# COPY FROM HERE ↓
+title Activate Admin\nUser Story: US-A-015
+
+participant Admin
+participant Frontend
+participant API
+participant Database
+
+Admin->Frontend: 1. Select admin to activate
+Admin->Frontend: 2. Click activate button
+Frontend->Frontend: 3. Confirm activation
+Admin->Frontend: 4. Confirm activation
+
+Frontend->API: 5. PUT /api/admin/user/<user_id>\n(action='activate')
+
+API->Database: 6. UPDATE users\nSET subscription_status='active'
+Database-->API: 7. Admin activated
+
+API->Frontend: 8. Response: success=true
+Frontend->Admin: 9. Display success message
+# COPY UNTIL HERE ↑
+
+# ==================================================================================
+# END OF ALL SEQUENCE DIAGRAMS
+# ==================================================================================
+

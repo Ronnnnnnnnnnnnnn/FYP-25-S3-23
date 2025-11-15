@@ -1,0 +1,52 @@
+# CREATE ADMIN ACCOUNT SEQUENCE DIAGRAM FOR SEQUENCEDIAGRAM.ORG
+# Copy everything below the line and paste into https://sequencediagram.org
+
+# ==================================================================================
+# COPY FROM HERE ↓
+# ==================================================================================
+
+title Create Admin Account\nUser Story: US-A-006 - As an admin, I want to create admin accounts
+
+participant Admin
+participant Browser
+participant Frontend
+participant API
+participant Database
+
+note over Admin, Database: Create Admin Account
+
+Admin->Browser: 1. Navigate to create admin page
+Browser->Frontend: 2. Load create admin form
+Frontend->Admin: 3. Display admin creation form
+
+Admin->Frontend: 4. Enter fullname, email, password
+Frontend->Frontend: 5. Validate form fields\n(min 6 chars password)
+
+alt Invalid input
+    Frontend-->Admin: Error: Validation failed
+end
+
+Admin->Frontend: 6. Submit admin creation form
+Frontend->API: 7. POST /api/admin/create-admin\n(fullname, email, password)
+
+API->API: 8. Verify admin role
+API->API: 9. Validate request data
+API->Database: 10. SELECT user_id FROM users\nWHERE email = %s
+Database-->API: 11. Email check result
+
+alt Email already exists
+    API-->Frontend: Error: Email already exists
+    Frontend-->Admin: Error message displayed
+end
+
+API->API: 12. Hash password\n(generate_password_hash)
+API->Database: 13. INSERT INTO users\n(fullname, email, password, role='admin', subscription_status='active')
+Database-->API: 14. Admin created (user_id)
+
+API->Frontend: 15. Response: success=true\nmessage="Admin account created successfully"
+Frontend->Admin: 16. Show success message\nNew admin can now login
+
+# ==================================================================================
+# COPY UNTIL HERE ↑
+# ==================================================================================
+

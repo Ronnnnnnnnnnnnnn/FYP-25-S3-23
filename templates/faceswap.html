@@ -522,6 +522,28 @@
             z-index: 1;
         }
 
+        .connection-status {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 1001;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-online { 
+            background: rgba(16, 185, 129, 0.9); 
+            color: white; 
+        }
+        .status-offline { 
+            background: rgba(239, 68, 68, 0.9); 
+            color: white; 
+        }
+
         .progress-container {
             margin-top: 2rem;
             display: none;
@@ -736,6 +758,10 @@
             </div>
         </nav>
 
+        <div id="connectionStatus" class="connection-status status-offline">
+            ⚠️ Checking connection...
+        </div>
+
         <div class="hero">
             <h1>Face Swap</h1>
             <p>Swap faces between two photos instantly using AI-powered face swapping technology</p>
@@ -943,35 +969,67 @@
             }
         }
         
-        // Initialize connection with multiple variations
-        let connectionPromise = (async () => {
+        // Check connection on load
+        window.addEventListener('load', async () => {
             console.log('🔍 Checking connection to:', SPACE_URL);
+            
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.textContent = '⏳ Connecting...';
+            statusDiv.className = 'connection-status status-offline';
             
             // Try different space name variations
             const spaceVariations = [
                 SPACE_URL,  // Original: "Tc12345/faceswap"
                 `${YOUR_USERNAME}/${SPACE_NAME.toLowerCase()}`,  // "Tc12345/faceswap"
-                `${YOUR_USERNAME}/${SPACE_NAME}`,  // "Tc12345/faceswap"
+                `${YOUR_USERNAME}/${SPACE_NAME.toUpperCase()}`,  // "Tc12345/FACESWAP"
             ];
+            
+            let connected = false;
+            let lastError = null;
             
             for (const spacePath of spaceVariations) {
                 try {
                     window.app = await tryConnect(spacePath);
+                    connected = true;
+                    statusDiv.textContent = '✅ Connected to API';
+                    statusDiv.className = 'connection-status status-online';
                     console.log(`✅ Successfully connected to: ${spacePath}`);
-                    return true;
+                    break;
                 } catch (error) {
+                    lastError = error;
                     console.log(`❌ Failed to connect to: ${spacePath}`);
                 }
             }
             
-            console.error('❌ All connection attempts failed');
-            return false;
-        })();
+            if (!connected) {
+                console.error('❌ All connection attempts failed');
+                statusDiv.textContent = '❌ API Offline';
+                statusDiv.className = 'connection-status status-offline';
+                
+                const spaceLink = `https://huggingface.co/spaces/${SPACE_URL}`;
+                showStatus(`
+                    ⚠️ Cannot connect to Gradio API<br><br>
+                    <strong>Tried:</strong> ${spaceVariations.join(', ')}<br>
+                    <strong>Error:</strong> ${lastError ? lastError.message : 'Unknown error'}<br><br>
+                    <strong>Please check:</strong><br>
+                    1. The space exists: <a href="${spaceLink}" target="_blank" style="color: #667eea;">${spaceLink}</a><br>
+                    2. The space is <strong>public</strong> and <strong>running</strong><br>
+                    3. Verify the exact space name in your Hugging Face account<br>
+                    4. Make sure the space name matches exactly (case-sensitive)<br>
+                    5. Try refreshing this page
+                `, 'error');
+            }
+        });
         
         // Main swap function
         window.swapFaces = async function() {
             if (!sourceFile || !targetFile) {
                 showStatus('❌ Please upload both images!', 'error');
+                return;
+            }
+
+            if (!window.app) {
+                showStatus('❌ Not connected to API. Please refresh.', 'error');
                 return;
             }
             
@@ -988,14 +1046,6 @@
             updateProgress(10, 'Preparing images...');
             
             try {
-                // Wait for connection if needed
-                if (!window.app) {
-                    showStatus('🔄 Connecting to API...', 'loading');
-                    const connected = await connectionPromise;
-                    if (!connected) {
-                        throw new Error('Failed to connect to Gradio API. Please check your space URL.');
-                    }
-                }
                 
                 updateProgress(20, 'Uploading images...');
                 

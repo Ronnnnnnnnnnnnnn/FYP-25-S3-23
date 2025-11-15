@@ -1,0 +1,29 @@
+# VIEW SAMPLE ANIMATIONS SEQUENCE DIAGRAM FOR SEQUENCEDIAGRAM.ORG
+# Copy everything below the line and paste into https://sequencediagram.org
+
+# ==================================================================================
+# COPY FROM HERE ↓
+# ==================================================================================
+
+title View Sample Animations\nUser Story: US-G-002 - As a guest, I want to view sample animations
+
+participant Guest
+participant Browser
+participant Frontend
+participant Storage
+
+note over Guest, Storage: View Sample Videos
+
+Guest->Browser: 1. Navigate to homepage (/)
+Browser->Frontend: 2. Load index.html
+Frontend->Storage: 3. Load sample videos\nstatic/videos/sample1.mp4\nstatic/videos/sample2.mp4
+Storage-->Frontend: 4. Video files
+Frontend->Guest: 5. Display sample animations\nin video players
+Guest->Guest: 6. Watch sample animations
+
+note over Guest: Samples showcase platform features
+
+# ==================================================================================
+# COPY UNTIL HERE ↑
+# ==================================================================================
+

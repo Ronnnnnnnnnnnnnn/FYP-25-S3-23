@@ -1,0 +1,30 @@
+# PLAY DRIVING VIDEO SEQUENCE DIAGRAM FOR SEQUENCEDIAGRAM.ORG
+# Copy everything below the line and paste into https://sequencediagram.org
+
+# ==================================================================================
+# COPY FROM HERE ↓
+# ==================================================================================
+
+title Play Driving Video for FOMD\nUser Story: US-S-028 - As a subscriber, I want to play the driving video
+
+participant Subscriber
+participant Browser
+participant Frontend
+
+note over Subscriber, Frontend: Video Preview
+
+Subscriber->Browser: 1. Select video file for FOMD
+Browser->Frontend: 2. File selected event
+Frontend->Frontend: 3. Read file using FileReader
+Frontend->Frontend: 4. Validate file type\n(MP4, AVI, MOV)
+Frontend->Frontend: 5. Create object URL\n(URL.createObjectURL)
+Frontend->Subscriber: 6. Display video preview\nin video player
+Subscriber->Frontend: 7. Click play button
+Frontend->Subscriber: 8. Video plays
+
+note over Subscriber: Video verified before processing
+
+# ==================================================================================
+# COPY UNTIL HERE ↑
+# ==================================================================================
+

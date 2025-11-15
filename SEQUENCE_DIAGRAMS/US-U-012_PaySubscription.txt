@@ -1,0 +1,73 @@
+# PAY FOR SUBSCRIPTION SEQUENCE DIAGRAM FOR SEQUENCEDIAGRAM.ORG
+# Copy everything below the line and paste into https://sequencediagram.org
+
+# ==================================================================================
+# COPY FROM HERE ↓
+# ==================================================================================
+
+title Pay for Subscription\nUser Story: US-U-012 - As a user, I want to pay for a subscription
+
+participant User
+participant Browser
+participant Frontend
+participant API
+participant Stripe
+participant Database
+
+note over User, Database: Initiate Payment
+
+User->Browser: 1. Navigate to /payment
+Browser->Frontend: 2. Load payment page
+Frontend->User: 3. Display subscription plans\n(monthly/yearly)
+
+User->Frontend: 4. Select plan (monthly/yearly)
+User->Frontend: 5. Click "Subscribe"
+Frontend->API: 6. POST /api/stripe/create-checkout-session\n(plan_type)
+
+API->Database: 7. SELECT email, fullname, stripe_customer_id\nFROM users WHERE user_id = %s
+Database-->API: 8. User data
+
+alt No Stripe customer ID
+    API->Stripe: 9. Create Stripe customer\n(email, name, metadata)
+    Stripe-->API: 10. Customer ID
+    API->Database: 11. UPDATE users\nSET stripe_customer_id = %s
+    Database-->API: 12. Customer ID saved
+end
+
+API->Stripe: 13. Create checkout session\n(customer_id, price_id, mode='subscription')
+Stripe-->API: 14. Checkout session ID\nand URL
+
+API->Frontend: 15. Response: success=true\nsessionId
+Frontend->Browser: 16. Redirect to Stripe checkout\n(session.url)
+Browser->User: 17. Display Stripe payment form
+
+note over User, Stripe: Payment Processing
+
+User->Stripe: 18. Enter payment details
+User->Stripe: 19. Submit payment
+Stripe->Stripe: 20. Process payment
+
+alt Payment failed
+    Stripe-->User: Error: Payment failed
+    Browser->Frontend: Redirect to /payment
+end
+
+Stripe->API: 21. Webhook: checkout.session.completed
+API->Database: 22. UPDATE users\nSET role='subscriber', subscription_status='active'
+Database-->API: 23. User upgraded
+
+Browser->Frontend: 24. Redirect to /payment-success
+Frontend->API: 25. GET /api/stripe/verify-session\n(session_id)
+API->Stripe: 26. Retrieve session
+Stripe-->API: 27. Session data
+
+API->Database: 28. Verify and update subscription
+Database-->API: 29. Subscription confirmed
+
+API->Frontend: 30. Response: success=true\nsubscription activated
+Frontend->User: 31. Display success message\nRedirect to subscriber dashboard
+
+# ==================================================================================
+# COPY UNTIL HERE ↑
+# ==================================================================================
+
